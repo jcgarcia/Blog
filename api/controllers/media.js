@@ -461,25 +461,34 @@ export const uploadToS3 = async (req, res) => {
               const credentials = await credentialManager.getCredentials();
               
               // Debug the actual credential structure
-              console.log('🔍 [S3CLIENT DEBUG] Raw credentials object:', credentials);
-              console.log('🔍 [S3CLIENT DEBUG] Credentials keys:', Object.keys(credentials || {}));
-              console.log('🔍 [S3CLIENT DEBUG] Credential types:', {
-                accessKeyId: typeof credentials?.accessKeyId,
-                secretAccessKey: typeof credentials?.secretAccessKey,
-                sessionToken: typeof credentials?.sessionToken
+              console.log('🔍 [S3CLIENT DEBUG] Raw credentials object structure detected');
+              console.log('🔍 [S3CLIENT DEBUG] Has Credentials nested object:', !!credentials.Credentials);
+              
+              // Extract credentials from the AWS STS response format
+              let extractedCredentials;
+              if (credentials.Credentials) {
+                // AWS STS format (OIDC response)
+                extractedCredentials = {
+                  accessKeyId: credentials.Credentials.AccessKeyId,
+                  secretAccessKey: credentials.Credentials.SecretAccessKey,
+                  sessionToken: credentials.Credentials.SessionToken
+                };
+              } else {
+                // Direct format (fallback)
+                extractedCredentials = {
+                  accessKeyId: credentials.accessKeyId,
+                  secretAccessKey: credentials.secretAccessKey,
+                  sessionToken: credentials.sessionToken
+                };
+              }
+              
+              console.log('🔑 [S3CLIENT DEBUG] Extracted credentials:', {
+                accessKeyId: extractedCredentials.accessKeyId ? extractedCredentials.accessKeyId.substring(0, 10) + '...' : 'missing',
+                secretAccessKey: extractedCredentials.secretAccessKey ? 'present' : 'missing',
+                sessionToken: extractedCredentials.sessionToken ? 'present' : 'missing'
               });
               
-              console.log('🔑 [S3CLIENT DEBUG] Retrieved credentials:', {
-                accessKeyId: credentials.accessKeyId ? credentials.accessKeyId.substring(0, 10) + '...' : 'missing',
-                secretAccessKey: credentials.secretAccessKey ? 'present' : 'missing',
-                sessionToken: credentials.sessionToken ? 'present' : 'missing'
-              });
-              
-              return {
-                accessKeyId: credentials.accessKeyId,
-                secretAccessKey: credentials.secretAccessKey,
-                sessionToken: credentials.sessionToken
-              };
+              return extractedCredentials;
             } catch (error) {
               console.error('❌ [S3CLIENT DEBUG] Failed to get credentials:', error.message);
               throw error;
