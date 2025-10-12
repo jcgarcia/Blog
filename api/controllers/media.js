@@ -442,24 +442,47 @@ export const uploadToS3 = async (req, res) => {
       
       if (storageType === 'aws' && settings.aws_config) {
         // Use OIDC credentials for AWS
+        console.log('🔄 [AWS CONFIG DEBUG] Initializing AWS S3 client for upload...');
+        console.log('🔄 [AWS CONFIG DEBUG] AWS config:', JSON.stringify(settings.aws_config, null, 2));
+        console.log('🔄 [AWS CONFIG DEBUG] Credential manager initialized:', credentialManager.isInitialized);
+        
         try {
           // Ensure credential provider is initialized
           if (!credentialManager.isInitialized) {
+            console.log('🔄 [AWS CONFIG DEBUG] Initializing credential provider...');
             await credentialManager.initializeCredentialProvider();
+            console.log('✅ [AWS CONFIG DEBUG] Credential provider initialized');
           }
           
-          s3 = new S3Client({
+          const s3Config = {
             region: settings.aws_config.region || 'eu-west-2',
             credentials: credentialManager.credentialProvider,
             forcePathStyle: true,
             endpoint: `https://s3.${settings.aws_config.region || 'eu-west-2'}.amazonaws.com`,
             disableS3ExpressSessionAuth: true,
             signatureVersion: 'v4'
+          };
+          
+          console.log('🔄 [AWS CONFIG DEBUG] S3 client configuration:', {
+            region: s3Config.region,
+            endpoint: s3Config.endpoint,
+            forcePathStyle: s3Config.forcePathStyle,
+            credentialsType: typeof s3Config.credentials
           });
+          
+          s3 = new S3Client(s3Config);
           BUCKET_NAME = settings.aws_config.bucketName;
           CDN_URL = settings.aws_config.cdnUrl || `https://${settings.aws_config.bucketName}.s3.${settings.aws_config.region}.amazonaws.com`;
+          
+          console.log('✅ [AWS CONFIG DEBUG] S3 client created successfully');
+          console.log('✅ [AWS CONFIG DEBUG] Bucket name:', BUCKET_NAME);
+          console.log('✅ [AWS CONFIG DEBUG] CDN URL:', CDN_URL);
         } catch (awsError) {
-          console.error('AWS S3 configuration failed:', awsError.message);
+          console.error('❌ [AWS CONFIG DEBUG] AWS S3 configuration failed:');
+          console.error('❌ [AWS CONFIG DEBUG] Error name:', awsError.name);
+          console.error('❌ [AWS CONFIG DEBUG] Error message:', awsError.message);
+          console.error('❌ [AWS CONFIG DEBUG] Error stack:', awsError.stack);
+          console.error('❌ [AWS CONFIG DEBUG] Full error:', JSON.stringify(awsError, null, 2));
           return res.status(500).json({ 
             success: false, 
             message: `AWS credentials error: ${awsError.message}. Please check Operations Panel configuration.` 
@@ -600,7 +623,16 @@ export const uploadToS3 = async (req, res) => {
         const finalThumbnailS3Key = thumbnailS3Key || pdfThumbnailS3Key;
         
         // Upload main file to S3 using AWS SDK (same approach as existing working code)
-        console.log('🔄 [DEBUG] Starting S3 upload for:', s3Key);
+        console.log('🔄 [UPLOAD DEBUG] Starting S3 upload process...');
+        console.log('🔄 [UPLOAD DEBUG] S3 Key:', s3Key);
+        console.log('🔄 [UPLOAD DEBUG] Bucket Name:', BUCKET_NAME);
+        console.log('🔄 [UPLOAD DEBUG] File size:', file.size);
+        console.log('🔄 [UPLOAD DEBUG] File mimetype:', file.mimetype);
+        console.log('🔄 [UPLOAD DEBUG] S3 Client config:', {
+          region: s3.config?.region,
+          endpoint: s3.config?.endpoint,
+          credentials: s3.config?.credentials ? 'Present' : 'Missing'
+        });
         
         try {
           // Use the same S3 client that works for other operations
@@ -617,17 +649,35 @@ export const uploadToS3 = async (req, res) => {
             }
           };
 
-          const command = new PutObjectCommand(uploadParams);
-          await s3.send(command);
-          
-          console.log('✅ [DEBUG] S3 upload completed for:', s3Key);
-        } catch (s3Error) {
-          console.error('❌ S3 upload error details:', {
-            message: s3Error.message,
-            code: s3Error.code,
-            name: s3Error.name,
-            stack: s3Error.stack
+          console.log('🔄 [UPLOAD DEBUG] Upload params prepared:', {
+            Bucket: uploadParams.Bucket,
+            Key: uploadParams.Key,
+            ContentType: uploadParams.ContentType,
+            BodyLength: uploadParams.Body?.length,
+            MetadataKeys: Object.keys(uploadParams.Metadata)
           });
+
+          console.log('🔄 [UPLOAD DEBUG] Creating PutObjectCommand...');
+          const command = new PutObjectCommand(uploadParams);
+          
+          console.log('🔄 [UPLOAD DEBUG] Sending command to S3...');
+          const result = await s3.send(command);
+          
+          console.log('✅ [UPLOAD DEBUG] S3 upload completed successfully!');
+          console.log('✅ [UPLOAD DEBUG] S3 response:', {
+            ETag: result.ETag,
+            Location: result.Location,
+            Key: result.Key,
+            Bucket: result.Bucket
+          });
+        } catch (s3Error) {
+          console.error('❌ [UPLOAD DEBUG] S3 upload failed with error:');
+          console.error('❌ [UPLOAD DEBUG] Error name:', s3Error.name);
+          console.error('❌ [UPLOAD DEBUG] Error message:', s3Error.message);
+          console.error('❌ [UPLOAD DEBUG] Error code:', s3Error.code);
+          console.error('❌ [UPLOAD DEBUG] Error metadata:', s3Error.$metadata);
+          console.error('❌ [UPLOAD DEBUG] Full error object:', JSON.stringify(s3Error, null, 2));
+          console.error('❌ [UPLOAD DEBUG] Error stack:', s3Error.stack);
           throw new Error(`S3 upload failed: ${s3Error.message}`);
         }
         // For private buckets, we don't store a public URL - we'll generate signed URLs on demand
