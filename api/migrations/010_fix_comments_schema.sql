@@ -92,7 +92,7 @@ CREATE TABLE post_shares (
 );
 
 -- Add indexes for post_shares
-CREATE INDEX IF NOT EXISTS idx_post_shares_post_id ON post_shares(json_id);
+CREATE INDEX IF NOT EXISTS idx_post_shares_post_id ON post_shares(post_id);
 CREATE INDEX IF NOT EXISTS idx_post_shares_platform ON post_shares(platform);
 CREATE INDEX IF NOT EXISTS idx_post_shares_created_at ON post_shares(created_at);
 
