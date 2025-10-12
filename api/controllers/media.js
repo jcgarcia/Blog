@@ -1150,10 +1150,11 @@ export const updateMediaFile = async (req, res) => {
   }
 };
 
-// Delete media file
+// Soft delete media file (move to trash)
 export const deleteMediaFile = async (req, res) => {
   try {
     const { id } = req.params;
+    const { permanent = false } = req.query; // Allow permanent delete via query param
     const pool = getDbPool();
     
     // Get media file info first
@@ -1169,79 +1170,444 @@ export const deleteMediaFile = async (req, res) => {
 
     const mediaFile = getResult.rows[0];
 
-    // Get storage settings from DB to initialize S3 client
-      const settingsRes = await pool.query("SELECT key, value, type FROM settings WHERE key IN ('media_storage_type', 'oci_config', 'aws_config')");
-      const settings = {};
-      settingsRes.rows.forEach(row => {
-        if (row.type === 'json') {
-          try { 
-            // Handle case where value might already be an object
-            if (typeof row.value === 'string') {
-              settings[row.key] = JSON.parse(row.value);
-            } else {
-              settings[row.key] = row.value; // Already an object
-            }
-          } catch (e) { 
-            console.error(`Error parsing JSON setting ${row.key}:`, e);
-            settings[row.key] = {}; 
+    // Get storage settings
+    const settingsRes = await pool.query("SELECT key, value, type FROM settings WHERE key IN ('media_storage_type', 'oci_config', 'aws_config')");
+    const settings = {};
+    settingsRes.rows.forEach(row => {
+      if (row.type === 'json') {
+        try { 
+          if (typeof row.value === 'string') {
+            settings[row.key] = JSON.parse(row.value);
+          } else {
+            settings[row.key] = row.value;
           }
-        } else {
-          settings[row.key] = row.value;
+        } catch (e) { 
+          console.error(`Error parsing JSON setting ${row.key}:`, e);
+          settings[row.key] = {}; 
         }
-      });    // Delete from S3/OCI if key exists
-    if (mediaFile.s3_key) {
-      try {
-        const s3Client = await credentialManager.getS3Client();
-        
-        // Get bucket name from settings
-        const bucketName = settings.oci_config?.bucket_name || settings.aws_config?.bucket_name;
-        if (!bucketName) {
-          console.warn('No bucket name found in settings, skipping S3 deletion');
-        } else {
-          const deleteCommand = new DeleteObjectCommand({
-            Bucket: bucketName,
-            Key: mediaFile.s3_key
+      } else {
+        settings[row.key] = row.value;
+      }
+    });
+
+    if (permanent) {
+      // PERMANENT DELETE: Actually remove from S3 and database
+      if (mediaFile.s3_key) {
+        try {
+          const s3Client = await credentialManager.getS3Client();
+          const bucketName = settings.oci_config?.bucket_name || settings.aws_config?.bucket_name;
+          
+          if (bucketName) {
+            // Delete main file
+            const deleteCommand = new DeleteObjectCommand({
+              Bucket: bucketName,
+              Key: mediaFile.s3_key
+            });
+            await s3Client.send(deleteCommand);
+            console.log(`🗑️ PERMANENTLY deleted file from S3: ${mediaFile.s3_key}`);
+            
+            // Delete thumbnail
+            if (mediaFile.thumbnail_key) {
+              try {
+                const thumbnailDeleteCommand = new DeleteObjectCommand({
+                  Bucket: bucketName,
+                  Key: mediaFile.thumbnail_key
+                });
+                await s3Client.send(thumbnailDeleteCommand);
+                console.log(`🗑️ PERMANENTLY deleted thumbnail from S3: ${mediaFile.thumbnail_key}`);
+              } catch (thumbnailError) {
+                console.error('❌ Error permanently deleting thumbnail:', thumbnailError);
+              }
+            }
+          }
+        } catch (s3Error) {
+          console.error('❌ Error permanently deleting from S3:', s3Error);
+          return res.status(500).json({
+            success: false,
+            message: 'Failed to permanently delete file from storage'
           });
+        }
+      }
+
+      // Remove from database
+      const deleteQuery = 'DELETE FROM media WHERE id = $1 RETURNING *';
+      const deleteResult = await pool.query(deleteQuery, [id]);
+
+      res.json({
+        success: true,
+        message: 'Media file permanently deleted',
+        deletedFile: deleteResult.rows[0]
+      });
+
+    } else {
+      // SOFT DELETE: Move to trash folder in S3 and mark as deleted in DB
+      if (mediaFile.s3_key && !mediaFile.is_deleted) {
+        try {
+          const s3Client = await credentialManager.getS3Client();
+          const bucketName = settings.oci_config?.bucket_name || settings.aws_config?.bucket_name;
           
-          await s3Client.send(deleteCommand);
-          console.log(`✅ Deleted file from S3: ${mediaFile.s3_key}`);
-          
-          // Also delete thumbnail if it exists
-          if (mediaFile.thumbnail_key) {
-            try {
-              const thumbnailDeleteCommand = new DeleteObjectCommand({
+          if (bucketName) {
+            // Generate trash paths
+            const trashKey = `trash/${Date.now()}-${mediaFile.s3_key.replace(/^.*\//, '')}`;
+            const trashThumbnailKey = mediaFile.thumbnail_key ? 
+              `trash/${Date.now()}-${mediaFile.thumbnail_key.replace(/^.*\//, '')}` : null;
+
+            // Copy main file to trash
+            const copyCommand = new CopyObjectCommand({
+              Bucket: bucketName,
+              CopySource: `${bucketName}/${mediaFile.s3_key}`,
+              Key: trashKey
+            });
+            await s3Client.send(copyCommand);
+            console.log(`🗂️ Moved file to trash: ${mediaFile.s3_key} → ${trashKey}`);
+
+            // Copy thumbnail to trash
+            if (mediaFile.thumbnail_key && trashThumbnailKey) {
+              try {
+                const copyThumbnailCommand = new CopyObjectCommand({
+                  Bucket: bucketName,
+                  CopySource: `${bucketName}/${mediaFile.thumbnail_key}`,
+                  Key: trashThumbnailKey
+                });
+                await s3Client.send(copyThumbnailCommand);
+                console.log(`🗂️ Moved thumbnail to trash: ${mediaFile.thumbnail_key} → ${trashThumbnailKey}`);
+              } catch (thumbnailError) {
+                console.error('❌ Error moving thumbnail to trash:', thumbnailError);
+              }
+            }
+
+            // Delete original files from S3
+            const deleteCommand = new DeleteObjectCommand({
+              Bucket: bucketName,
+              Key: mediaFile.s3_key
+            });
+            await s3Client.send(deleteCommand);
+
+            if (mediaFile.thumbnail_key) {
+              const deleteThumbnailCommand = new DeleteObjectCommand({
                 Bucket: bucketName,
                 Key: mediaFile.thumbnail_key
               });
-              await s3Client.send(thumbnailDeleteCommand);
-              console.log(`✅ Deleted thumbnail from S3: ${mediaFile.thumbnail_key}`);
-            } catch (thumbnailError) {
-              console.error('❌ Error deleting thumbnail from S3:', thumbnailError);
-              // Continue even if thumbnail deletion fails
+              await s3Client.send(deleteThumbnailCommand);
             }
+
+            // Update database record to mark as deleted and store trash location
+            const updateQuery = `
+              UPDATE media 
+              SET is_deleted = true, 
+                  deleted_at = CURRENT_TIMESTAMP,
+                  trash_s3_key = $1,
+                  trash_thumbnail_key = $2,
+                  original_s3_key = s3_key,
+                  original_thumbnail_key = thumbnail_key
+              WHERE id = $3 
+              RETURNING *
+            `;
+            const updateResult = await pool.query(updateQuery, [trashKey, trashThumbnailKey, id]);
+
+            res.json({
+              success: true,
+              message: 'Media file moved to trash',
+              trashedFile: updateResult.rows[0]
+            });
+          } else {
+            throw new Error('No bucket name found in settings');
           }
+        } catch (s3Error) {
+          console.error('❌ Error moving file to trash:', s3Error);
+          return res.status(500).json({
+            success: false,
+            message: 'Failed to move file to trash'
+          });
         }
-      } catch (s3Error) {
-        console.error('❌ Error deleting from S3:', s3Error);
-        // Continue with database deletion even if S3 deletion fails
+      } else {
+        // File already deleted or no S3 key, just mark as deleted in DB
+        const updateQuery = `
+          UPDATE media 
+          SET is_deleted = true, 
+              deleted_at = CURRENT_TIMESTAMP
+          WHERE id = $1 
+          RETURNING *
+        `;
+        const updateResult = await pool.query(updateQuery, [id]);
+
+        res.json({
+          success: true,
+          message: 'Media file marked as deleted',
+          trashedFile: updateResult.rows[0]
+        });
       }
     }
-
-    // Delete from database
-    const deleteQuery = 'DELETE FROM media WHERE id = $1 RETURNING *';
-    const deleteResult = await pool.query(deleteQuery, [id]);
-
-    res.json({
-      success: true,
-      message: 'Media file deleted successfully',
-      deletedFile: deleteResult.rows[0]
-    });
 
   } catch (error) {
     console.error('Delete media file error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to delete media file'
+    });
+  }
+};
+
+// Get trash/deleted files
+export const getTrashFiles = async (req, res) => {
+  try {
+    const pool = getDbPool();
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const offset = (page - 1) * limit;
+
+    // Get deleted files from database
+    let query = `
+      SELECT m.*, u.username, u.first_name, u.last_name
+      FROM media m
+      LEFT JOIN users u ON m.uploaded_by = u.id
+      WHERE m.is_deleted = true
+      ORDER BY m.deleted_at DESC
+      LIMIT $1 OFFSET $2
+    `;
+
+    const countQuery = `SELECT COUNT(*) FROM media WHERE is_deleted = true`;
+    
+    const [result, countResult] = await Promise.all([
+      pool.query(query, [limit, offset]),
+      pool.query(countQuery)
+    ]);
+
+    const total = parseInt(countResult.rows[0].count);
+    const totalPages = Math.ceil(total / limit);
+
+    res.json({
+      success: true,
+      files: result.rows,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasNext: page < totalPages,
+        hasPrev: page > 1
+      }
+    });
+
+  } catch (error) {
+    console.error('Get trash files error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get trash files'
+    });
+  }
+};
+
+// Restore file from trash
+export const restoreMediaFile = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const pool = getDbPool();
+    
+    // Get deleted media file info
+    const getQuery = 'SELECT * FROM media WHERE id = $1 AND is_deleted = true';
+    const getResult = await pool.query(getQuery, [id]);
+    
+    if (getResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Deleted media file not found'
+      });
+    }
+
+    const mediaFile = getResult.rows[0];
+
+    // Get storage settings
+    const settingsRes = await pool.query("SELECT key, value, type FROM settings WHERE key IN ('media_storage_type', 'oci_config', 'aws_config')");
+    const settings = {};
+    settingsRes.rows.forEach(row => {
+      if (row.type === 'json') {
+        try { 
+          if (typeof row.value === 'string') {
+            settings[row.key] = JSON.parse(row.value);
+          } else {
+            settings[row.key] = row.value;
+          }
+        } catch (e) { 
+          console.error(`Error parsing JSON setting ${row.key}:`, e);
+          settings[row.key] = {}; 
+        }
+      } else {
+        settings[row.key] = row.value;
+      }
+    });
+
+    // Restore files from trash in S3
+    if (mediaFile.trash_s3_key) {
+      try {
+        const s3Client = await credentialManager.getS3Client();
+        const bucketName = settings.oci_config?.bucket_name || settings.aws_config?.bucket_name;
+        
+        if (bucketName) {
+          // Restore main file
+          const originalKey = mediaFile.original_s3_key || mediaFile.s3_key;
+          const copyCommand = new CopyObjectCommand({
+            Bucket: bucketName,
+            CopySource: `${bucketName}/${mediaFile.trash_s3_key}`,
+            Key: originalKey
+          });
+          await s3Client.send(copyCommand);
+          console.log(`♻️ Restored file from trash: ${mediaFile.trash_s3_key} → ${originalKey}`);
+
+          // Restore thumbnail if it exists
+          if (mediaFile.trash_thumbnail_key) {
+            try {
+              const originalThumbnailKey = mediaFile.original_thumbnail_key || mediaFile.thumbnail_key;
+              const copyThumbnailCommand = new CopyObjectCommand({
+                Bucket: bucketName,
+                CopySource: `${bucketName}/${mediaFile.trash_thumbnail_key}`,
+                Key: originalThumbnailKey
+              });
+              await s3Client.send(copyThumbnailCommand);
+              console.log(`♻️ Restored thumbnail from trash: ${mediaFile.trash_thumbnail_key} → ${originalThumbnailKey}`);
+            } catch (thumbnailError) {
+              console.error('❌ Error restoring thumbnail from trash:', thumbnailError);
+            }
+          }
+
+          // Delete from trash folder
+          const deleteTrashCommand = new DeleteObjectCommand({
+            Bucket: bucketName,
+            Key: mediaFile.trash_s3_key
+          });
+          await s3Client.send(deleteTrashCommand);
+
+          if (mediaFile.trash_thumbnail_key) {
+            const deleteTrashThumbnailCommand = new DeleteObjectCommand({
+              Bucket: bucketName,
+              Key: mediaFile.trash_thumbnail_key
+            });
+            await s3Client.send(deleteTrashThumbnailCommand);
+          }
+        }
+      } catch (s3Error) {
+        console.error('❌ Error restoring file from trash:', s3Error);
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to restore file from storage'
+        });
+      }
+    }
+
+    // Update database to mark as restored
+    const updateQuery = `
+      UPDATE media 
+      SET is_deleted = false, 
+          deleted_at = NULL,
+          trash_s3_key = NULL,
+          trash_thumbnail_key = NULL,
+          original_s3_key = NULL,
+          original_thumbnail_key = NULL
+      WHERE id = $1 
+      RETURNING *
+    `;
+    const updateResult = await pool.query(updateQuery, [id]);
+
+    res.json({
+      success: true,
+      message: 'Media file restored from trash',
+      restoredFile: updateResult.rows[0]
+    });
+
+  } catch (error) {
+    console.error('Restore media file error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to restore media file'
+    });
+  }
+};
+
+// Empty trash (permanently delete all trashed files)
+export const emptyTrash = async (req, res) => {
+  try {
+    const pool = getDbPool();
+    
+    // Get all deleted files
+    const getQuery = 'SELECT * FROM media WHERE is_deleted = true';
+    const getResult = await pool.query(getQuery);
+    
+    if (getResult.rows.length === 0) {
+      return res.json({
+        success: true,
+        message: 'Trash is already empty',
+        deletedCount: 0
+      });
+    }
+
+    // Get storage settings
+    const settingsRes = await pool.query("SELECT key, value, type FROM settings WHERE key IN ('media_storage_type', 'oci_config', 'aws_config')");
+    const settings = {};
+    settingsRes.rows.forEach(row => {
+      if (row.type === 'json') {
+        try { 
+          if (typeof row.value === 'string') {
+            settings[row.key] = JSON.parse(row.value);
+          } else {
+            settings[row.key] = row.value;
+          }
+        } catch (e) { 
+          console.error(`Error parsing JSON setting ${row.key}:`, e);
+          settings[row.key] = {}; 
+        }
+      } else {
+        settings[row.key] = row.value;
+      }
+    });
+
+    let deletedFromS3Count = 0;
+    const s3Client = await credentialManager.getS3Client();
+    const bucketName = settings.oci_config?.bucket_name || settings.aws_config?.bucket_name;
+
+    // Delete all trash files from S3
+    if (bucketName) {
+      for (const file of getResult.rows) {
+        try {
+          if (file.trash_s3_key) {
+            const deleteCommand = new DeleteObjectCommand({
+              Bucket: bucketName,
+              Key: file.trash_s3_key
+            });
+            await s3Client.send(deleteCommand);
+            deletedFromS3Count++;
+            console.log(`🗑️ Permanently deleted from trash: ${file.trash_s3_key}`);
+          }
+
+          if (file.trash_thumbnail_key) {
+            const deleteThumbnailCommand = new DeleteObjectCommand({
+              Bucket: bucketName,
+              Key: file.trash_thumbnail_key
+            });
+            await s3Client.send(deleteThumbnailCommand);
+            console.log(`🗑️ Permanently deleted thumbnail from trash: ${file.trash_thumbnail_key}`);
+          }
+        } catch (s3Error) {
+          console.error(`❌ Error deleting ${file.trash_s3_key} from S3:`, s3Error);
+        }
+      }
+    }
+
+    // Remove all deleted files from database
+    const deleteQuery = 'DELETE FROM media WHERE is_deleted = true';
+    const deleteResult = await pool.query(deleteQuery);
+
+    res.json({
+      success: true,
+      message: `Trash emptied successfully`,
+      deletedCount: deleteResult.rowCount,
+      deletedFromS3: deletedFromS3Count
+    });
+
+  } catch (error) {
+    console.error('Empty trash error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to empty trash'
     });
   }
 };

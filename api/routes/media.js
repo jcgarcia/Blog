@@ -6,6 +6,9 @@ import {
   getMediaFile,
   updateMediaFile,
   deleteMediaFile,
+  getTrashFiles,
+  restoreMediaFile,
+  emptyTrash,
   moveMediaFile,
   getMediaFolders,
   createMediaFolder,
@@ -41,8 +44,13 @@ router.get("/files", requireAdminAuth, getMediaFiles);             // GET /api/m
 router.get("/files/:id", requireAdminAuth, getMediaFile);          // GET /api/media/files/:id - Get single media file
 router.put("/files/:id", requireAdminAuth, updateMediaFile);       // PUT /api/media/files/:id - Update media metadata
 router.put("/files/:id/move", requireAdminAuth, moveMediaFile);    // PUT /api/media/files/:id/move - Move file to different folder
-router.delete("/files/:id", requireAdminAuth, deleteMediaFile);    // DELETE /api/media/files/:id - Delete media file
+router.delete("/files/:id", requireAdminAuth, deleteMediaFile);    // DELETE /api/media/files/:id - Delete media file (soft delete to trash)
 router.get("/signed-url", requireAdminAuth, getSignedUrlForKey);   // GET /api/media/signed-url?key=... - Get signed URL for S3 key
+
+// Trash management routes
+router.get("/trash", requireAdminAuth, getTrashFiles);             // GET /api/media/trash - Get all trashed files
+router.post("/trash/:id/restore", requireAdminAuth, restoreMediaFile); // POST /api/media/trash/:id/restore - Restore file from trash
+router.delete("/trash/empty", requireAdminAuth, emptyTrash);       // DELETE /api/media/trash/empty - Empty trash (permanent delete)
 
 // Media serving route - serve files by filename with signed URLs (must be after other routes)
 router.get("/serve/:filename", async (req, res) => {
