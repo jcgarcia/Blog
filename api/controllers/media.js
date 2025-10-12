@@ -459,11 +459,22 @@ export const uploadToS3 = async (req, res) => {
             try {
               console.log('🔑 [S3CLIENT DEBUG] Getting credentials for S3Client...');
               const credentials = await credentialManager.getCredentials();
+              
+              // Debug the actual credential structure
+              console.log('🔍 [S3CLIENT DEBUG] Raw credentials object:', credentials);
+              console.log('🔍 [S3CLIENT DEBUG] Credentials keys:', Object.keys(credentials || {}));
+              console.log('🔍 [S3CLIENT DEBUG] Credential types:', {
+                accessKeyId: typeof credentials?.accessKeyId,
+                secretAccessKey: typeof credentials?.secretAccessKey,
+                sessionToken: typeof credentials?.sessionToken
+              });
+              
               console.log('🔑 [S3CLIENT DEBUG] Retrieved credentials:', {
                 accessKeyId: credentials.accessKeyId ? credentials.accessKeyId.substring(0, 10) + '...' : 'missing',
                 secretAccessKey: credentials.secretAccessKey ? 'present' : 'missing',
                 sessionToken: credentials.sessionToken ? 'present' : 'missing'
               });
+              
               return {
                 accessKeyId: credentials.accessKeyId,
                 secretAccessKey: credentials.secretAccessKey,
