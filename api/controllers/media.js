@@ -966,7 +966,11 @@ export const getMediaFiles = async (req, res) => {
       SELECT m.*, u.username, u.first_name, u.last_name
       FROM media m
       LEFT JOIN users u ON m.uploaded_by = u.id
-      WHERE m.file_path LIKE $1 || '%'
+      WHERE (
+        m.file_path LIKE $1 || '%' 
+        OR m.file_path IS NULL 
+        OR (m.file_path NOT LIKE '/%' AND $1 = '/')
+      )
       AND (m.is_thumbnail IS NULL OR m.is_thumbnail = false)
     `;
     let queryParams = [folderPath];
