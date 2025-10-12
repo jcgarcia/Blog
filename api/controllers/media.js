@@ -725,18 +725,19 @@ export const uploadToS3 = async (req, res) => {
         let result;
         
         try {
-          // Insert into database with correct columns (matching working version)
+          // Insert into database with correct columns (including required file_path)
           const dbQuery = `
             INSERT INTO media (
-              filename, original_name, file_type, file_size, s3_key, s3_bucket, 
+              filename, original_name, file_path, file_type, file_size, s3_key, s3_bucket, 
               public_url, uploaded_by, folder_path, tags, alt_text, mime_type, width, height, 
               thumbnail_path, thumbnail_url
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
             RETURNING *
           `;
           const values = [
             path.basename(s3Key),                                      // filename
             file.originalname,                                         // original_name
+            s3Key,                                                     // file_path (S3 key as file path)
             path.extname(file.originalname).toLowerCase().replace('.', ''), // file_type
             file.size,                                                 // file_size
             s3Key,                                                     // s3_key
@@ -2299,7 +2300,14 @@ export const getSignedUrlForKey = async (req, res) => {
       });
     }
     
-    const awsConfig = JSON.parse(settingsRes.rows[0].value);
+    // Parse AWS config (handle both string and object formats)
+    let awsConfig;
+    const configValue = settingsRes.rows[0].value;
+    if (typeof configValue === 'string') {
+      awsConfig = JSON.parse(configValue);
+    } else {
+      awsConfig = configValue; // Already an object
+    }
     const signedUrl = await generateSignedUrl(key, awsConfig.bucketName);
     
     res.json({
