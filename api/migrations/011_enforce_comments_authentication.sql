@@ -21,6 +21,4 @@ UPDATE posts SET comment_count = (
 -- Create index for better performance on authenticated comment queries
 CREATE INDEX IF NOT EXISTS idx_comments_user_post ON comments(user_id, post_id);
 
--- Add audit info
-INSERT INTO migration_log (migration_name, executed_at, description) 
-VALUES ('011_enforce_comments_authentication', CURRENT_TIMESTAMP, 'Enforced strict authentication for comments - no anonymous comments allowed');
+-- Migration completed successfully (no migration_log table available)
