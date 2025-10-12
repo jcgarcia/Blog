@@ -23,7 +23,15 @@ CREATE TABLE IF NOT EXISTS comments (
 CREATE INDEX IF NOT EXISTS idx_comments_post_id ON comments(post_id);
 CREATE INDEX IF NOT EXISTS idx_comments_parent_id ON comments(parent_id);
 CREATE INDEX IF NOT EXISTS idx_comments_user_id ON comments(user_id);
-CREATE INDEX IF NOT EXISTS idx_comments_status ON comments(status);
+
+-- Create status index only if status column exists
+DO $$ 
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.columns 
+               WHERE table_name='comments' AND column_name='status') THEN
+        CREATE INDEX IF NOT EXISTS idx_comments_status ON comments(status);
+    END IF;
+END $$;
 
 -- Add comment count column to posts table if it doesn't exist
 DO $$ 
