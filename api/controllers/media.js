@@ -454,13 +454,31 @@ export const uploadToS3 = async (req, res) => {
             console.log('✅ [AWS CONFIG DEBUG] Credential provider initialized');
           }
           
+          // Create a proper credential provider for S3Client
+          const credentialProvider = async () => {
+            try {
+              console.log('🔑 [S3CLIENT DEBUG] Getting credentials for S3Client...');
+              const credentials = await credentialManager.getCredentials();
+              console.log('🔑 [S3CLIENT DEBUG] Retrieved credentials:', {
+                accessKeyId: credentials.accessKeyId ? credentials.accessKeyId.substring(0, 10) + '...' : 'missing',
+                secretAccessKey: credentials.secretAccessKey ? 'present' : 'missing',
+                sessionToken: credentials.sessionToken ? 'present' : 'missing'
+              });
+              return {
+                accessKeyId: credentials.accessKeyId,
+                secretAccessKey: credentials.secretAccessKey,
+                sessionToken: credentials.sessionToken
+              };
+            } catch (error) {
+              console.error('❌ [S3CLIENT DEBUG] Failed to get credentials:', error.message);
+              throw error;
+            }
+          };
+
           const s3Config = {
             region: settings.aws_config.region || 'eu-west-2',
-            credentials: credentialManager.credentialProvider,
-            forcePathStyle: true,
-            endpoint: `https://s3.${settings.aws_config.region || 'eu-west-2'}.amazonaws.com`,
-            disableS3ExpressSessionAuth: true,
-            signatureVersion: 'v4'
+            credentials: credentialProvider,
+            forcePathStyle: true
           };
           
           console.log('🔄 [AWS CONFIG DEBUG] S3 client configuration:', {
