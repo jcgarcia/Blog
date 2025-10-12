@@ -15,8 +15,7 @@ ALTER TABLE comments ADD CONSTRAINT comments_valid_user_id CHECK (user_id > 0);
 UPDATE posts SET comment_count = (
   SELECT COUNT(*) FROM comments 
   WHERE comments.post_id = posts.id 
-  AND comments.is_deleted = false 
-  AND comments.is_approved = true
+  AND comments.status = 'approved'
 );
 
 -- Create index for better performance on authenticated comment queries
