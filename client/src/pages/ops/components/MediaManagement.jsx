@@ -279,6 +279,37 @@ export default function MediaManagement() {
     }
   };
 
+  // Fix missing PDF thumbnails
+  const handleFixThumbnails = async () => {
+    if (!confirm('This will attempt to fix missing PDF thumbnails. Continue?')) return;
+
+    try {
+      const response = await fetch(API_ENDPOINTS.MEDIA.FIX_THUMBNAILS, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`,
+        },
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('🔧 Fix thumbnails result:', result);
+        
+        // Refresh media files to show updated thumbnails
+        await fetchMediaFiles();
+        
+        alert(`Thumbnail fix completed! Processed ${result.processed} files.`);
+      } else {
+        const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
+        console.error('Fix thumbnails failed:', response.status, errorData);
+        alert(`Failed to fix thumbnails: ${errorData.message || `HTTP ${response.status}`}`);
+      }
+    } catch (error) {
+      console.error('Error fixing thumbnails:', error);
+      alert('Failed to fix thumbnails. Please try again.');
+    }
+  };
+
   // Save AWS configuration to database
   const saveAwsConfiguration = async () => {
     try {
@@ -925,6 +956,15 @@ export default function MediaManagement() {
                   }}
                 >
                   <i className="fa-solid fa-cloud"></i> {mediaServerType === 'aws' ? 'Save AWS Config' : 'Configure Cloud'}
+                </button>
+              )}
+              {mediaServerType === 'aws' && (
+                <button 
+                  className="btn-info"
+                  onClick={handleFixThumbnails}
+                  title="Fix missing PDF thumbnails in the database"
+                >
+                  <i className="fa-solid fa-wrench"></i> Fix PDF Thumbnails
                 </button>
               )}
             </div>

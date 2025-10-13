@@ -88,6 +88,8 @@ export const API_ENDPOINTS = {
     TRASH: `${API_URL}/api/media/trash`,
     RESTORE: (id) => `${API_URL}/api/media/trash/${id}/restore`,
     EMPTY_TRASH: `${API_URL}/api/media/trash/empty`,
+    // Utility
+    FIX_THUMBNAILS: `${API_URL}/api/media/fix-thumbnails`,
     // AWS/Connection
     TEST_AWS_CONNECTION: `${API_URL}/api/media/test-aws-connection`,
     TEST_OIDC_CONNECTION: `${API_URL}/api/media/test-oidc-connection`,
