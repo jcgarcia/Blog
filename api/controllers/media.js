@@ -1226,8 +1226,18 @@ export const deleteMediaFile = async (req, res) => {
       // PERMANENT DELETE: Actually remove from S3 and database
       if (mediaFile.s3_key) {
         try {
-          const s3Client = await credentialManager.getS3Client();
+          // Get credentials directly for delete operations (more reliable than getS3Client)
+          const credentials = await credentialManager.getCredentials();
           const bucketName = settings.oci_config?.bucket_name || settings.aws_config?.bucketName;
+          
+          // Create a fresh S3Client specifically for this delete operation
+          const s3Client = new S3Client({
+            region: settings.aws_config?.region || 'eu-west-2',
+            credentials: credentials,
+            endpoint: `https://s3.${settings.aws_config?.region || 'eu-west-2'}.amazonaws.com`,
+            forcePathStyle: false,
+            signatureVersion: 'v4'
+          });
           
           if (bucketName) {
             // Delete main file
@@ -1275,8 +1285,18 @@ export const deleteMediaFile = async (req, res) => {
       // SOFT DELETE: Move to trash folder in S3 and mark as deleted in DB
       if (mediaFile.s3_key && !mediaFile.is_deleted) {
         try {
-          const s3Client = await credentialManager.getS3Client();
+          // Get credentials directly for delete operations (more reliable than getS3Client)
+          const credentials = await credentialManager.getCredentials();
           const bucketName = settings.oci_config?.bucket_name || settings.aws_config?.bucketName;
+          
+          // Create a fresh S3Client specifically for this delete operation
+          const s3Client = new S3Client({
+            region: settings.aws_config?.region || 'eu-west-2',
+            credentials: credentials,
+            endpoint: `https://s3.${settings.aws_config?.region || 'eu-west-2'}.amazonaws.com`,
+            forcePathStyle: false,
+            signatureVersion: 'v4'
+          });
           
           if (bucketName) {
             // Generate trash paths
