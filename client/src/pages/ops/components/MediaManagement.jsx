@@ -910,19 +910,6 @@ export default function MediaManagement() {
                 <i className="fa-solid fa-upload"></i> 
                 {uploading ? 'Uploading...' : 'Upload Media'}
               </button>
-              {hasDeletedFiles && (
-                <button 
-                  className="btn-trash"
-                  onClick={() => {
-                    setCurrentFolder('/trash');
-                    fetchTrashFiles();
-                  }}
-                  title={`View trash (${trashFiles.length} deleted files)`}
-                >
-                  <i className="fa-solid fa-trash"></i> 
-                  Trash ({trashFiles.length})
-                </button>
-              )}
               {(mediaServerType === 'oci' || mediaServerType === 'aws') && (
                 <button 
                   className="btn-warning"
@@ -1024,6 +1011,11 @@ export default function MediaManagement() {
                   .filter(folder => {
                     // Hide Root folder - it's the default view, users don't need to click on it
                     if (folder.path === '/' || folder.name === 'Root') {
+                      return false;
+                    }
+                    
+                    // Hide Trash folder - access via trash button instead
+                    if (folder.path === '/trash' || folder.name === 'Trash') {
                       return false;
                     }
                     
