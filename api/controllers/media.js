@@ -934,7 +934,13 @@ export const getMediaFiles = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 20;
     const offset = (page - 1) * limit;
-    const folderPath = req.query.folder || '/';
+    let folderPath = req.query.folder || '/';
+    
+    // Normalize folder path - ensure it starts with /
+    if (folderPath !== '/' && !folderPath.startsWith('/')) {
+      folderPath = '/' + folderPath;
+    }
+    
     const fileType = req.query.type;
     const search = req.query.search;
     const enableSync = req.query.sync === 'true'; // Optional sync parameter
