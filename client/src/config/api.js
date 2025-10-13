@@ -84,6 +84,11 @@ export const API_ENDPOINTS = {
     FOLDERS: `${API_URL}/api/media/folders`,
     UPLOAD: `${API_URL}/api/media/upload`,
     DELETE: (id) => `${API_URL}/api/media/files/${id}`,
+    // Trash management
+    TRASH: `${API_URL}/api/media/trash`,
+    RESTORE: (id) => `${API_URL}/api/media/trash/${id}/restore`,
+    EMPTY_TRASH: `${API_URL}/api/media/trash/empty`,
+    // AWS/Connection
     TEST_AWS_CONNECTION: `${API_URL}/api/media/test-aws-connection`,
     TEST_OIDC_CONNECTION: `${API_URL}/api/media/test-oidc-connection`,
     SYNC_S3: `${API_URL}/api/media/sync-s3`,

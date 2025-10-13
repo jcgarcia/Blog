@@ -1447,3 +1447,65 @@
   border-color: #007bff;
   box-shadow: 0 2px 8px rgba(0,0,0,0.15);
 }
+
+/* Trash Folder Styles */
+.folder-item.trash-folder {
+  background: linear-gradient(135deg, #ffeaa7, #fdcb6e);
+  border: 2px solid #e17055;
+  color: #d63031;
+}
+
+.folder-item.trash-folder:hover {
+  background: linear-gradient(135deg, #fdcb6e, #e17055);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(225, 112, 85, 0.3);
+}
+
+.folder-item.trash-folder i {
+  color: #d63031;
+}
+
+/* Trash Controls */
+.trash-controls {
+  margin-bottom: 2rem;
+  padding: 1rem;
+  background: linear-gradient(135deg, #fff5f5, #fed7d7);
+  border: 1px solid #feb2b2;
+  border-radius: 8px;
+}
+
+.trash-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.trash-header h3 {
+  margin: 0;
+  color: #d63031;
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Action Button Styles for Trash */
+.btn-icon.restore {
+  color: #27ae60;
+  background: rgba(39, 174, 96, 0.1);
+}
+
+.btn-icon.restore:hover {
+  color: white;
+  background: #27ae60;
+}
+
+.btn-icon.permanent {
+  color: #e74c3c;
+  background: rgba(231, 76, 60, 0.1);
+}
+
+.btn-icon.permanent:hover {
+  color: white;
+  background: #e74c3c;
+}

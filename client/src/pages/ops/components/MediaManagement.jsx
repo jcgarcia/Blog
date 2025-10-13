@@ -23,6 +23,8 @@ export default function MediaManagement() {
   });
   const [activeSection, setActiveSection] = useState('library'); // 'library' or 'config'
   const [credentialStatus, setCredentialStatus] = useState(null);
+  const [trashFiles, setTrashFiles] = useState([]);
+  const [hasDeletedFiles, setHasDeletedFiles] = useState(false);
   // Media server configuration with OCI/AWS support
   const [mediaServerType, setMediaServerType] = useState('internal'); // 'internal', 'oci', 'aws'
   const [externalMediaServerUrl, setExternalMediaServerUrl] = useState('');
@@ -96,6 +98,13 @@ export default function MediaManagement() {
       setLoading(false);
     }
   }, [currentFolder, activeSection]);
+
+  // Load trash files to check if trash folder should be visible
+  useEffect(() => {
+    if (mediaServerType === 'internal' || mediaServerType === 'aws') {
+      fetchTrashFiles();
+    }
+  }, [mediaServerType]);
 
   const loadMediaStorageConfig = async () => {
     try {
@@ -182,6 +191,91 @@ export default function MediaManagement() {
       }
     } catch (error) {
       console.error('Error fetching folders:', error);
+    }
+  };
+
+  // Fetch trash files
+  const fetchTrashFiles = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(API_ENDPOINTS.MEDIA.TRASH, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setTrashFiles(data.files || []);
+        setHasDeletedFiles((data.files || []).length > 0);
+      }
+    } catch (error) {
+      console.error('Error fetching trash files:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Restore file from trash
+  const handleRestoreFile = async (fileId) => {
+    if (!confirm('Are you sure you want to restore this file?')) return;
+
+    try {
+      const response = await fetch(API_ENDPOINTS.MEDIA.RESTORE(fileId), {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`,
+        },
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('🔄 Restore successful:', result);
+        
+        // Refresh trash files and regular media files
+        await fetchTrashFiles();
+        await fetchMediaFiles();
+        
+        alert('File restored successfully!');
+      } else {
+        const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
+        console.error('Restore failed:', response.status, errorData);
+        alert(`Failed to restore file: ${errorData.message || `HTTP ${response.status}`}`);
+      }
+    } catch (error) {
+      console.error('Error restoring file:', error);
+      alert('Failed to restore file. Please try again.');
+    }
+  };
+
+  // Empty trash (permanent delete all)
+  const handleEmptyTrash = async () => {
+    if (!confirm('⚠️ This will permanently delete ALL files in trash. This action CANNOT be undone. Are you sure?')) return;
+
+    try {
+      const response = await fetch(API_ENDPOINTS.MEDIA.EMPTY_TRASH, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`,
+        },
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('🗑️ Empty trash successful:', result);
+        
+        // Refresh trash files
+        await fetchTrashFiles();
+        
+        alert('Trash emptied successfully!');
+      } else {
+        const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
+        console.error('Empty trash failed:', response.status, errorData);
+        alert(`Failed to empty trash: ${errorData.message || `HTTP ${response.status}`}`);
+      }
+    } catch (error) {
+      console.error('Error emptying trash:', error);
+      alert('Failed to empty trash. Please try again.');
     }
   };
 
@@ -631,14 +725,19 @@ export default function MediaManagement() {
         const result = await response.json();
         console.log('🗑️ Delete successful:', result);
         
-        // Force state update by clearing current files first
-        setMediaFiles([]);
-        
-        // Then refresh the media files
-        await fetchMediaFiles();
+        // Refresh appropriate file lists based on current folder
+        if (currentFolder === '/trash') {
+          // In trash folder: refresh trash files (permanent delete)
+          await fetchTrashFiles();
+        } else {
+          // In regular folder: refresh media files and trash count (soft delete to trash)
+          setMediaFiles([]);
+          await fetchMediaFiles();
+          await fetchTrashFiles(); // Update trash count
+        }
         
         // Show success message
-        alert('File deleted successfully!');
+        alert(currentFolder === '/trash' ? 'File permanently deleted!' : 'File moved to trash!');
       } else {
         const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
         console.error('Delete failed:', response.status, errorData);
@@ -910,6 +1009,11 @@ export default function MediaManagement() {
                 )}
                 {folders.length > 0 && folders
                   .filter(folder => {
+                    // Hide Root folder - it's the default view, users don't need to click on it
+                    if (folder.path === '/' || folder.name === 'Root') {
+                      return false;
+                    }
+                    
                     // Show folders that are direct children of current folder
                     if (currentFolder === '/') {
                       return !folder.path.includes('/', 1); // Root level folders
@@ -929,6 +1033,22 @@ export default function MediaManagement() {
                       <small>({folder.file_count} files)</small>
                     </div>
                   ))}
+                
+                {/* Trash Folder - show when in root and has deleted files */}
+                {currentFolder === '/' && hasDeletedFiles && (
+                  <div 
+                    className="folder-item trash-folder"
+                    onClick={() => {
+                      setCurrentFolder('/trash');
+                      fetchTrashFiles();
+                    }}
+                  >
+                    <i className="fa-solid fa-trash"></i>
+                    <span>Trash</span>
+                    <small>({trashFiles.length} deleted files)</small>
+                  </div>
+                )}
+                
                 {currentFolder !== '/' && (
                   <div className="folder-current-info">
                     <i className="fa-solid fa-info-circle"></i>
@@ -944,19 +1064,40 @@ export default function MediaManagement() {
             <div className="loading">Loading media files...</div>
           ) : (
             <div className="media-grid">
-              {mediaFiles.length === 0 ? (
+              {/* Show trash controls when in trash folder */}
+              {currentFolder === '/trash' && (
+                <div className="trash-controls">
+                  <div className="trash-header">
+                    <h3><i className="fa-solid fa-trash"></i> Trash ({trashFiles.length} files)</h3>
+                    {trashFiles.length > 0 && (
+                      <button 
+                        className="btn-danger"
+                        onClick={handleEmptyTrash}
+                        title="Permanently delete all files in trash"
+                      >
+                        <i className="fa-solid fa-trash-can"></i> Empty Trash
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+              
+              {/* Show appropriate file list based on current folder */}
+              {(currentFolder === '/trash' ? trashFiles : mediaFiles).length === 0 ? (
                 <div className="media-empty">
-                  <i className="fa-solid fa-image"></i>
-                  <p>No media files found</p>
-                  <button 
-                    className="btn-primary"
-                    onClick={() => setShowUploadModal(true)}
-                  >
-                    Upload your first file
-                  </button>
+                  <i className={currentFolder === '/trash' ? "fa-solid fa-trash" : "fa-solid fa-image"}></i>
+                  <p>{currentFolder === '/trash' ? 'No files in trash' : 'No media files found'}</p>
+                  {currentFolder !== '/trash' && (
+                    <button 
+                      className="btn-primary"
+                      onClick={() => setShowUploadModal(true)}
+                    >
+                      Upload your first file
+                    </button>
+                  )}
                 </div>
               ) : (
-                mediaFiles.map(file => (
+                (currentFolder === '/trash' ? trashFiles : mediaFiles).map(file => (
                   <div key={file.id} className="media-item">
                     <div className="media-thumbnail">
                       {(isImage(file.mime_type) || (file.mime_type === 'application/pdf' && file.thumbnail_url)) ? (
@@ -1001,34 +1142,57 @@ export default function MediaManagement() {
                     </div>
 
                     <div className="media-item-actions">
-                      <button 
-                        className="btn-icon"
-                        onClick={() => window.open(file.public_url || file.signed_url, '_blank')}
-                        title="View file"
-                      >
-                        <i className="fa-solid fa-eye"></i>
-                      </button>
-                      <button 
-                        className="btn-icon"
-                        onClick={() => navigator.clipboard.writeText(file.public_url || file.signed_url)}
-                        title="Copy URL"
-                      >
-                        <i className="fa-solid fa-copy"></i>
-                      </button>
-                      <button 
-                        className="btn-icon"
-                        onClick={() => setShowMoveModal(file)}
-                        title="Move to different folder"
-                      >
-                        <i className="fa-solid fa-arrows-turn-right"></i>
-                      </button>
-                      <button 
-                        className="btn-icon delete"
-                        onClick={() => handleDeleteFile(file.id)}
-                        title="Delete file"
-                      >
-                        <i className="fa-solid fa-trash"></i>
-                      </button>
+                      {currentFolder === '/trash' ? (
+                        // Trash file actions: restore or permanently delete
+                        <>
+                          <button 
+                            className="btn-icon restore"
+                            onClick={() => handleRestoreFile(file.id)}
+                            title="Restore file from trash"
+                          >
+                            <i className="fa-solid fa-arrow-rotate-left"></i>
+                          </button>
+                          <button 
+                            className="btn-icon delete permanent"
+                            onClick={() => handleDeleteFile(file.id)}
+                            title="Permanently delete file"
+                          >
+                            <i className="fa-solid fa-trash-can"></i>
+                          </button>
+                        </>
+                      ) : (
+                        // Regular file actions
+                        <>
+                          <button 
+                            className="btn-icon"
+                            onClick={() => window.open(file.public_url || file.signed_url, '_blank')}
+                            title="View file"
+                          >
+                            <i className="fa-solid fa-eye"></i>
+                          </button>
+                          <button 
+                            className="btn-icon"
+                            onClick={() => navigator.clipboard.writeText(file.public_url || file.signed_url)}
+                            title="Copy URL"
+                          >
+                            <i className="fa-solid fa-copy"></i>
+                          </button>
+                          <button 
+                            className="btn-icon"
+                            onClick={() => setShowMoveModal(file)}
+                            title="Move to different folder"
+                          >
+                            <i className="fa-solid fa-arrows-turn-right"></i>
+                          </button>
+                          <button 
+                            className="btn-icon delete"
+                            onClick={() => handleDeleteFile(file.id)}
+                            title="Delete file"
+                          >
+                            <i className="fa-solid fa-trash"></i>
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
                 ))
