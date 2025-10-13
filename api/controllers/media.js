@@ -1027,16 +1027,17 @@ export const getMediaFiles = async (req, res) => {
             
             // Generate thumbnail URL if thumbnail exists
             let thumbnailUrl = null;
-            console.log(`🔍 Debug thumbnail for ${media.original_name}: thumbnail_key=${media.thumbnail_key}, s3_bucket=${media.s3_bucket}`);
-            if (media.thumbnail_key) {
+            const thumbnailKey = media.thumbnail_path || media.thumbnail_key; // Support both column names
+            console.log(`🔍 Debug thumbnail for ${media.original_name}: thumbnail_path=${media.thumbnail_path}, thumbnail_key=${media.thumbnail_key}, s3_bucket=${media.s3_bucket}`);
+            if (thumbnailKey) {
               try {
-                thumbnailUrl = await generateSignedUrl(media.thumbnail_key, media.s3_bucket);
+                thumbnailUrl = await generateSignedUrl(thumbnailKey, media.s3_bucket);
                 console.log(`✅ Generated thumbnail URL for ${media.original_name}: ${thumbnailUrl ? 'SUCCESS' : 'NULL'}`);
               } catch (thumbError) {
-                console.warn(`❌ Could not generate thumbnail URL for ${media.thumbnail_key}:`, thumbError.message);
+                console.warn(`❌ Could not generate thumbnail URL for ${thumbnailKey}:`, thumbError.message);
               }
             } else {
-              console.log(`⚠️ No thumbnail_key for ${media.original_name}`);
+              console.log(`⚠️ No thumbnail_path or thumbnail_key for ${media.original_name}`);
             }
             
             return { 
@@ -1490,8 +1491,9 @@ export const getTrashFiles = async (req, res) => {
           }
           
           // Generate thumbnail URL if trash thumbnail exists
-          if (file.trash_thumbnail_key) {
-            const thumbnailUrl = await generateSignedUrl(file.trash_thumbnail_key, file.s3_bucket);
+          const trashThumbnailKey = file.trash_thumbnail_key || file.thumbnail_path || file.thumbnail_key;
+          if (trashThumbnailKey) {
+            const thumbnailUrl = await generateSignedUrl(trashThumbnailKey, file.s3_bucket);
             file.thumbnail_url = thumbnailUrl;
           }
           
