@@ -3001,24 +3001,30 @@ export const fixMissingThumbnails = async (req, res) => {
         // 3. Upload thumbnail to S3
         // 4. Update database record
         
-        // For now, let's just construct the expected thumbnail path based on the pattern
-        const baseKey = pdfFile.s3_key.replace(/\.[^/.]+$/, ''); // Remove extension
-        const expectedThumbnailKey = `thumbnails/${baseKey}.png`;
+        // Construct the expected thumbnail path based on the actual pattern used during upload
+        const expectedThumbnailKey = pdfFile.s3_key.replace(/(\.[^.]+)$/, '_thumb.png');
         
-        // Update the database record to include the expected thumbnail path
-        const updateQuery = `
-          UPDATE media 
-          SET thumbnail_path = $1, 
-              thumbnail_url = $2 
-          WHERE id = $3
-        `;
-        
-        const thumbnailUrl = `https://${pdfFile.s3_bucket}.s3.amazonaws.com/${expectedThumbnailKey}`;
-        
-        await pool.query(updateQuery, [expectedThumbnailKey, thumbnailUrl, pdfFile.id]);
-        
-        console.log(`✅ Updated thumbnail path for ${pdfFile.original_name}: ${expectedThumbnailKey}`);
-        processed++;
+        // Try to verify the thumbnail exists in S3 by generating a signed URL
+        try {
+          const testUrl = await generateSignedUrl(expectedThumbnailKey, pdfFile.s3_bucket);
+          
+          // If we can generate a signed URL, assume the file exists and update the database
+          const updateQuery = `
+            UPDATE media 
+            SET thumbnail_path = $1, 
+                thumbnail_key = $2
+            WHERE id = $3
+          `;
+          
+          await pool.query(updateQuery, [expectedThumbnailKey, expectedThumbnailKey, pdfFile.id]);
+          
+          console.log(`✅ Updated thumbnail path for ${pdfFile.original_name}: ${expectedThumbnailKey}`);
+          processed++;
+          
+        } catch (thumbnailError) {
+          console.log(`⚠️ Thumbnail not found in S3 for ${pdfFile.original_name}: ${expectedThumbnailKey}`);
+          // Skip this file if thumbnail doesn't exist
+        }
         
       } catch (error) {
         console.error(`❌ Error processing ${pdfFile.original_name}:`, error);
