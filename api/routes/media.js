@@ -19,7 +19,6 @@ import {
   clearMediaDatabase,
   getAWSCredentialStatus,
   refreshAWSCredentials,
-  fixMissingThumbnails,
   updateAWSCredentials,
   initializeSSO,
   testSSOCredentials,
@@ -52,9 +51,6 @@ router.get("/signed-url", requireAdminAuth, getSignedUrlForKey);   // GET /api/m
 router.get("/trash", requireAdminAuth, getTrashFiles);             // GET /api/media/trash - Get all trashed files
 router.post("/trash/:id/restore", requireAdminAuth, restoreMediaFile); // POST /api/media/trash/:id/restore - Restore file from trash
 router.delete("/trash/empty", requireAdminAuth, emptyTrash);       // DELETE /api/media/trash/empty - Empty trash (permanent delete)
-
-// Utility routes
-router.post("/fix-thumbnails", requireAdminAuth, fixMissingThumbnails); // POST /api/media/fix-thumbnails - Fix missing PDF thumbnails
 
 // Media serving route - serve files by filename with signed URLs (must be after other routes)
 router.get("/serve/:filename", async (req, res) => {
