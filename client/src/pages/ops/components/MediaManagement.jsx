@@ -167,6 +167,18 @@ export default function MediaManagement() {
 
       if (response.ok) {
         const data = await response.json();
+        
+        // Debug: Log PDF files to see thumbnail_url values
+        const pdfFiles = (data.media || []).filter(file => file.mime_type === 'application/pdf');
+        if (pdfFiles.length > 0) {
+          console.log('🔍 PDF files received:', pdfFiles.map(file => ({
+            name: file.original_name,
+            thumbnail_url: file.thumbnail_url,
+            thumbnail_path: file.thumbnail_path,
+            hasThumbUrl: !!file.thumbnail_url
+          })));
+        }
+        
         setMediaFiles(data.media || []);
         setPagination(data.pagination || pagination);
       }
@@ -1102,10 +1114,20 @@ export default function MediaManagement() {
                   )}
                 </div>
               ) : (
-                (currentFolder === '/trash' ? trashFiles : mediaFiles).map(file => (
-                  <div key={file.id} className="media-item">
-                    <div className="media-thumbnail">
-                      {(isImage(file.mime_type) || (file.mime_type === 'application/pdf' && file.thumbnail_url)) ? (
+                (currentFolder === '/trash' ? trashFiles : mediaFiles).map(file => {
+                  // Debug PDF thumbnail condition
+                  if (file.mime_type === 'application/pdf') {
+                    console.log(`🖼️ PDF ${file.original_name}:`, {
+                      hasThumbnailUrl: !!file.thumbnail_url,
+                      thumbnailUrl: file.thumbnail_url,
+                      willShowImage: !!(file.mime_type === 'application/pdf' && file.thumbnail_url)
+                    });
+                  }
+                  
+                  return (
+                    <div key={file.id} className="media-item">
+                      <div className="media-thumbnail">
+                        {(isImage(file.mime_type) || (file.mime_type === 'application/pdf' && file.thumbnail_url)) ? (
                         <img 
                           src={file.thumbnail_url || file.public_url || file.signed_url} 
                           alt={file.alt_text || file.original_name}
@@ -1199,8 +1221,9 @@ export default function MediaManagement() {
                         </>
                       )}
                     </div>
-                  </div>
-                ))
+                    </div>
+                  );
+                })
               )}
             </div>
           )}
