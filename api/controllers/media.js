@@ -1227,7 +1227,7 @@ export const deleteMediaFile = async (req, res) => {
       if (mediaFile.s3_key) {
         try {
           const s3Client = await credentialManager.getS3Client();
-          const bucketName = settings.oci_config?.bucket_name || settings.aws_config?.bucket_name;
+          const bucketName = settings.oci_config?.bucket_name || settings.aws_config?.bucketName;
           
           if (bucketName) {
             // Delete main file
@@ -1276,7 +1276,7 @@ export const deleteMediaFile = async (req, res) => {
       if (mediaFile.s3_key && !mediaFile.is_deleted) {
         try {
           const s3Client = await credentialManager.getS3Client();
-          const bucketName = settings.oci_config?.bucket_name || settings.aws_config?.bucket_name;
+          const bucketName = settings.oci_config?.bucket_name || settings.aws_config?.bucketName;
           
           if (bucketName) {
             // Generate trash paths
@@ -1343,6 +1343,7 @@ export const deleteMediaFile = async (req, res) => {
               trashedFile: updateResult.rows[0]
             });
           } else {
+            console.error('❌ No bucket name found in settings. Available settings:', JSON.stringify(settings, null, 2));
             throw new Error('No bucket name found in settings');
           }
         } catch (s3Error) {
