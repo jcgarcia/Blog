@@ -1286,8 +1286,57 @@ export const deleteMediaFile = async (req, res) => {
       if (mediaFile.s3_key && !mediaFile.is_deleted) {
         try {
           // Get credentials directly for delete operations (more reliable than getS3Client)
-          const credentials = await credentialManager.getCredentials();
+          const rawCredentials = await credentialManager.getCredentials();
           const bucketName = settings.oci_config?.bucket_name || settings.aws_config?.bucketName;
+          
+          // Extract credentials properly (same logic as generateSignedUrl function)
+          let accessKeyId, secretAccessKey, sessionToken;
+          
+          if (rawCredentials.Credentials) {
+            // OIDC Web Identity Token response structure (from AWS STS AssumeRoleWithWebIdentity)
+            accessKeyId = rawCredentials.Credentials.AccessKeyId;
+            secretAccessKey = rawCredentials.Credentials.SecretAccessKey;
+            sessionToken = rawCredentials.Credentials.SessionToken;
+            console.log('🔑 Using OIDC Web Identity credential structure for delete operation');
+          } else if (rawCredentials.credentials) {
+            // Nested credentials object (lowercase)
+            const creds = rawCredentials.credentials;
+            accessKeyId = creds.AccessKeyId || creds.accessKeyId;
+            secretAccessKey = creds.SecretAccessKey || creds.secretAccessKey;
+            sessionToken = creds.SessionToken || creds.sessionToken;
+            console.log('🔑 Using nested credentials object for delete operation');
+          } else if (rawCredentials.accessKeyId || rawCredentials.AccessKeyId) {
+            // Direct credential structure
+            accessKeyId = rawCredentials.accessKeyId || rawCredentials.AccessKeyId;
+            secretAccessKey = rawCredentials.secretAccessKey || rawCredentials.SecretAccessKey;
+            sessionToken = rawCredentials.sessionToken || rawCredentials.SessionToken;
+            console.log('🔑 Using direct credential structure for delete operation');
+          } else {
+            console.error('❌ Unable to find AWS credentials in object for delete. Available properties:', Object.keys(rawCredentials).join(', '));
+            throw new Error(`Unable to find AWS credentials in delete object. Available properties: ${Object.keys(rawCredentials).join(', ')}`);
+          }
+          
+          // Validate extracted credentials
+          if (!accessKeyId || !secretAccessKey || !sessionToken) {
+            console.error('❌ Delete credential validation failed:', {
+              hasAccessKeyId: !!accessKeyId,
+              hasSecretAccessKey: !!secretAccessKey,
+              hasSessionToken: !!sessionToken
+            });
+            throw new Error(`Invalid delete credentials: missing ${!accessKeyId ? 'accessKeyId' : !secretAccessKey ? 'secretAccessKey' : 'sessionToken'}`);
+          }
+          
+          console.log('✅ Delete credentials extracted successfully:', {
+            accessKeyId: accessKeyId.substring(0, 10) + '...',
+            hasSessionToken: !!sessionToken
+          });
+          
+          // Create properly formatted credentials object for S3Client
+          const credentials = {
+            accessKeyId: accessKeyId,
+            secretAccessKey: secretAccessKey,
+            sessionToken: sessionToken
+          };
           
           // Create a fresh S3Client specifically for this delete operation
           const s3Client = new S3Client({
