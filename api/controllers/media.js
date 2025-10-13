@@ -885,11 +885,14 @@ async function syncS3WithDatabase(pool, s3Client, bucketName, defaultUserId = 1)
             folderPath = '/documents'; // Default for other file types
           }
           
+          // Check if this is a thumbnail file
+          const isThumbnail = filename.includes('_thumb');
+          
           // Insert into database
           const insertQuery = `
             INSERT INTO media (
-              filename, original_name, file_path, file_size, mime_type, created_at
-            ) VALUES ($1, $2, $3, $4, $5, $6)
+              filename, original_name, file_path, file_size, mime_type, created_at, is_thumbnail
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7)
             ON CONFLICT (filename) DO NOTHING
             RETURNING id
           `;
@@ -900,7 +903,8 @@ async function syncS3WithDatabase(pool, s3Client, bucketName, defaultUserId = 1)
             s3Object.Key,               // file_path (use S3 key as file path)
             s3Object.Size,              // file_size
             mimeType,                   // mime_type
-            s3Object.LastModified       // created_at
+            s3Object.LastModified,      // created_at
+            isThumbnail                 // is_thumbnail
           ]);
           
           if (insertResult.rows.length > 0) {
@@ -934,6 +938,7 @@ export const getMediaFiles = async (req, res) => {
     const fileType = req.query.type;
     const search = req.query.search;
     const enableSync = req.query.sync === 'true'; // Optional sync parameter
+    const isTrashFolder = folderPath === '/trash';
 
     // Check if S3 sync is enabled and get AWS config
     let syncPerformed = false;
@@ -962,19 +967,37 @@ export const getMediaFiles = async (req, res) => {
       }
     }
 
-    let query = `
-      SELECT m.*, u.username, u.first_name, u.last_name
-      FROM media m
-      LEFT JOIN users u ON m.uploaded_by = u.id
-      WHERE (
-        m.file_path LIKE $1 || '%' 
-        OR m.file_path IS NULL 
-        OR (m.file_path NOT LIKE '/%' AND $1 = '/')
-      )
-      AND (m.is_thumbnail IS NULL OR m.is_thumbnail = false)
-    `;
-    let queryParams = [folderPath];
-    let paramIndex = 2;
+    let query;
+    let queryParams;
+    
+    if (isTrashFolder) {
+      // Show only deleted files for trash folder
+      query = `
+        SELECT m.*, u.username, u.first_name, u.last_name
+        FROM media m
+        LEFT JOIN users u ON m.uploaded_by = u.id
+        WHERE m.is_deleted = true
+        AND (m.is_thumbnail IS NULL OR m.is_thumbnail = false)
+      `;
+      queryParams = [];
+    } else {
+      // Show only non-deleted files for regular folders
+      query = `
+        SELECT m.*, u.username, u.first_name, u.last_name
+        FROM media m
+        LEFT JOIN users u ON m.uploaded_by = u.id
+        WHERE (
+          m.file_path LIKE $1 || '%' 
+          OR m.file_path IS NULL 
+          OR (m.file_path NOT LIKE '/%' AND $1 = '/')
+        )
+        AND (m.is_thumbnail IS NULL OR m.is_thumbnail = false)
+        AND (m.is_deleted IS NULL OR m.is_deleted = false)
+      `;
+      queryParams = [folderPath];
+    }
+    
+    let paramIndex = queryParams.length + 1;
 
     // Add file type filter (using mime_type)
     if (fileType) {
@@ -1032,10 +1055,19 @@ export const getMediaFiles = async (req, res) => {
     );
 
     // Get total count
-    let countQuery = `SELECT COUNT(*) FROM media WHERE file_path LIKE $1 || '%' AND (is_thumbnail IS NULL OR is_thumbnail = false)`;
-    let countParams = [folderPath];
+    let countQuery, countParams;
+    
+    if (isTrashFolder) {
+      countQuery = `SELECT COUNT(*) FROM media WHERE is_deleted = true AND (is_thumbnail IS NULL OR is_thumbnail = false)`;
+      countParams = [];
+    } else {
+      countQuery = `SELECT COUNT(*) FROM media WHERE file_path LIKE $1 || '%' AND (is_thumbnail IS NULL OR is_thumbnail = false) AND (is_deleted IS NULL OR is_deleted = false)`;
+      countParams = [folderPath];
+    }
+    
     if (fileType) {
-      countQuery += ` AND mime_type LIKE $2`;
+      const paramIndex = countParams.length + 1;
+      countQuery += ` AND mime_type LIKE $${paramIndex}`;
       countParams.push(fileType + '%');
     }
     
@@ -1678,9 +1710,31 @@ export const getMediaFolders = async (req, res) => {
     
     const result = await pool.query(query);
 
+    // Get count of deleted files for Trash folder
+    const trashCountQuery = `SELECT COUNT(*) as count FROM media WHERE is_deleted = true`;
+    const trashResult = await pool.query(trashCountQuery);
+    const trashCount = parseInt(trashResult.rows[0].count);
+
+    // Add Trash folder as virtual folder
+    const folders = [...result.rows];
+    if (trashCount > 0 || req.query.includeEmptyTrash === 'true') {
+      folders.push({
+        id: 'trash',
+        name: 'Trash',
+        path: '/trash',
+        parent_id: null,
+        description: 'Deleted files (can be restored)',
+        created_at: new Date(),
+        updated_at: new Date(),
+        file_count: trashCount.toString(),
+        created_by_username: 'system',
+        is_virtual: true
+      });
+    }
+
     res.json({
       success: true,
-      folders: result.rows
+      folders: folders
     });
 
   } catch (error) {

@@ -616,6 +616,8 @@ export default function MediaManagement() {
     if (!confirm('Are you sure you want to delete this file?')) return;
 
     try {
+      console.log(`🗑️ Attempting to delete file with ID: ${fileId}`);
+      
       const response = await fetch(API_ENDPOINTS.MEDIA.DELETE(fileId), {
         method: 'DELETE',
         headers: {
@@ -623,11 +625,28 @@ export default function MediaManagement() {
         },
       });
 
+      console.log(`🗑️ Delete response status: ${response.status}`);
+
       if (response.ok) {
+        const result = await response.json();
+        console.log('🗑️ Delete successful:', result);
+        
+        // Force state update by clearing current files first
+        setMediaFiles([]);
+        
+        // Then refresh the media files
         await fetchMediaFiles();
+        
+        // Show success message
+        alert('File deleted successfully!');
+      } else {
+        const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
+        console.error('Delete failed:', response.status, errorData);
+        alert(`Failed to delete file: ${errorData.message || `HTTP ${response.status}`}`);
       }
     } catch (error) {
       console.error('Error deleting file:', error);
+      alert(`Error deleting file: ${error.message}`);
     }
   };
 
