@@ -1039,6 +1039,20 @@ export default function MediaManagement() {
                     </div>
                   ))}
 
+                {/* Trash Button - show when in root and has deleted files */}
+                {currentFolder === '/' && hasDeletedFiles && (
+                  <div 
+                    className="folder-item trash-folder"
+                    onClick={() => {
+                      setCurrentFolder('/trash');
+                      fetchTrashFiles();
+                    }}
+                  >
+                    <i className="fa-solid fa-trash"></i>
+                    <span>Trash</span>
+                    <small>({trashFiles.length} deleted files)</small>
+                  </div>
+                )}
                 
                 {currentFolder !== '/' && (
                   <div className="folder-current-info">
