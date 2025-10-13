@@ -1509,3 +1509,31 @@
   color: white;
   background: #e74c3c;
 }
+
+/* Trash Button in Media Actions */
+.btn-trash {
+  background: linear-gradient(135deg, #ffeaa7, #fdcb6e);
+  color: #d63031;
+  border: 2px solid #e17055;
+  padding: 10px 16px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.btn-trash:hover {
+  background: linear-gradient(135deg, #fdcb6e, #e17055);
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(225, 112, 85, 0.3);
+}
+
+.btn-trash:active {
+  transform: translateY(0);
+}

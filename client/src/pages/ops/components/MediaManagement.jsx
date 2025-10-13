@@ -910,6 +910,19 @@ export default function MediaManagement() {
                 <i className="fa-solid fa-upload"></i> 
                 {uploading ? 'Uploading...' : 'Upload Media'}
               </button>
+              {hasDeletedFiles && (
+                <button 
+                  className="btn-trash"
+                  onClick={() => {
+                    setCurrentFolder('/trash');
+                    fetchTrashFiles();
+                  }}
+                  title={`View trash (${trashFiles.length} deleted files)`}
+                >
+                  <i className="fa-solid fa-trash"></i> 
+                  Trash ({trashFiles.length})
+                </button>
+              )}
               {(mediaServerType === 'oci' || mediaServerType === 'aws') && (
                 <button 
                   className="btn-warning"
@@ -1033,21 +1046,7 @@ export default function MediaManagement() {
                       <small>({folder.file_count} files)</small>
                     </div>
                   ))}
-                
-                {/* Trash Folder - show when in root and has deleted files */}
-                {currentFolder === '/' && hasDeletedFiles && (
-                  <div 
-                    className="folder-item trash-folder"
-                    onClick={() => {
-                      setCurrentFolder('/trash');
-                      fetchTrashFiles();
-                    }}
-                  >
-                    <i className="fa-solid fa-trash"></i>
-                    <span>Trash</span>
-                    <small>({trashFiles.length} deleted files)</small>
-                  </div>
-                )}
+
                 
                 {currentFolder !== '/' && (
                   <div className="folder-current-info">

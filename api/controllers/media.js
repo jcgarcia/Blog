@@ -1478,9 +1478,34 @@ export const getTrashFiles = async (req, res) => {
     const total = parseInt(countResult.rows[0].count);
     const totalPages = Math.ceil(total / limit);
 
+    // Generate signed URLs for trash files
+    const filesWithUrls = await Promise.all(
+      result.rows.map(async (file) => {
+        try {
+          // Use trash S3 key to generate signed URL
+          if (file.trash_s3_key) {
+            const signedUrl = await generateSignedUrl(file.trash_s3_key, file.s3_bucket);
+            file.signed_url = signedUrl;
+            file.public_url = signedUrl; // For compatibility
+          }
+          
+          // Generate thumbnail URL if trash thumbnail exists
+          if (file.trash_thumbnail_key) {
+            const thumbnailUrl = await generateSignedUrl(file.trash_thumbnail_key, file.s3_bucket);
+            file.thumbnail_url = thumbnailUrl;
+          }
+          
+          return file;
+        } catch (error) {
+          console.error(`Error generating signed URL for trash file ${file.id}:`, error);
+          return file; // Return file without signed URL
+        }
+      })
+    );
+
     res.json({
       success: true,
-      files: result.rows,
+      files: filesWithUrls,
       pagination: {
         page,
         limit,
