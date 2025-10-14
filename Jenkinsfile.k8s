@@ -50,6 +50,8 @@ pipeline {
                     echo "📦 Images to build:"
                     echo "  Frontend: ${env.FRONTEND_IMAGE}"
                     echo "  Backend: ${env.BACKEND_IMAGE}"
+                    echo "  OIDC Provider: ${env.OIDC_IMAGE}"
+                    echo "  PostgreSQL: ${env.POSTGRES_IMAGE}"
                     echo "🌐 Target URLs:"
                     echo "  Frontend: https://blog.ingasti.com"
                     echo "  Backend: https://bapi.ingasti.com"
@@ -94,6 +96,19 @@ pipeline {
             }
         }
         
+        stage('Build PostgreSQL Container Image') {
+            steps {
+                script {
+                    echo "🐘 Building PostgreSQL container Docker image..."
+                    env.POSTGRES_IMAGE = "${REGISTRY_URL}/blog-postgres:${BUILD_NUMBER}-${env.GIT_COMMIT_SHORT}"
+                    sh """
+                        docker build -f postgres/Dockerfile -t ${env.POSTGRES_IMAGE} postgres/
+                        docker tag ${env.POSTGRES_IMAGE} ${REGISTRY_URL}/blog-postgres:latest
+                    """
+                }
+            }
+        }
+        
         stage('Push Images to Registry') {
             steps {
                 script {
@@ -110,6 +125,10 @@ pipeline {
                         echo "Pushing OIDC provider image..."
                         docker push ${env.OIDC_IMAGE}
                         docker push ${REGISTRY_URL}/oidc-provider:latest
+                        
+                        echo "Pushing PostgreSQL container image..."
+                        docker push ${env.POSTGRES_IMAGE}
+                        docker push ${REGISTRY_URL}/blog-postgres:latest
                     """
                 }
             }
