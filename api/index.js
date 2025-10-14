@@ -24,7 +24,7 @@ import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import fs from "fs";
 import dotenv from "dotenv";
 import { loadSystemConfig } from "./middleware/systemConfig.js";
-import { closeDbPool } from "./db.js";
+import { closeDbPool, databaseManager } from "./db.js";
 import { createHealthCheckEndpoint, createConnectionInfoEndpoint } from "./utils/dbHealthCheck.js";
 import { initializeDatabaseMigrations } from "./migrations.js";
 
@@ -32,18 +32,30 @@ import { initializeDatabaseMigrations } from "./migrations.js";
 dotenv.config({ path: '.env.local' });
 dotenv.config();
 
-// Validate required PostgreSQL environment variables
-const requiredEnvVars = ['PGHOST', 'PGPORT', 'PGUSER', 'PGPASSWORD', 'PGDATABASE'];
-const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
+// Validate PostgreSQL environment variables
+const rdsRequiredVars = ['PGHOST', 'PGPORT', 'PGUSER', 'PGPASSWORD', 'PGDATABASE'];
+const containerOptionalVars = ['POSTGRES_CONTAINER_HOST', 'POSTGRES_CONTAINER_USER', 'POSTGRES_CONTAINER_PASSWORD', 'POSTGRES_CONTAINER_DB'];
 
-if (missingVars.length > 0) {
-  console.error('❌ Missing required PostgreSQL environment variables:', missingVars);
-  console.error('📝 Please set these variables in your environment or .env file');
+const missingRdsVars = rdsRequiredVars.filter(varName => !process.env[varName]);
+const hasContainerVars = containerOptionalVars.some(varName => process.env[varName]);
+
+if (missingRdsVars.length > 0 && !hasContainerVars) {
+  console.error('❌ No valid database configuration found!');
+  console.error('📝 Please provide either:');
+  console.error('   AWS RDS variables:', rdsRequiredVars.join(', '));
+  console.error('   OR Container PostgreSQL variables:', containerOptionalVars.join(', '));
   process.exit(1);
 }
 
-console.log('✅ PostgreSQL environment variables loaded successfully');
-console.log('🔧 System configuration will be loaded from database');
+if (missingRdsVars.length === 0) {
+  console.log('✅ AWS RDS configuration loaded successfully');
+}
+
+if (hasContainerVars) {
+  console.log('✅ Container PostgreSQL configuration detected');
+}
+
+console.log('🔧 Multi-database system initialized - configuration will be loaded from active database');
 
 const app = express();
 
@@ -188,6 +200,11 @@ const server = app.listen(PORT, async () => {
   console.log(`Connected! Server running on port ${PORT}`);
   
   try {
+    // Initialize database manager (supports both RDS and Container PostgreSQL)
+    console.log('🔧 Initializing DatabaseManager...');
+    await databaseManager.initialize();
+    console.log('✅ DatabaseManager initialized successfully');
+    
     // Run database migrations to ensure critical settings are present
     await initializeDatabaseMigrations();
   } catch (error) {

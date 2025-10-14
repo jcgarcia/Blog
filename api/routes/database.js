@@ -7,7 +7,11 @@ import {
   listBackups, 
   deleteBackup,
   downloadBackup,
-  getDatabaseInfo 
+  getDatabaseInfo,
+  getDatabaseHealthStatus,
+  switchDatabase,
+  getDatabaseConnections,
+  testDatabaseConnection
 } from "../controllers/database.js";
 
 const router = express.Router();
@@ -17,6 +21,12 @@ router.use(requireAdminAuth);
 
 // Database info and status
 router.get("/info", getDatabaseInfo);
+
+// Multi-database management
+router.get("/health", getDatabaseHealthStatus);
+router.get("/connections", getDatabaseConnections);
+router.post("/switch", switchDatabase);
+router.get("/test/:database", testDatabaseConnection);
 
 // Backup operations
 router.post("/backup", createBackup);

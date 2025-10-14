@@ -1,6 +1,6 @@
 import { exec } from 'child_process';
 import { promisify } from 'util';
-import { getDbPool } from '../db.js';
+import { getDbPool, databaseManager } from '../db.js';
 
 const execAsync = promisify(exec);
 
@@ -369,6 +369,171 @@ export const restoreBackup = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to restore database',
+      error: error.message
+    });
+  }
+};
+
+// Database Manager Functions for Multi-Database Support
+
+/**
+ * Get health status for all available databases
+ */
+export const getDatabaseHealthStatus = async (req, res) => {
+  try {
+    const healthStatus = databaseManager.getHealthStatus();
+    
+    res.json({
+      success: true,
+      ...healthStatus
+    });
+  } catch (error) {
+    console.error('Error getting database health status:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get database health status',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Switch to a different database
+ */
+export const switchDatabase = async (req, res) => {
+  try {
+    const { database } = req.body;
+
+    if (!database) {
+      return res.status(400).json({
+        success: false,
+        message: 'Database parameter is required'
+      });
+    }
+
+    if (!['rds', 'container'].includes(database)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid database. Must be "rds" or "container"'
+      });
+    }
+
+    const result = await databaseManager.switchDatabase(database);
+    
+    console.log(`📊 Database switched by admin user: ${req.user?.username || 'unknown'}`);
+    
+    res.json({
+      success: true,
+      message: `Successfully switched to ${database} database`,
+      ...result
+    });
+  } catch (error) {
+    console.error('Error switching database:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to switch database',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Get detailed database connection information
+ */
+export const getDatabaseConnections = async (req, res) => {
+  try {
+    const healthStatus = databaseManager.getHealthStatus();
+    
+    // Add configuration information for available databases
+    const connectionInfo = {
+      current: healthStatus.current,
+      databases: {}
+    };
+
+    // RDS configuration
+    if (process.env.PGHOST) {
+      connectionInfo.databases.rds = {
+        ...healthStatus.databases.rds,
+        config: {
+          host: process.env.PGHOST,
+          port: process.env.PGPORT || 5432,
+          database: process.env.PGDATABASE,
+          user: process.env.PGUSER,
+          ssl: process.env.PGSSLMODE === 'require'
+        }
+      };
+    }
+
+    // Container PostgreSQL configuration
+    if (process.env.POSTGRES_CONTAINER_HOST) {
+      connectionInfo.databases.container = {
+        ...healthStatus.databases.container,
+        config: {
+          host: process.env.POSTGRES_CONTAINER_HOST,
+          port: process.env.POSTGRES_CONTAINER_PORT || 5432,
+          database: process.env.POSTGRES_CONTAINER_DB,
+          user: process.env.POSTGRES_CONTAINER_USER,
+          ssl: false
+        }
+      };
+    }
+
+    res.json({
+      success: true,
+      ...connectionInfo
+    });
+  } catch (error) {
+    console.error('Error getting database connections:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get database connections',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Test connection to a specific database
+ */
+export const testDatabaseConnection = async (req, res) => {
+  try {
+    const { database } = req.params;
+
+    if (!['rds', 'container'].includes(database)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid database. Must be "rds" or "container"'
+      });
+    }
+
+    const pools = databaseManager.pools;
+    const pool = pools[database];
+
+    if (!pool) {
+      return res.status(404).json({
+        success: false,
+        message: `Database ${database} is not configured or available`
+      });
+    }
+
+    // Test connection with a simple query
+    const start = Date.now();
+    const client = await pool.connect();
+    const result = await client.query('SELECT current_database(), current_user, version(), now() as timestamp');
+    const responseTime = Date.now() - start;
+    client.release();
+
+    res.json({
+      success: true,
+      database,
+      responseTime,
+      connection: result.rows[0]
+    });
+  } catch (error) {
+    console.error(`Error testing ${req.params.database} connection:`, error);
+    res.status(500).json({
+      success: false,
+      message: `Failed to test ${req.params.database} connection`,
       error: error.message
     });
   }
