@@ -63,13 +63,34 @@ const DatabaseManagement = () => {
         },
       });
 
-      const data = await response.json();
-
       if (response.ok) {
-        setSuccess(`Backup created successfully: ${data.backup.filename}`);
-        fetchBackups(); // Refresh the list
+        // Get the filename from the Content-Disposition header
+        const contentDisposition = response.headers.get('Content-Disposition');
+        const filenameMatch = contentDisposition?.match(/filename="(.+)"/);
+        const filename = filenameMatch ? filenameMatch[1] : `backup-${new Date().toISOString().slice(0, 19).replace(/[:.]/g, '-')}.sql`;
+        
+        // Create blob from response and trigger download
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        setSuccess(`Database backup downloaded successfully: ${filename}`);
+        fetchBackups(); // Refresh the list (though it will be empty now)
       } else {
-        setError(data.message || 'Failed to create backup');
+        // For non-200 responses, try to parse as JSON for error message
+        try {
+          const data = await response.json();
+          setError(data.message || 'Failed to create backup');
+        } catch {
+          setError(`Failed to create backup (HTTP ${response.status})`);
+        }
       }
     } catch (error) {
       setError('Network error occurred');
