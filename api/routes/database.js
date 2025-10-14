@@ -6,6 +6,7 @@ import {
   exportTable, 
   listBackups, 
   deleteBackup,
+  downloadBackup,
   getDatabaseInfo 
 } from "../controllers/database.js";
 
@@ -21,6 +22,7 @@ router.get("/info", getDatabaseInfo);
 router.post("/backup", createBackup);
 router.get("/backups", listBackups);
 router.delete("/backups/:filename", deleteBackup);
+router.get("/backups/:filename/download", downloadBackup);
 
 // Export specific tables
 router.post("/export/:table", exportTable);

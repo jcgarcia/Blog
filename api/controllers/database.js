@@ -1,13 +1,8 @@
 import { exec } from 'child_process';
 import { promisify } from 'util';
-import fs from 'fs/promises';
-import path from 'path';
 import { getDbPool } from '../db.js';
 
 const execAsync = promisify(exec);
-
-// Directory for storing database backups (use activity folder in docs repo)
-const BACKUP_DIR = process.env.BACKUP_DIR || '/home/jcgarcia/docs/Tech/Blog/activity/backups/database';
 
 // Database connection details from environment (use the same config as the app)
 const DB_CONFIG = {
@@ -17,15 +12,6 @@ const DB_CONFIG = {
   username: process.env.DB_USER || process.env.PGUSER,
   password: process.env.DB_PASSWORD || process.env.PGPASSWORD
 };
-
-// Ensure backup directory exists
-async function ensureBackupDir() {
-  try {
-    await fs.access(BACKUP_DIR);
-  } catch {
-    await fs.mkdir(BACKUP_DIR, { recursive: true });
-  }
-}
 
 // Get database information and status
 export const getDatabaseInfo = async (req, res) => {
@@ -73,7 +59,7 @@ export const getDatabaseInfo = async (req, res) => {
   }
 };
 
-// Create a full database backup
+// Create and download database backup (stream directly to user)
 export const createBackup = async (req, res) => {
   try {
     console.log('🔧 Database config check:', {
@@ -89,83 +75,85 @@ export const createBackup = async (req, res) => {
       throw new Error('Missing required database configuration parameters');
     }
 
-    await ensureBackupDir();
-    
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const filename = `backup-${timestamp}.sql`;
-    const filepath = path.join(BACKUP_DIR, filename);
+    const filename = `backup-${DB_CONFIG.database}-${timestamp}.sql`;
     
-    // Build pg_dump command
-    const cmd = `PGPASSWORD="${DB_CONFIG.password}" pg_dump -h ${DB_CONFIG.host} -p ${DB_CONFIG.port} -U ${DB_CONFIG.username} -d ${DB_CONFIG.database} --no-password > ${filepath}`;
+    // Set headers for file download
+    res.setHeader('Content-Type', 'application/sql');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     
-    console.log('Creating database backup:', filename);
-    console.log('Backup directory:', BACKUP_DIR);
+    // Build pg_dump command that outputs to stdout
+    const cmd = `PGPASSWORD="${DB_CONFIG.password}" pg_dump -h ${DB_CONFIG.host} -p ${DB_CONFIG.port} -U ${DB_CONFIG.username} -d ${DB_CONFIG.database} --no-password`;
     
-    await execAsync(cmd);
+    console.log('Streaming database backup:', filename);
     
-    // Get backup file size
-    const stats = await fs.stat(filepath);
-    const sizeInMB = (stats.size / (1024 * 1024)).toFixed(2);
+    // Execute command and stream output directly to response
+    const { spawn } = await import('child_process');
+    const pgDump = spawn('pg_dump', [
+      '-h', DB_CONFIG.host,
+      '-p', DB_CONFIG.port.toString(),
+      '-U', DB_CONFIG.username,
+      '-d', DB_CONFIG.database,
+      '--no-password'
+    ], {
+      env: { ...process.env, PGPASSWORD: DB_CONFIG.password }
+    });
+
+    // Stream stdout directly to response
+    pgDump.stdout.pipe(res);
     
-    res.json({
-      success: true,
-      message: 'Backup created successfully',
-      backup: {
-        filename,
-        size: `${sizeInMB} MB`,
-        created: new Date().toISOString(),
-        path: filepath
+    // Handle errors
+    pgDump.stderr.on('data', (data) => {
+      console.error('pg_dump stderr:', data.toString());
+    });
+
+    pgDump.on('error', (error) => {
+      console.error('pg_dump process error:', error);
+      if (!res.headersSent) {
+        res.status(500).json({
+          success: false,
+          message: 'Failed to create backup',
+          error: error.message
+        });
       }
     });
+
+    pgDump.on('close', (code) => {
+      if (code !== 0) {
+        console.error(`pg_dump process exited with code ${code}`);
+        if (!res.headersSent) {
+          res.status(500).json({
+            success: false,
+            message: `Backup process failed with exit code ${code}`
+          });
+        }
+      } else {
+        console.log('✅ Database backup streamed successfully');
+      }
+    });
+
   } catch (error) {
     console.error('Backup creation error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to create backup',
-      error: error.message
-    });
+    if (!res.headersSent) {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to create backup',
+        error: error.message
+      });
+    }
   }
 };
 
 // List all available backups
 export const listBackups = async (req, res) => {
   try {
-    console.log('📂 Listing backups from directory:', BACKUP_DIR);
-    
-    await ensureBackupDir();
-    console.log('✅ Backup directory ensured');
-    
-    const files = await fs.readdir(BACKUP_DIR);
-    console.log('📁 Files found:', files.length);
-    
-    const backups = [];
-    
-    for (const file of files) {
-      if (file.endsWith('.sql')) {
-        const filepath = path.join(BACKUP_DIR, file);
-        try {
-          const stats = await fs.stat(filepath);
-          
-          backups.push({
-            filename: file,
-            size: `${(stats.size / (1024 * 1024)).toFixed(2)} MB`,
-            created: stats.mtime.toISOString(),
-            path: filepath
-          });
-        } catch (statError) {
-          console.error(`Error reading file stats for ${file}:`, statError);
-        }
-      }
-    }
-    
-    // Sort by creation date (newest first)
-    backups.sort((a, b) => new Date(b.created) - new Date(a.created));
-    
-    console.log('✅ Found', backups.length, 'backups');
-    
+    // Since we now stream backups directly to users, we don't store them
+    // This endpoint returns empty but maintains API compatibility
     res.json({
       success: true,
-      backups
+      backups: [],
+      count: 0,
+      message: 'Backups are now generated on-demand and streamed directly to download'
     });
   } catch (error) {
     console.error('List backups error:', error);
@@ -180,22 +168,10 @@ export const listBackups = async (req, res) => {
 // Delete a specific backup file
 export const deleteBackup = async (req, res) => {
   try {
-    const { filename } = req.params;
-    
-    // Security check: only allow .sql files and no path traversal
-    if (!filename.endsWith('.sql') || filename.includes('../') || filename.includes('..\\')) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid filename'
-      });
-    }
-    
-    const filepath = path.join(BACKUP_DIR, filename);
-    await fs.unlink(filepath);
-    
-    res.json({
-      success: true,
-      message: 'Backup deleted successfully'
+    // Since we don't store backups anymore, this operation is not applicable
+    res.status(404).json({
+      success: false,
+      message: 'Delete operation not available - backups are now streamed directly and not stored'
     });
   } catch (error) {
     console.error('Delete backup error:', error);
@@ -207,11 +183,11 @@ export const deleteBackup = async (req, res) => {
   }
 };
 
-// Export specific table
+// Export specific table (stream directly to user)
 export const exportTable = async (req, res) => {
   try {
     const { table } = req.params;
-    const { format = 'sql', includeSchema = true } = req.body;
+    const { includeSchema = true } = req.body;
     
     // Validate table name (security)
     const pool = getDbPool();
@@ -227,35 +203,65 @@ export const exportTable = async (req, res) => {
       });
     }
     
-    await ensureBackupDir();
-    
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const filename = `export-${table}-${timestamp}.sql`;
-    const filepath = path.join(BACKUP_DIR, filename);
     
-    // Build export command
-    let cmd;
-    if (includeSchema) {
-      cmd = `PGPASSWORD="${DB_CONFIG.password}" pg_dump -h ${DB_CONFIG.host} -p ${DB_CONFIG.port} -U ${DB_CONFIG.username} -d ${DB_CONFIG.database} --no-password -t ${table} > ${filepath}`;
-    } else {
-      cmd = `PGPASSWORD="${DB_CONFIG.password}" pg_dump -h ${DB_CONFIG.host} -p ${DB_CONFIG.port} -U ${DB_CONFIG.username} -d ${DB_CONFIG.database} --no-password -t ${table} --data-only > ${filepath}`;
+    // Set headers for file download
+    res.setHeader('Content-Type', 'application/sql');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    
+    console.log(`Streaming table export: ${table}`);
+    
+    // Build pg_dump arguments for table export
+    const pgDumpArgs = [
+      '-h', DB_CONFIG.host,
+      '-p', DB_CONFIG.port.toString(),
+      '-U', DB_CONFIG.username,
+      '-d', DB_CONFIG.database,
+      '--no-password',
+      '-t', table
+    ];
+    
+    if (!includeSchema) {
+      pgDumpArgs.push('--data-only');
     }
     
-    console.log(`Exporting table ${table}:`, filename);
-    await execAsync(cmd);
+    // Execute command and stream output directly to response
+    const { spawn } = await import('child_process');
+    const pgDump = spawn('pg_dump', pgDumpArgs, {
+      env: { ...process.env, PGPASSWORD: DB_CONFIG.password }
+    });
+
+    // Stream stdout directly to response
+    pgDump.stdout.pipe(res);
     
-    // Get file size
-    const stats = await fs.stat(filepath);
-    const sizeInMB = (stats.size / (1024 * 1024)).toFixed(2);
-    
-    res.json({
-      success: true,
-      message: `Table ${table} exported successfully`,
-      export: {
-        filename,
-        size: `${sizeInMB} MB`,
-        created: new Date().toISOString(),
-        path: filepath
+    // Handle errors
+    pgDump.stderr.on('data', (data) => {
+      console.error('pg_dump stderr:', data.toString());
+    });
+
+    pgDump.on('error', (error) => {
+      console.error('pg_dump process error:', error);
+      if (!res.headersSent) {
+        res.status(500).json({
+          success: false,
+          message: 'Failed to export table',
+          error: error.message
+        });
+      }
+    });
+
+    pgDump.on('close', (code) => {
+      if (code !== 0) {
+        console.error(`pg_dump process exited with code ${code}`);
+        if (!res.headersSent) {
+          res.status(500).json({
+            success: false,
+            message: `Export process failed with exit code ${code}`
+          });
+        }
+      } else {
+        console.log(`✅ Table ${table} export streamed successfully`);
       }
     });
   } catch (error) {
@@ -268,10 +274,27 @@ export const exportTable = async (req, res) => {
   }
 };
 
-// Restore database from backup
+// Download backup file (no longer applicable since backups are streamed directly)
+export const downloadBackup = async (req, res) => {
+  try {
+    res.status(404).json({
+      success: false,
+      message: 'Download not available - backups are now generated and streamed directly via /api/database/backup'
+    });
+  } catch (error) {
+    console.error('Download backup error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to download backup',
+      error: error.message
+    });
+  }
+};
+
+// Restore database from uploaded backup file
 export const restoreBackup = async (req, res) => {
   try {
-    const { filename, confirmRestore } = req.body;
+    const { confirmRestore } = req.body;
     
     // Safety check
     if (!confirmRestore) {
@@ -281,39 +304,66 @@ export const restoreBackup = async (req, res) => {
       });
     }
     
-    // Validate filename
-    if (!filename.endsWith('.sql') || filename.includes('../') || filename.includes('..\\')) {
+    // Check if file was uploaded (using multer middleware)
+    if (!req.file) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid filename'
+        message: 'No backup file uploaded'
       });
     }
     
-    const filepath = path.join(BACKUP_DIR, filename);
-    
-    // Check if file exists
-    try {
-      await fs.access(filepath);
-    } catch {
-      return res.status(404).json({
+    // Validate file type
+    if (!req.file.originalname.endsWith('.sql')) {
+      return res.status(400).json({
         success: false,
-        message: 'Backup file not found'
+        message: 'Only .sql files are allowed'
       });
     }
     
-    // WARNING: This will overwrite the existing database
-    const cmd = `PGPASSWORD="${DB_CONFIG.password}" psql -h ${DB_CONFIG.host} -p ${DB_CONFIG.port} -U ${DB_CONFIG.username} -d ${DB_CONFIG.database} < ${filepath}`;
-    
-    console.log('RESTORING DATABASE FROM:', filename);
+    console.log('RESTORING DATABASE FROM UPLOADED FILE:', req.file.originalname);
     console.log('WARNING: This will overwrite existing data');
     
-    await execAsync(cmd);
-    
-    res.json({
-      success: true,
-      message: 'Database restored successfully',
-      warning: 'Database has been restored. All previous data has been overwritten.'
+    // Stream the uploaded file directly to psql
+    const { spawn } = await import('child_process');
+    const psql = spawn('psql', [
+      '-h', DB_CONFIG.host,
+      '-p', DB_CONFIG.port.toString(),
+      '-U', DB_CONFIG.username,
+      '-d', DB_CONFIG.database
+    ], {
+      env: { ...process.env, PGPASSWORD: DB_CONFIG.password },
+      stdio: ['pipe', 'pipe', 'pipe']
     });
+
+    // Stream the file buffer to psql stdin
+    psql.stdin.write(req.file.buffer);
+    psql.stdin.end();
+
+    // Handle process completion
+    psql.on('close', (code) => {
+      if (code === 0) {
+        res.json({
+          success: true,
+          message: 'Database restored successfully',
+          warning: 'Database has been restored. All previous data has been overwritten.'
+        });
+      } else {
+        res.status(500).json({
+          success: false,
+          message: `Restore process failed with exit code ${code}`
+        });
+      }
+    });
+
+    psql.on('error', (error) => {
+      console.error('psql process error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to restore database',
+        error: error.message
+      });
+    });
+
   } catch (error) {
     console.error('Database restore error:', error);
     res.status(500).json({
