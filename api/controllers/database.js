@@ -9,13 +9,13 @@ const execAsync = promisify(exec);
 // Directory for storing database backups (use activity folder in docs repo)
 const BACKUP_DIR = process.env.BACKUP_DIR || '/home/jcgarcia/docs/Tech/Blog/activity/backups/database';
 
-// Database connection details from environment (use PostgreSQL env vars)
+// Database connection details from environment (use the same config as the app)
 const DB_CONFIG = {
-  host: process.env.PGHOST,
-  port: process.env.PGPORT || 5432,
-  database: process.env.PGDATABASE,
-  username: process.env.PGUSER,
-  password: process.env.PGPASSWORD
+  host: process.env.DB_HOST || process.env.PGHOST,
+  port: process.env.DB_PORT || process.env.PGPORT || 5432,
+  database: process.env.DB_NAME || process.env.PGDATABASE,
+  username: process.env.DB_USER || process.env.PGUSER,
+  password: process.env.DB_PASSWORD || process.env.PGPASSWORD
 };
 
 // Ensure backup directory exists
@@ -76,6 +76,19 @@ export const getDatabaseInfo = async (req, res) => {
 // Create a full database backup
 export const createBackup = async (req, res) => {
   try {
+    console.log('🔧 Database config check:', {
+      host: DB_CONFIG.host ? 'SET' : 'MISSING',
+      port: DB_CONFIG.port,
+      database: DB_CONFIG.database ? 'SET' : 'MISSING',
+      username: DB_CONFIG.username ? 'SET' : 'MISSING',
+      password: DB_CONFIG.password ? 'SET' : 'MISSING'
+    });
+
+    // Validate database config
+    if (!DB_CONFIG.host || !DB_CONFIG.database || !DB_CONFIG.username || !DB_CONFIG.password) {
+      throw new Error('Missing required database configuration parameters');
+    }
+
     await ensureBackupDir();
     
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -86,6 +99,8 @@ export const createBackup = async (req, res) => {
     const cmd = `PGPASSWORD="${DB_CONFIG.password}" pg_dump -h ${DB_CONFIG.host} -p ${DB_CONFIG.port} -U ${DB_CONFIG.username} -d ${DB_CONFIG.database} --no-password > ${filepath}`;
     
     console.log('Creating database backup:', filename);
+    console.log('Backup directory:', BACKUP_DIR);
+    
     await execAsync(cmd);
     
     // Get backup file size
@@ -115,27 +130,38 @@ export const createBackup = async (req, res) => {
 // List all available backups
 export const listBackups = async (req, res) => {
   try {
+    console.log('📂 Listing backups from directory:', BACKUP_DIR);
+    
     await ensureBackupDir();
+    console.log('✅ Backup directory ensured');
     
     const files = await fs.readdir(BACKUP_DIR);
+    console.log('📁 Files found:', files.length);
+    
     const backups = [];
     
     for (const file of files) {
       if (file.endsWith('.sql')) {
         const filepath = path.join(BACKUP_DIR, file);
-        const stats = await fs.stat(filepath);
-        
-        backups.push({
-          filename: file,
-          size: `${(stats.size / (1024 * 1024)).toFixed(2)} MB`,
-          created: stats.mtime.toISOString(),
-          path: filepath
-        });
+        try {
+          const stats = await fs.stat(filepath);
+          
+          backups.push({
+            filename: file,
+            size: `${(stats.size / (1024 * 1024)).toFixed(2)} MB`,
+            created: stats.mtime.toISOString(),
+            path: filepath
+          });
+        } catch (statError) {
+          console.error(`Error reading file stats for ${file}:`, statError);
+        }
       }
     }
     
     // Sort by creation date (newest first)
     backups.sort((a, b) => new Date(b.created) - new Date(a.created));
+    
+    console.log('✅ Found', backups.length, 'backups');
     
     res.json({
       success: true,
