@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { API_ENDPOINTS } from '../../config/api';
 import CognitoLogin from '../cognito-login/CognitoLogin';
+import DatabaseManager from './DatabaseManager';
 import './cognito-admin.css';
 
 const defaultConfig = {
@@ -242,6 +243,12 @@ export default function CognitoAdminPanel() {
           <i className="fa-solid fa-rocket"></i> Live Demo
         </button>
         <button 
+          className={activeTab === 'database' ? 'active' : ''}
+          onClick={() => setActiveTab('database')}
+        >
+          <i className="fa-solid fa-database"></i> Database
+        </button>
+        <button 
           className={activeTab === 'debug' ? 'active' : ''}
           onClick={() => setActiveTab('debug')}
         >
@@ -396,6 +403,10 @@ export default function CognitoAdminPanel() {
       ) : activeTab === 'demo' ? (
         <div className="demo-section">
           <CognitoLogin />
+        </div>
+      ) : activeTab === 'database' ? (
+        <div className="database-section">
+          <DatabaseManager />
         </div>
       ) : activeTab === 'debug' ? (
         <div className="debug-section">
