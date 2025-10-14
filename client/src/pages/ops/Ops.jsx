@@ -9,6 +9,7 @@ import SiteSettings from './components/SiteSettings';
 import Analytics from './components/Analytics';
 import MediaManagement from './components/MediaManagement';
 import PageManagement from './components/PageManagement';
+import DatabaseManagement from './components/DatabaseManagement';
 
 export default function Ops() {
   const [activeTab, setActiveTab] = useState('content');
@@ -32,6 +33,8 @@ export default function Ops() {
         return <MediaManagement />;
       case 'auth':
         return <CognitoAdminPanel />;
+      case 'database':
+        return <DatabaseManagement />;
       default:
         return <ContentManagement />;
     }
@@ -98,6 +101,12 @@ export default function Ops() {
           onClick={() => setActiveTab('auth')}
         >
           <i className="fa-solid fa-shield-halved"></i> Auth
+        </button>
+        <button 
+          className={activeTab === 'database' ? 'active' : ''} 
+          onClick={() => setActiveTab('database')}
+        >
+          <i className="fa-solid fa-database"></i> Database
         </button>
       </div>
 

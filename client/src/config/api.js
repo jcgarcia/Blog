@@ -98,6 +98,16 @@ export const API_ENDPOINTS = {
     INITIALIZE_SSO: `${API_URL}/api/media/initialize-sso`,
     COMPLETE_SSO: `${API_URL}/api/media/complete-sso`,
   },
+  
+  // Database management
+  DATABASE: {
+    INFO: `${API_URL}/api/database/info`,
+    BACKUP: `${API_URL}/api/database/backup`,
+    BACKUPS: `${API_URL}/api/database/backups`,
+    DELETE_BACKUP: (filename) => `${API_URL}/api/database/backups/${filename}`,
+    EXPORT_TABLE: (table) => `${API_URL}/api/database/export/${table}`,
+    RESTORE: `${API_URL}/api/database/restore`,
+  },
 };
 
 // Export the base URL for media management
