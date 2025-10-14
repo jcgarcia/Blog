@@ -1,0 +1,184 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: postgres-initial-migration
+  namespace: blog
+  labels:
+    app: blog-postgres
+    job-type: migration
+spec:
+  ttlSecondsAfterFinished: 3600 # Clean up job after 1 hour
+  template:
+    metadata:
+      labels:
+        app: blog-postgres
+        job-type: migration
+    spec:
+      restartPolicy: OnFailure
+      serviceAccountName: blog-postgres-sa
+      containers:
+      - name: migration
+        image: postgres:16-alpine
+        env:
+        # AWS RDS connection (source)
+        - name: AWS_DB_HOST
+          valueFrom:
+            secretKeyRef:
+              name: blog-secrets
+              key: PGHOST
+        - name: AWS_DB_PORT
+          valueFrom:
+            secretKeyRef:
+              name: blog-secrets
+              key: PGPORT
+        - name: AWS_DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: blog-secrets
+              key: PGUSER
+        - name: AWS_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: blog-secrets
+              key: PGPASSWORD
+        - name: AWS_DB_NAME
+          valueFrom:
+            secretKeyRef:
+              name: blog-secrets
+              key: PGDATABASE
+        # Container database connection (target)
+        - name: CONTAINER_DB_HOST
+          value: "blog-postgres-service.blog.svc.cluster.local"
+        - name: CONTAINER_DB_PORT
+          value: "5432"
+        - name: CONTAINER_DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secrets
+              key: POSTGRES_USER
+        - name: CONTAINER_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secrets
+              key: POSTGRES_PASSWORD
+        - name: CONTAINER_DB_NAME
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secrets
+              key: POSTGRES_DB
+        command:
+        - /bin/sh
+        - -c
+        - |
+          set -e
+          echo "🚀 Starting PostgreSQL migration from AWS RDS to Container"
+          
+          # Wait for container database to be ready
+          echo "⏳ Waiting for container database to be ready..."
+          until PGPASSWORD="$CONTAINER_DB_PASSWORD" pg_isready -h "$CONTAINER_DB_HOST" -p "$CONTAINER_DB_PORT" -U "$CONTAINER_DB_USER"; do
+            echo "  Waiting for PostgreSQL container..."
+            sleep 5
+          done
+          echo "✅ Container database is ready"
+          
+          # Create backup from AWS RDS
+          echo "💾 Creating backup from AWS RDS..."
+          BACKUP_FILE="/backups/aws-migration-$(date +%Y%m%d_%H%M%S).sql"
+          
+          PGPASSWORD="$AWS_DB_PASSWORD" pg_dump \
+            -h "$AWS_DB_HOST" \
+            -p "$AWS_DB_PORT" \
+            -U "$AWS_DB_USER" \
+            -d "$AWS_DB_NAME" \
+            --verbose \
+            --no-password \
+            --format=plain \
+            --no-owner \
+            --no-privileges \
+            --create \
+            --clean \
+            > "$BACKUP_FILE"
+          
+          BACKUP_SIZE=$(du -h "$BACKUP_FILE" | cut -f1)
+          echo "✅ AWS backup created: $BACKUP_FILE ($BACKUP_SIZE)"
+          
+          # Verify backup integrity
+          if head -20 "$BACKUP_FILE" | grep -q "PostgreSQL database dump"; then
+            echo "✅ Backup file format verified"
+          else
+            echo "❌ Invalid backup file format"
+            exit 1
+          fi
+          
+          # Get source database statistics
+          TABLES_COUNT=$(PGPASSWORD="$AWS_DB_PASSWORD" psql -h "$AWS_DB_HOST" -p "$AWS_DB_PORT" -U "$AWS_DB_USER" -d "$AWS_DB_NAME" -t -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public';" | xargs)
+          DB_SIZE=$(PGPASSWORD="$AWS_DB_PASSWORD" psql -h "$AWS_DB_HOST" -p "$AWS_DB_PORT" -U "$AWS_DB_USER" -d "$AWS_DB_NAME" -t -c "SELECT pg_size_pretty(pg_database_size('$AWS_DB_NAME'));" | xargs)
+          
+          echo "📊 Source database statistics:"
+          echo "  - Tables: $TABLES_COUNT"
+          echo "  - Size: $DB_SIZE"
+          
+          # Restore to container database
+          echo "🔄 Restoring backup to container database..."
+          
+          # Drop existing connections
+          PGPASSWORD="$CONTAINER_DB_PASSWORD" psql -h "$CONTAINER_DB_HOST" -p "$CONTAINER_DB_PORT" -U "$CONTAINER_DB_USER" -d postgres -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '$CONTAINER_DB_NAME' AND pid <> pg_backend_pid();" 2>/dev/null || true
+          
+          # Restore the backup
+          if PGPASSWORD="$CONTAINER_DB_PASSWORD" psql -h "$CONTAINER_DB_HOST" -p "$CONTAINER_DB_PORT" -U "$CONTAINER_DB_USER" -d postgres < "$BACKUP_FILE"; then
+            echo "✅ Database restoration completed"
+            
+            # Verify restoration
+            RESTORED_TABLES=$(PGPASSWORD="$CONTAINER_DB_PASSWORD" psql -h "$CONTAINER_DB_HOST" -p "$CONTAINER_DB_PORT" -U "$CONTAINER_DB_USER" -d "$CONTAINER_DB_NAME" -t -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public';" | xargs)
+            RESTORED_SIZE=$(PGPASSWORD="$CONTAINER_DB_PASSWORD" psql -h "$CONTAINER_DB_HOST" -p "$CONTAINER_DB_PORT" -U "$CONTAINER_DB_USER" -d "$CONTAINER_DB_NAME" -t -c "SELECT pg_size_pretty(pg_database_size('$CONTAINER_DB_NAME'));" | xargs)
+            
+            echo "📊 Restored database statistics:"
+            echo "  - Tables: $RESTORED_TABLES"
+            echo "  - Size: $RESTORED_SIZE"
+            
+            if [ "$TABLES_COUNT" = "$RESTORED_TABLES" ]; then
+              echo "✅ Table count verification passed"
+            else
+              echo "⚠️ Warning: Table count mismatch (source: $TABLES_COUNT, restored: $RESTORED_TABLES)"
+            fi
+            
+            # Create latest backup symlink
+            ln -sf "$BACKUP_FILE" /backups/initial-restore.sql
+            echo "🔗 Created initial restore link"
+            
+            # Log migration details
+            cat > /backups/migration_log.txt << EOF
+Migration completed successfully
+Date: $(date)
+Source: AWS RDS ($AWS_DB_HOST:$AWS_DB_PORT/$AWS_DB_NAME)
+Target: Container ($CONTAINER_DB_HOST:$CONTAINER_DB_PORT/$CONTAINER_DB_NAME)
+Backup File: $BACKUP_FILE
+Backup Size: $BACKUP_SIZE
+Source Tables: $TABLES_COUNT
+Restored Tables: $RESTORED_TABLES
+Source Size: $DB_SIZE
+Restored Size: $RESTORED_SIZE
+EOF
+            
+            echo "🎉 Migration completed successfully!"
+            
+          else
+            echo "❌ Database restoration failed"
+            exit 1
+          fi
+        
+        volumeMounts:
+        - name: backup-storage
+          mountPath: /backups
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+      
+      volumes:
+      - name: backup-storage
+        persistentVolumeClaim:
+          claimName: postgres-backup-pvc
