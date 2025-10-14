@@ -1,8 +1,8 @@
 FROM node:20-alpine
 
-# Install curl for health checks and poppler-utils for PDF thumbnail generation
+# Install curl for health checks, poppler-utils for PDF thumbnail generation, and postgresql-client for database backups
 # Enable corepack for pnpm (official method, no npm needed)
-RUN apk add --no-cache curl poppler-utils && \
+RUN apk add --no-cache curl poppler-utils postgresql-client && \
     corepack enable && \
     corepack prepare pnpm@latest --activate
 
