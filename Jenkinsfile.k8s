@@ -255,13 +255,18 @@ pipeline {
                             # Delete existing secret if it exists (ignore errors)
                             kubectl delete secret blog-secrets -n blog || true
                             
-                            # Create new secret with current credentials from Jenkins
+                            # Create new secret with current credentials from Jenkins + PostgreSQL container info
                             kubectl create secret generic blog-secrets -n blog \
                                 --from-literal=PGHOST="\${PGHOST}" \
                                 --from-literal=PGPORT="\${PGPORT}" \
                                 --from-literal=PGDATABASE="\${PGDATABASE}" \
                                 --from-literal=PGUSER="\${PGUSER}" \
                                 --from-literal=PGPASSWORD="\${PGPASSWORD}" \
+                                --from-literal=POSTGRES_CONTAINER_HOST='blog-postgres-service.blog.svc.cluster.local' \
+                                --from-literal=POSTGRES_CONTAINER_PORT='5432' \
+                                --from-literal=POSTGRES_CONTAINER_USER='blogadmin' \
+                                --from-literal=POSTGRES_CONTAINER_PASSWORD='blogpassword' \
+                                --from-literal=POSTGRES_CONTAINER_DB='blog' \
                                 --from-literal=BLOG_API_KEY='81128b70915fe2d690a4e55eebeb13cedf069659e8e524c1198426d7665462b0' \
                                 --from-literal=GOOGLE_CLIENT_ID='dummy-google-client-id' \
                                 --from-literal=GOOGLE_CLIENT_SECRET='dummy-google-client-secret'
