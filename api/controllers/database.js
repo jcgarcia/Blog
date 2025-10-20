@@ -443,51 +443,74 @@ export const switchDatabase = async (req, res) => {
 export const getDatabaseConnections = async (req, res) => {
   try {
     const healthStatus = databaseManager.getHealthStatus();
-    
-    // Add configuration information for available databases
-    const connectionInfo = {
-      current: healthStatus.current,
-      databases: {}
-    };
+    const connections = [];
+    let activeConnection = healthStatus.current;
 
     // RDS configuration
     if (process.env.PGHOST) {
-      connectionInfo.databases.rds = {
-        ...healthStatus.databases.rds,
+      connections.push({
+        type: 'rds',
+        name: 'AWS RDS PostgreSQL',
         config: {
           host: process.env.PGHOST,
           port: process.env.PGPORT || 5432,
           database: process.env.PGDATABASE,
           user: process.env.PGUSER,
           ssl: process.env.PGSSLMODE === 'require'
-        }
-      };
+        },
+        status: healthStatus.databases?.rds?.status || 'unknown',
+        connected: healthStatus.databases?.rds?.connected || false
+      });
     }
 
     // Container PostgreSQL configuration
     if (process.env.POSTGRES_CONTAINER_HOST) {
-      connectionInfo.databases.container = {
-        ...healthStatus.databases.container,
+      connections.push({
+        type: 'container',
+        name: 'PostgreSQL Container',
         config: {
           host: process.env.POSTGRES_CONTAINER_HOST,
           port: process.env.POSTGRES_CONTAINER_PORT || 5432,
           database: process.env.POSTGRES_CONTAINER_DB,
           user: process.env.POSTGRES_CONTAINER_USER,
           ssl: false
-        }
-      };
+        },
+        status: healthStatus.databases?.container?.status || 'unknown',
+        connected: healthStatus.databases?.container?.connected || false
+      });
+    }
+
+    // If no environment variables are set, create default connections
+    if (connections.length === 0) {
+      // Add current active connection
+      connections.push({
+        type: 'current',
+        name: 'Current Database',
+        config: {
+          host: process.env.PGHOST || 'localhost',
+          port: process.env.PGPORT || 5432,
+          database: process.env.PGDATABASE || 'blog',
+          user: process.env.PGUSER || 'postgres',
+          ssl: false
+        },
+        status: 'connected',
+        connected: true
+      });
+      activeConnection = 'current';
     }
 
     res.json({
       success: true,
-      ...connectionInfo
+      connections: connections,
+      active: activeConnection
     });
   } catch (error) {
     console.error('Error getting database connections:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to get database connections',
-      error: error.message
+      error: error.message,
+      connections: []
     });
   }
 };
