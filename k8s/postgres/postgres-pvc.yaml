@@ -12,7 +12,7 @@ spec:
   resources:
     requests:
       storage: 20Gi
-  storageClassName: oci-bv # OCI Block Volume storage class
+  storageClassName: local-path # Use local-path storage class for K3s
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -28,4 +28,4 @@ spec:
   resources:
     requests:
       storage: 10Gi # Separate storage for backups
-  storageClassName: oci-bv
+  storageClassName: local-path # Use local-path storage class for K3s
