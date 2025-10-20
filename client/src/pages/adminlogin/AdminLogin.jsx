@@ -116,9 +116,6 @@ export default function AdminLogin() {
             <i className="fa-solid fa-info-circle"></i>
             This is a secure admin area. Only authorized personnel may access.
           </p>
-          <div className="demo-credentials">
-            <small>Demo credentials: jcsa025 / admin123</small>
-          </div>
         </div>
       </div>
     </div>

@@ -57,7 +57,7 @@ spec:
               name: blog-secrets
               key: PGPASSWORD
         - name: PGSSLMODE
-          value: "require"
+          value: "disable"
         - name: BLOG_API_KEY
           valueFrom:
             secretKeyRef:
@@ -89,36 +89,26 @@ spec:
             secretKeyRef:
               name: blog-secrets
               key: GOOGLE_CLIENT_SECRET
-        - name: POSTGRES_CONTAINER_HOST
-          valueFrom:
-            secretKeyRef:
-              name: blog-secrets
-              key: POSTGRES_CONTAINER_HOST
-        - name: POSTGRES_CONTAINER_PORT
-          valueFrom:
-            secretKeyRef:
-              name: blog-secrets
-              key: POSTGRES_CONTAINER_PORT
-        - name: POSTGRES_CONTAINER_DATABASE
-          valueFrom:
-            secretKeyRef:
-              name: blog-secrets
-              key: POSTGRES_CONTAINER_DATABASE
-        - name: POSTGRES_CONTAINER_USER
-          valueFrom:
-            secretKeyRef:
-              name: blog-secrets
-              key: POSTGRES_CONTAINER_USER
-        - name: POSTGRES_CONTAINER_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: blog-secrets
-              key: POSTGRES_CONTAINER_PASSWORD
         - name: JWT_SECRET
           valueFrom:
             secretKeyRef:
               name: blog-secrets
-              key: jwt-secret
+              key: JWT_SECRET
+        - name: SESSION_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: blog-secrets
+              key: SESSION_SECRET
+        - name: COREDB_ADMIN_USER
+          valueFrom:
+            secretKeyRef:
+              name: blog-secrets
+              key: COREDB_ADMIN_USER
+        - name: COREDB_ADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: blog-secrets
+              key: COREDB_ADMIN_PASSWORD
         resources:
           requests:
             memory: "256Mi"
