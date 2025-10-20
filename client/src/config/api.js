@@ -105,6 +105,9 @@ export const API_ENDPOINTS = {
     // Multi-database management
     HEALTH: `${API_URL}/api/database/health`,
     CONNECTIONS: `${API_URL}/api/database/connections`,
+    CREATE_CONNECTION: `${API_URL}/api/database/connections`,
+    UPDATE_CONNECTION: (id) => `${API_URL}/api/database/connections/${id}`,
+    DELETE_CONNECTION: (id) => `${API_URL}/api/database/connections/${id}`,
     SWITCH: `${API_URL}/api/database/switch`,
     TEST: `${API_URL}/api/database/test`,
     // Backup operations

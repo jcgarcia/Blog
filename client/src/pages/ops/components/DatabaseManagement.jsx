@@ -15,6 +15,17 @@ const DatabaseManagement = () => {
   const [activeConnection, setActiveConnection] = useState(null);
   const [testResults, setTestResults] = useState({});
   const [switchingDatabase, setSwitchingDatabase] = useState(false);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    type: 'postgresql',
+    host: '',
+    port: '5432',
+    database: '',
+    username: '',
+    password: '',
+    ssl_mode: 'require'
+  });
 
   useEffect(() => {
     fetchDatabaseInfo();
@@ -287,6 +298,80 @@ const DatabaseManagement = () => {
     }
   };
 
+  // Database connection form functions
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleAddConnection = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+    
+    try {
+      const response = await fetch(API_ENDPOINTS.DATABASE.CREATE_CONNECTION, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setSuccess('Database connection created successfully');
+        setShowAddForm(false);
+        setFormData({
+          name: '',
+          type: 'postgresql',
+          host: '',
+          port: '5432',
+          database: '',
+          username: '',
+          password: '',
+          ssl_mode: 'require'
+        });
+        fetchDatabaseConnections(); // Refresh connections list
+      } else {
+        setError(data.message || 'Failed to create database connection');
+      }
+    } catch (error) {
+      setError('Network error occurred while creating connection');
+    }
+  };
+
+  const handleDeleteConnection = async (connectionId, connectionName) => {
+    if (!window.confirm(`Are you sure you want to delete the connection "${connectionName}"?`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(API_ENDPOINTS.DATABASE.DELETE_CONNECTION(connectionId), {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`,
+        },
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setSuccess('Database connection deleted successfully');
+        fetchDatabaseConnections(); // Refresh connections list
+      } else {
+        setError(data.message || 'Failed to delete database connection');
+      }
+    } catch (error) {
+      setError('Network error occurred while deleting connection');
+    }
+  };
+
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleString();
   };
@@ -364,25 +449,157 @@ const DatabaseManagement = () => {
 
       {/* Database Configuration */}
       <div className="bg-white p-4 rounded-lg border mb-6">
-        <h3 className="text-lg font-semibold mb-3">Database Configuration</h3>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-lg font-semibold">Database Configuration</h3>
+          <button
+            onClick={() => setShowAddForm(!showAddForm)}
+            className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+          >
+            {showAddForm ? 'Cancel' : 'Add New Connection'}
+          </button>
+        </div>
+
+        {/* Add Connection Form */}
+        {showAddForm && (
+          <div className="bg-gray-50 p-4 rounded-lg mb-4">
+            <h4 className="font-semibold mb-3">Add New Database Connection</h4>
+            <form onSubmit={handleAddConnection} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Connection Name</label>
+                  <input
+                    type="text"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleInputChange}
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="PostgreSQL Production"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Database Type</label>
+                  <select
+                    name="type"
+                    value={formData.type}
+                    onChange={handleInputChange}
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="postgresql">PostgreSQL</option>
+                    <option value="mysql">MySQL</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Host</label>
+                  <input
+                    type="text"
+                    name="host"
+                    value={formData.host}
+                    onChange={handleInputChange}
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="dbdb.ingasti.com"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Port</label>
+                  <input
+                    type="number"
+                    name="port"
+                    value={formData.port}
+                    onChange={handleInputChange}
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="5432"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Database Name</label>
+                  <input
+                    type="text"
+                    name="database"
+                    value={formData.database}
+                    onChange={handleInputChange}
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="blog"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Username</label>
+                  <input
+                    type="text"
+                    name="username"
+                    value={formData.username}
+                    onChange={handleInputChange}
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="dbcore_usr_2025"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Password</label>
+                  <input
+                    type="password"
+                    name="password"
+                    value={formData.password}
+                    onChange={handleInputChange}
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="••••••••"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">SSL Mode</label>
+                  <select
+                    name="ssl_mode"
+                    value={formData.ssl_mode}
+                    onChange={handleInputChange}
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="require">Require</option>
+                    <option value="prefer">Prefer</option>
+                    <option value="allow">Allow</option>
+                    <option value="disable">Disable</option>
+                  </select>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="submit"
+                  className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                >
+                  Create Connection
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowAddForm(false)}
+                  className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
         
         {connections.length > 0 && (
           <div className="mb-4">
             <h4 className="font-semibold mb-2">Available Database Connections</h4>
             <div className="space-y-3">
               {connections.map((connection) => (
-                <div key={connection.type} className="flex items-center justify-between p-3 border rounded-lg">
+                <div key={connection.id} className="flex items-center justify-between p-3 border rounded-lg">
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
                       <span className="font-medium">{connection.name}</span>
-                      {activeConnection === connection.type && (
+                      {activeConnection === connection.name && (
                         <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">Active</span>
                       )}
                     </div>
                     <div className="text-sm text-gray-600 mt-1">
                       <div>Type: {connection.type}</div>
-                      <div>Host: {connection.config.host}:{connection.config.port}</div>
-                      <div>Database: {connection.config.database}</div>
+                      <div>Host: {connection.host}:{connection.port}</div>
+                      <div>Database: {connection.database}</div>
                     </div>
                   </div>
                   
@@ -407,15 +624,23 @@ const DatabaseManagement = () => {
                     </button>
                     
                     {/* Switch Database */}
-                    {activeConnection !== connection.type && (
+                    {activeConnection !== connection.name && (
                       <button
-                        onClick={() => switchDatabase(connection.type)}
+                        onClick={() => switchDatabase(connection.name)}
                         className="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600 disabled:opacity-50"
                         disabled={switchingDatabase}
                       >
                         {switchingDatabase ? 'Switching...' : 'Switch'}
                       </button>
                     )}
+                    
+                    {/* Delete Connection */}
+                    <button
+                      onClick={() => handleDeleteConnection(connection.id, connection.name)}
+                      className="bg-red-500 text-white px-3 py-1 rounded text-sm hover:bg-red-600"
+                    >
+                      Delete
+                    </button>
                   </div>
                 </div>
               ))}
@@ -423,9 +648,9 @@ const DatabaseManagement = () => {
           </div>
         )}
         
-        {connections.length === 0 && (
+        {connections.length === 0 && !showAddForm && (
           <div className="text-gray-600 text-center py-4">
-            No database connections configured. Please check server configuration.
+            No database connections configured. Click "Add New Connection" to get started.
           </div>
         )}
       </div>

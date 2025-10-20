@@ -1,6 +1,7 @@
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { getDbPool, databaseManager } from '../db.js';
+import CoreDB from '../services/CoreDB.js';
 
 const execAsync = promisify(exec);
 
@@ -442,67 +443,16 @@ export const switchDatabase = async (req, res) => {
  */
 export const getDatabaseConnections = async (req, res) => {
   try {
-    const healthStatus = databaseManager.getHealthStatus();
-    const connections = [];
-    let activeConnection = healthStatus.current;
-
-    // RDS configuration
-    if (process.env.PGHOST) {
-      connections.push({
-        type: 'rds',
-        name: 'AWS RDS PostgreSQL',
-        config: {
-          host: process.env.PGHOST,
-          port: process.env.PGPORT || 5432,
-          database: process.env.PGDATABASE,
-          user: process.env.PGUSER,
-          ssl: process.env.PGSSLMODE === 'require'
-        },
-        status: healthStatus.databases?.rds?.status || 'unknown',
-        connected: healthStatus.databases?.rds?.connected || false
-      });
-    }
-
-    // Container PostgreSQL configuration
-    if (process.env.POSTGRES_CONTAINER_HOST) {
-      connections.push({
-        type: 'container',
-        name: 'PostgreSQL Container',
-        config: {
-          host: process.env.POSTGRES_CONTAINER_HOST,
-          port: process.env.POSTGRES_CONTAINER_PORT || 5432,
-          database: process.env.POSTGRES_CONTAINER_DB,
-          user: process.env.POSTGRES_CONTAINER_USER,
-          ssl: false
-        },
-        status: healthStatus.databases?.container?.status || 'unknown',
-        connected: healthStatus.databases?.container?.connected || false
-      });
-    }
-
-    // If no environment variables are set, create default connections
-    if (connections.length === 0) {
-      // Add current active connection
-      connections.push({
-        type: 'current',
-        name: 'Current Database',
-        config: {
-          host: process.env.PGHOST || 'localhost',
-          port: process.env.PGPORT || 5432,
-          database: process.env.PGDATABASE || 'blog',
-          user: process.env.PGUSER || 'postgres',
-          ssl: false
-        },
-        status: 'connected',
-        connected: true
-      });
-      activeConnection = 'current';
-    }
-
+    const coreDB = CoreDB.getInstance();
+    
+    // Get database connections from CoreDB
+    const connections = await coreDB.getDatabaseConnections();
+    const activeDatabase = await coreDB.getActiveDatabaseConfig();
+    
     res.json({
       success: true,
       connections: connections,
-      active: activeConnection
+      active: activeDatabase?.name || null
     });
   } catch (error) {
     console.error('Error getting database connections:', error);
@@ -557,6 +507,109 @@ export const testDatabaseConnection = async (req, res) => {
     res.status(500).json({
       success: false,
       message: `Failed to test ${req.params.database} connection`,
+      error: error.message
+    });
+  }
+};
+/**
+ * Create a new database connection configuration
+ */
+export const createDatabaseConnection = async (req, res) => {
+  try {
+    const { name, type, host, port, database, username, password, ssl_mode } = req.body;
+    
+    // Validate required fields
+    if (!name || !type || !host || !port || !database || !username || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'All database connection fields are required'
+      });
+    }
+
+    const coreDB = CoreDB.getInstance();
+    const connectionId = await coreDB.createDatabaseConnection({
+      name,
+      type,
+      host,
+      port: parseInt(port),
+      database,
+      username,
+      password,
+      ssl_mode: ssl_mode || 'require'
+    });
+
+    res.json({
+      success: true,
+      message: 'Database connection created successfully',
+      id: connectionId
+    });
+  } catch (error) {
+    console.error('Error creating database connection:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message.includes('UNIQUE constraint failed') 
+        ? 'A database connection with this name already exists'
+        : 'Failed to create database connection',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Update an existing database connection configuration
+ */
+export const updateDatabaseConnection = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, type, host, port, database, username, password, ssl_mode } = req.body;
+    
+    const coreDB = CoreDB.getInstance();
+    const updateData = {};
+    
+    if (name) updateData.name = name;
+    if (type) updateData.type = type;
+    if (host) updateData.host = host;
+    if (port) updateData.port = parseInt(port);
+    if (database) updateData.database = database;
+    if (username) updateData.username = username;
+    if (password) updateData.password = password;
+    if (ssl_mode) updateData.ssl_mode = ssl_mode;
+
+    await coreDB.updateDatabaseConnection(id, updateData);
+
+    res.json({
+      success: true,
+      message: 'Database connection updated successfully'
+    });
+  } catch (error) {
+    console.error('Error updating database connection:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update database connection',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Delete a database connection configuration
+ */
+export const deleteDatabaseConnection = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const coreDB = CoreDB.getInstance();
+    await coreDB.deleteDatabaseConnection(id);
+
+    res.json({
+      success: true,
+      message: 'Database connection deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting database connection:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete database connection',
       error: error.message
     });
   }

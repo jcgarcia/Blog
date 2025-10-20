@@ -376,6 +376,133 @@ class CoreDB {
     }
     
     /**
+     * Database Connection Management Methods
+     */
+    
+    async getDatabaseConnections() {
+        if (!this.initialized) {
+            throw new Error('CoreDB not initialized');
+        }
+        
+        const connections = await this.db.all(`
+            SELECT id, name, type, host, port, database_name as database, 
+                   username, ssl_mode, active, created_at, updated_at
+            FROM external_databases 
+            ORDER BY name
+        `);
+        
+        return connections;
+    }
+    
+    async getActiveDatabaseConfig() {
+        if (!this.initialized) {
+            throw new Error('CoreDB not initialized');
+        }
+        
+        const activeDb = await this.db.get(`
+            SELECT id, name, type, host, port, database_name as database, 
+                   username, password_encrypted, ssl_mode, created_at, updated_at
+            FROM external_databases 
+            WHERE active = 1
+            LIMIT 1
+        `);
+        
+        if (activeDb) {
+            // Decrypt password
+            activeDb.password = this.decrypt(activeDb.password_encrypted);
+            delete activeDb.password_encrypted;
+        }
+        
+        return activeDb;
+    }
+    
+    async createDatabaseConnection(config) {
+        if (!this.initialized) {
+            throw new Error('CoreDB not initialized');
+        }
+        
+        const { name, type, host, port, database, username, password, ssl_mode } = config;
+        
+        // Encrypt password
+        const encryptedPassword = this.encrypt(password);
+        
+        const result = await this.db.run(`
+            INSERT INTO external_databases 
+            (name, type, host, port, database_name, username, password_encrypted, ssl_mode, active)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)
+        `, [name, type, host, port, database, username, encryptedPassword, ssl_mode]);
+        
+        console.log(`✅ CoreDB: Database connection '${name}' created`);
+        return result.lastID;
+    }
+    
+    async updateDatabaseConnection(id, updateData) {
+        if (!this.initialized) {
+            throw new Error('CoreDB not initialized');
+        }
+        
+        const updates = [];
+        const values = [];
+        
+        Object.keys(updateData).forEach(key => {
+            if (key === 'password') {
+                updates.push('password_encrypted = ?');
+                values.push(this.encrypt(updateData[key]));
+            } else if (key === 'database') {
+                updates.push('database_name = ?');
+                values.push(updateData[key]);
+            } else {
+                updates.push(`${key} = ?`);
+                values.push(updateData[key]);
+            }
+        });
+        
+        if (updates.length === 0) {
+            throw new Error('No fields to update');
+        }
+        
+        updates.push('updated_at = CURRENT_TIMESTAMP');
+        values.push(id);
+        
+        await this.db.run(`
+            UPDATE external_databases 
+            SET ${updates.join(', ')}
+            WHERE id = ?
+        `, values);
+        
+        console.log(`✅ CoreDB: Database connection ${id} updated`);
+    }
+    
+    async deleteDatabaseConnection(id) {
+        if (!this.initialized) {
+            throw new Error('CoreDB not initialized');
+        }
+        
+        // Check if this is the active connection
+        const activeDb = await this.db.get('SELECT id FROM external_databases WHERE id = ? AND active = 1', [id]);
+        if (activeDb) {
+            throw new Error('Cannot delete the active database connection. Please switch to another database first.');
+        }
+        
+        await this.db.run('DELETE FROM external_databases WHERE id = ?', [id]);
+        console.log(`✅ CoreDB: Database connection ${id} deleted`);
+    }
+    
+    async setActiveDatabaseConnection(id) {
+        if (!this.initialized) {
+            throw new Error('CoreDB not initialized');
+        }
+        
+        // Deactivate all connections
+        await this.db.run('UPDATE external_databases SET active = 0');
+        
+        // Activate the specified connection
+        await this.db.run('UPDATE external_databases SET active = 1 WHERE id = ?', [id]);
+        
+        console.log(`✅ CoreDB: Database connection ${id} set as active`);
+    }
+    
+    /**
      * Get the singleton instance
      */
     static getInstance() {

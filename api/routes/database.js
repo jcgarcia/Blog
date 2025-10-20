@@ -11,7 +11,10 @@ import {
   getDatabaseHealthStatus,
   switchDatabase,
   getDatabaseConnections,
-  testDatabaseConnection
+  testDatabaseConnection,
+  createDatabaseConnection,
+  updateDatabaseConnection,
+  deleteDatabaseConnection
 } from "../controllers/database.js";
 
 const router = express.Router();
@@ -25,6 +28,9 @@ router.get("/info", getDatabaseInfo);
 // Multi-database management
 router.get("/health", getDatabaseHealthStatus);
 router.get("/connections", getDatabaseConnections);
+router.post("/connections", createDatabaseConnection);
+router.put("/connections/:id", updateDatabaseConnection);
+router.delete("/connections/:id", deleteDatabaseConnection);
 router.post("/switch", switchDatabase);
 router.get("/test/:database", testDatabaseConnection);
 
