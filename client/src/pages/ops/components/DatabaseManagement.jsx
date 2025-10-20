@@ -9,10 +9,17 @@ const DatabaseManagement = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [confirmRestore, setConfirmRestore] = useState('');
+  
+  // Database configuration state
+  const [connections, setConnections] = useState([]);
+  const [activeConnection, setActiveConnection] = useState(null);
+  const [testResults, setTestResults] = useState({});
+  const [switchingDatabase, setSwitchingDatabase] = useState(false);
 
   useEffect(() => {
     fetchDatabaseInfo();
     fetchBackups();
+    fetchDatabaseConnections();
   }, []);
 
   const fetchDatabaseInfo = async () => {
@@ -200,6 +207,86 @@ const DatabaseManagement = () => {
     }
   };
 
+  // Database configuration functions
+  const fetchDatabaseConnections = async () => {
+    try {
+      const response = await fetch(API_ENDPOINTS.DATABASE.CONNECTIONS, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`,
+        },
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setConnections(data.connections || []);
+        setActiveConnection(data.active || null);
+      }
+    } catch (error) {
+      console.error('Failed to fetch database connections:', error);
+    }
+  };
+
+  const testDatabaseConnection = async (databaseType) => {
+    try {
+      setTestResults(prev => ({ ...prev, [databaseType]: 'testing' }));
+      
+      const response = await fetch(`${API_ENDPOINTS.DATABASE.TEST}/${databaseType}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`,
+        },
+      });
+      
+      const data = await response.json();
+      setTestResults(prev => ({ 
+        ...prev, 
+        [databaseType]: response.ok ? 'success' : 'failed' 
+      }));
+      
+      if (!response.ok) {
+        setError(`Database test failed: ${data.message}`);
+      }
+    } catch (error) {
+      setTestResults(prev => ({ ...prev, [databaseType]: 'failed' }));
+      setError('Network error during database test');
+    }
+  };
+
+  const switchDatabase = async (databaseType) => {
+    if (!window.confirm(`Are you sure you want to switch to ${databaseType}? This will affect all blog operations.`)) {
+      return;
+    }
+
+    setSwitchingDatabase(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const response = await fetch(API_ENDPOINTS.DATABASE.SWITCH, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ database: databaseType }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setSuccess(`Successfully switched to ${databaseType} database`);
+        setActiveConnection(databaseType);
+        fetchDatabaseInfo(); // Refresh database info
+        fetchDatabaseConnections(); // Refresh connections
+      } else {
+        setError(data.message || 'Failed to switch database');
+      }
+    } catch (error) {
+      setError('Network error occurred during database switch');
+    } finally {
+      setSwitchingDatabase(false);
+    }
+  };
+
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleString();
   };
@@ -274,6 +361,74 @@ const DatabaseManagement = () => {
           </div>
         </div>
       )}
+
+      {/* Database Configuration */}
+      <div className="bg-white p-4 rounded-lg border mb-6">
+        <h3 className="text-lg font-semibold mb-3">Database Configuration</h3>
+        
+        {connections.length > 0 && (
+          <div className="mb-4">
+            <h4 className="font-semibold mb-2">Available Database Connections</h4>
+            <div className="space-y-3">
+              {connections.map((connection) => (
+                <div key={connection.type} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{connection.name}</span>
+                      {activeConnection === connection.type && (
+                        <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">Active</span>
+                      )}
+                    </div>
+                    <div className="text-sm text-gray-600 mt-1">
+                      <div>Type: {connection.type}</div>
+                      <div>Host: {connection.config.host}:{connection.config.port}</div>
+                      <div>Database: {connection.config.database}</div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    {/* Test Connection */}
+                    <button
+                      onClick={() => testDatabaseConnection(connection.type)}
+                      className={`px-3 py-1 rounded text-sm ${
+                        testResults[connection.type] === 'success' 
+                          ? 'bg-green-100 text-green-800' 
+                          : testResults[connection.type] === 'failed'
+                          ? 'bg-red-100 text-red-800'
+                          : testResults[connection.type] === 'testing'
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                      }`}
+                      disabled={testResults[connection.type] === 'testing'}
+                    >
+                      {testResults[connection.type] === 'testing' ? 'Testing...' : 
+                       testResults[connection.type] === 'success' ? '✓ Connected' :
+                       testResults[connection.type] === 'failed' ? '✗ Failed' : 'Test'}
+                    </button>
+                    
+                    {/* Switch Database */}
+                    {activeConnection !== connection.type && (
+                      <button
+                        onClick={() => switchDatabase(connection.type)}
+                        className="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600 disabled:opacity-50"
+                        disabled={switchingDatabase}
+                      >
+                        {switchingDatabase ? 'Switching...' : 'Switch'}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        
+        {connections.length === 0 && (
+          <div className="text-gray-600 text-center py-4">
+            No database connections configured. Please check server configuration.
+          </div>
+        )}
+      </div>
 
       {/* Backup Operations */}
       <div className="bg-white p-4 rounded-lg border mb-6">
