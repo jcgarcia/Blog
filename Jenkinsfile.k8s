@@ -287,12 +287,20 @@ pipeline {
                         # Update image tags in deployment files
                         sed -i.bak "s|localhost:5000/blog-frontend:latest|${env.FRONTEND_IMAGE}|g" frontend-deployment.yaml
                         sed -i.bak "s|localhost:5000/blog-backend:latest|${env.BACKEND_IMAGE}|g" backend-deployment.yaml
+                        sed -i.bak "s|localhost:5000/blog-postgres:latest|${env.POSTGRES_IMAGE}|g" postgres/postgres-deployment.yaml
                         
                         # Apply namespace first
                         kubectl apply -f namespace.yaml
                         
                         # Apply persistent volumes
                         kubectl apply -f storage.yaml
+                        
+                        # Apply PostgreSQL deployment
+                        echo "🐘 Deploying PostgreSQL container..."
+                        kubectl apply -f postgres/postgres-pvc.yaml
+                        kubectl apply -f postgres/postgres-secrets.yaml
+                        kubectl apply -f postgres/postgres-service.yaml
+                        kubectl apply -f postgres/postgres-deployment.yaml
                         
                         # Apply OIDC service account and configuration
                         kubectl apply -f service-account.yaml
@@ -310,12 +318,14 @@ pipeline {
                         
                         # Wait for deployments to be ready
                         echo "⏳ Waiting for deployments to be ready..."
+                        kubectl wait --for=condition=available --timeout=300s deployment/blog-postgres -n blog
                         kubectl wait --for=condition=available --timeout=300s deployment/blog-backend -n blog
                         kubectl wait --for=condition=available --timeout=300s deployment/blog-frontend -n blog
                         
                         # Restore original deployment files
                         mv frontend-deployment.yaml.bak frontend-deployment.yaml
                         mv backend-deployment.yaml.bak backend-deployment.yaml
+                        mv postgres/postgres-deployment.yaml.bak postgres/postgres-deployment.yaml
                     """
                     
                     echo "✅ Kubernetes deployment completed"
@@ -335,11 +345,14 @@ pipeline {
                         kubectl get pods -n blog -o wide
                         
                         # Check for any issues
+                        kubectl describe pods -n blog -l app=blog-postgres | grep -A 10 Events || true
                         kubectl describe pods -n blog -l app=blog-backend | grep -A 10 Events || true
                         kubectl describe pods -n blog -l app=blog-frontend | grep -A 10 Events || true
                         
                         # Internal health checks
                         echo "🏥 Performing internal health checks..."
+                        kubectl run health-check-postgres --image=postgres:15 --rm -i --restart=Never --timeout=60s -- psql -h blog-postgres-service.blog.svc.cluster.local -U blogadmin -d blog -c "SELECT version();" && echo "PostgreSQL health check passed" || echo "PostgreSQL health check failed"
+                        
                         kubectl run health-check-backend --image=busybox --rm -i --restart=Never --timeout=60s -- /bin/sh -c "wget -qO- http://blog-backend-service.blog.svc.cluster.local/health && echo 'Backend health check passed'" || echo "Backend health check failed"
                         
                         kubectl run health-check-frontend --image=busybox --rm -i --restart=Never --timeout=60s -- /bin/sh -c "wget -qO- http://blog-frontend-service.blog.svc.cluster.local/health && echo 'Frontend health check passed'" || echo "Frontend health check failed"
@@ -353,6 +366,9 @@ pipeline {
                 script {
                     echo "📋 Recent application logs:"
                     sh """
+                        echo "PostgreSQL logs:"
+                        kubectl logs -n blog -l app=blog-postgres --tail=20 || echo "Could not fetch PostgreSQL logs"
+                        
                         echo "Backend logs:"
                         kubectl logs -n blog -l app=blog-backend --tail=20 || echo "Could not fetch backend logs"
                         
