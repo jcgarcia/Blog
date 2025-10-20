@@ -237,11 +237,11 @@ const DatabaseManagement = () => {
     }
   };
 
-  const testDatabaseConnection = async (databaseType) => {
+  const testDatabaseConnection = async (connectionId) => {
     try {
-      setTestResults(prev => ({ ...prev, [databaseType]: 'testing' }));
+      setTestResults(prev => ({ ...prev, [connectionId]: 'testing' }));
       
-      const response = await fetch(`${API_ENDPOINTS.DATABASE.TEST}/${databaseType}`, {
+      const response = await fetch(`${API_ENDPOINTS.DATABASE.CONNECTIONS}/${connectionId}/test`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('adminToken')}`,
         },
@@ -250,14 +250,16 @@ const DatabaseManagement = () => {
       const data = await response.json();
       setTestResults(prev => ({ 
         ...prev, 
-        [databaseType]: response.ok ? 'success' : 'failed' 
+        [connectionId]: response.ok ? 'success' : 'failed' 
       }));
       
       if (!response.ok) {
         setError(`Database test failed: ${data.message}`);
+      } else {
+        setSuccess(`Connection test successful - Response time: ${data.responseTime}ms`);
       }
     } catch (error) {
-      setTestResults(prev => ({ ...prev, [databaseType]: 'failed' }));
+      setTestResults(prev => ({ ...prev, [connectionId]: 'failed' }));
       setError('Network error during database test');
     }
   };
@@ -606,21 +608,21 @@ const DatabaseManagement = () => {
                   <div className="flex items-center gap-2">
                     {/* Test Connection */}
                     <button
-                      onClick={() => testDatabaseConnection(connection.type)}
+                      onClick={() => testDatabaseConnection(connection.id)}
                       className={`px-3 py-1 rounded text-sm ${
-                        testResults[connection.type] === 'success' 
+                        testResults[connection.id] === 'success' 
                           ? 'bg-green-100 text-green-800' 
-                          : testResults[connection.type] === 'failed'
+                          : testResults[connection.id] === 'failed'
                           ? 'bg-red-100 text-red-800'
-                          : testResults[connection.type] === 'testing'
+                          : testResults[connection.id] === 'testing'
                           ? 'bg-yellow-100 text-yellow-800'
                           : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
                       }`}
-                      disabled={testResults[connection.type] === 'testing'}
+                      disabled={testResults[connection.id] === 'testing'}
                     >
-                      {testResults[connection.type] === 'testing' ? 'Testing...' : 
-                       testResults[connection.type] === 'success' ? '✓ Connected' :
-                       testResults[connection.type] === 'failed' ? '✗ Failed' : 'Test'}
+                      {testResults[connection.id] === 'testing' ? 'Testing...' : 
+                       testResults[connection.id] === 'success' ? '✓ Connected' :
+                       testResults[connection.id] === 'failed' ? '✗ Failed' : 'Test'}
                     </button>
                     
                     {/* Switch Database */}

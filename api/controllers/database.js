@@ -466,47 +466,70 @@ export const getDatabaseConnections = async (req, res) => {
 };
 
 /**
- * Test connection to a specific database
+ * Test connection to a specific database configuration
  */
 export const testDatabaseConnection = async (req, res) => {
   try {
     const { database } = req.params;
+    const coreDB = CoreDB.getInstance();
+    
+    // Get the database connection with encrypted password
+    const connection = await coreDB.db.get(`
+      SELECT id, name, type, host, port, database_name as database, 
+             username, password_encrypted, ssl_mode, active
+      FROM external_databases 
+      WHERE id = ? OR name = ? OR type = ?
+    `, [database, database, database]);
 
-    if (!['rds', 'container'].includes(database)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid database. Must be "rds" or "container"'
-      });
-    }
-
-    const pools = databaseManager.pools;
-    const pool = pools[database];
-
-    if (!pool) {
+    if (!connection) {
       return res.status(404).json({
         success: false,
-        message: `Database ${database} is not configured or available`
+        message: `Database connection "${database}" not found`
       });
     }
 
-    // Test connection with a simple query
-    const start = Date.now();
-    const client = await pool.connect();
-    const result = await client.query('SELECT current_database(), current_user, version(), now() as timestamp');
-    const responseTime = Date.now() - start;
-    client.release();
+    // Get decrypted password
+    const decryptedPassword = coreDB.decrypt(connection.password_encrypted);
 
-    res.json({
-      success: true,
-      database,
-      responseTime,
-      connection: result.rows[0]
+    // Create a temporary connection pool for testing
+    const { Pool } = await import('pg');
+    const testPool = new Pool({
+      host: connection.host,
+      port: connection.port,
+      database: connection.database,
+      user: connection.username,
+      password: decryptedPassword,
+      ssl: connection.ssl_mode === 'disable' ? false : { rejectUnauthorized: false },
+      max: 1,
+      idleTimeoutMillis: 5000,
+      connectionTimeoutMillis: 10000,
     });
+
+    try {
+      // Test connection with a simple query
+      const start = Date.now();
+      const client = await testPool.connect();
+      const result = await client.query('SELECT current_database(), current_user, version(), now() as timestamp');
+      const responseTime = Date.now() - start;
+      client.release();
+
+      await testPool.end();
+
+      res.json({
+        success: true,
+        database: connection.name,
+        responseTime,
+        connection: result.rows[0]
+      });
+    } catch (testError) {
+      await testPool.end();
+      throw testError;
+    }
   } catch (error) {
-    console.error(`Error testing ${req.params.database} connection:`, error);
+    console.error(`Error testing database connection:`, error);
     res.status(500).json({
       success: false,
-      message: `Failed to test ${req.params.database} connection`,
+      message: `Failed to test database connection: ${error.message}`,
       error: error.message
     });
   }
