@@ -34,6 +34,9 @@
     "passport-google-oauth20": "^2.0.0",
     "pg": "^8.11.3",
     "sharp": "^0.33.2",
+    "sqlite": "^5.1.1",
+    "sqlite3": "^5.1.7",
+    "bcrypt": "^5.1.1",
     "uuid": "^10.0.0"
   }
 }
