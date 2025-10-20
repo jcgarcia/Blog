@@ -105,17 +105,17 @@ class CoreDB {
         const existingAdmin = await this.db.get('SELECT id FROM admin_users LIMIT 1');
         
         if (!existingAdmin) {
-            const defaultPassword = 'admin123'; // TODO: Generate random password
+            const defaultPassword = 'CoreAdmin2025#Secure'; // Secure default password
             const passwordHash = await argon2.hash(defaultPassword);
             
             await this.db.run(
                 `INSERT INTO admin_users (username, password_hash, email) 
                  VALUES (?, ?, ?)`,
-                ['admin', passwordHash, 'admin@bedtime.ingasti.com']
+                ['coreadmin', passwordHash, 'coreadmin@bedtime.ingasti.com']
             );
             
             console.log('✅ CoreDB: Default admin created');
-            console.log('⚠️  Default admin credentials: admin / admin123');
+            console.log('⚠️  Default admin credentials: coreadmin / CoreAdmin2025#Secure');
             console.log('⚠️  CHANGE PASSWORD IMMEDIATELY after first login!');
         }
     }

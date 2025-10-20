@@ -28,6 +28,7 @@ import { loadSystemConfig } from "./middleware/systemConfig.js";
 import { closeDbPool, databaseManager } from "./db.js";
 import { createHealthCheckEndpoint, createConnectionInfoEndpoint } from "./utils/dbHealthCheck.js";
 import { initializeDatabaseMigrations } from "./migrations.js";
+import CoreDB from "./services/CoreDB.js";
 
 // Load environment variables for database connection only
 dotenv.config({ path: '.env.local' });
@@ -200,6 +201,17 @@ app.get('/share', socialCrawlerMiddleware);
 const PORT = process.env.PORT || 5000;
 const server = app.listen(PORT, async () => {
   console.log(`Connected! Server running on port ${PORT}`);
+  
+  // Initialize CoreDB first (essential for admin authentication)
+  try {
+    console.log('🔧 Initializing CoreDB...');
+    const coreDB = new CoreDB();
+    await coreDB.initialize();
+    console.log('✅ CoreDB initialized successfully');
+  } catch (error) {
+    console.error('❌ Failed to initialize CoreDB:', error);
+    console.error('🔄 Admin authentication may not work properly');
+  }
   
   try {
     // Run essential database migrations first
