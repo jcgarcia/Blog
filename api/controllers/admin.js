@@ -1,6 +1,7 @@
 import argon2 from 'argon2';
 import jwt from 'jsonwebtoken';
 import { getDbPool } from '../db.js';
+import CoreDB from '../services/CoreDB.js';
 
 // Simple in-memory rate limiting (in production, use Redis or similar)
 const loginAttempts = new Map();
@@ -65,51 +66,77 @@ export const adminLogin = async (req, res) => {
     // Log the login attempt (without sensitive data)
     console.log(`Admin login attempt for username: ${username} from IP: ${ip}`);
 
-    // Find admin user
-    const query = `
-      SELECT id, username, email, password_hash, first_name, last_name, role, is_active
-      FROM users 
-      WHERE (username = $1 OR email = $1) 
-      AND role IN ('admin', 'super_admin', 'editor')
-      AND is_active = true
-    `;
+    let user = null;
+    let authSource = 'unknown';
 
-    const result = await getDbPool().query(query, [username]);
+    try {
+      // First try CoreDB authentication
+      const coreDbUser = await coreDb.authenticateAdmin(username, password);
+      if (coreDbUser) {
+        user = {
+          id: 1, // Default admin ID for CoreDB
+          username: coreDbUser.username,
+          email: coreDbUser.email || 'admin@bedtime.ingasti.com',
+          first_name: 'Admin',
+          last_name: 'User',
+          role: 'admin'
+        };
+        authSource = 'CoreDB';
+        console.log(`CoreDB authentication successful for: ${username}`);
+      }
+    } catch (error) {
+      console.log(`CoreDB authentication failed: ${error.message}`);
+    }
 
-    if (result.rows.length === 0) {
+    // If CoreDB authentication failed, try legacy PostgreSQL database
+    if (!user) {
+      try {
+        const query = `
+          SELECT id, username, email, password_hash, first_name, last_name, role, is_active
+          FROM users 
+          WHERE (username = $1 OR email = $1) 
+          AND role IN ('admin', 'super_admin', 'editor')
+          AND is_active = true
+        `;
+
+        const result = await getDbPool().query(query, [username]);
+
+        if (result.rows.length > 0) {
+          const dbUser = result.rows[0];
+          const passwordMatch = await argon2.verify(dbUser.password_hash, password);
+          
+          if (passwordMatch) {
+            user = dbUser;
+            authSource = 'PostgreSQL';
+            console.log(`PostgreSQL authentication successful for: ${username}`);
+            
+            // Update last login for PostgreSQL users
+            await getDbPool().query(
+              'UPDATE users SET last_login_at = CURRENT_TIMESTAMP WHERE id = $1',
+              [user.id]
+            );
+          }
+        }
+      } catch (error) {
+        console.log(`PostgreSQL authentication failed: ${error.message}`);
+      }
+    }
+
+    // If both authentication methods failed
+    if (!user) {
       trackFailedAttempt(ip);
-      console.log(`Failed admin login: user not found or insufficient permissions - ${username} from ${ip}`);
+      console.log(`Failed admin login: authentication failed for ${username} from ${ip}`);
       return res.status(401).json({
         success: false,
         message: 'Invalid credentials or insufficient permissions'
       });
     }
 
-    const user = result.rows[0];
-
-    // Verify password
-    const passwordMatch = await argon2.verify(user.password_hash, password);
-
-    if (!passwordMatch) {
-      trackFailedAttempt(ip);
-      console.log(`Failed admin login: incorrect password - ${username} from ${ip}`);
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid credentials'
-      });
-    }
-
     // Clear failed attempts on successful login
     clearAttempts(ip);
 
-    // Update last login
-    await getDbPool().query(
-      'UPDATE users SET last_login_at = CURRENT_TIMESTAMP WHERE id = $1',
-      [user.id]
-    );
-
     // Log successful login
-    console.log(`Successful admin login: ${user.username} (${user.role}) from ${ip}`);
+    console.log(`Successful admin login: ${user.username} (${user.role}) from ${ip} via ${authSource}`);
 
     // Generate JWT token
     const token = jwt.sign(
@@ -162,22 +189,38 @@ export const verifyAdminToken = async (req, res) => {
     // Verify JWT token
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
 
-    // Get current user data
-    const result = await getDbPool().query(
-      `SELECT id, username, email, first_name, last_name, role, is_active, last_login_at
-       FROM users 
-       WHERE id = $1 AND role IN ('admin', 'super_admin', 'editor') AND is_active = true`,
-      [decoded.id]
-    );
+    let user = null;
 
-    if (result.rows.length === 0) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid token or user not found'
-      });
+    // If this is a CoreDB admin user (id = 1), use static data
+    if (decoded.id === 1) {
+      user = {
+        id: 1,
+        username: decoded.username,
+        email: 'admin@bedtime.ingasti.com',
+        first_name: 'Admin',
+        last_name: 'User',
+        role: 'admin',
+        is_active: true,
+        last_login_at: new Date()
+      };
+    } else {
+      // For legacy PostgreSQL users, query the database
+      const result = await getDbPool().query(
+        `SELECT id, username, email, first_name, last_name, role, is_active, last_login_at
+         FROM users 
+         WHERE id = $1 AND role IN ('admin', 'super_admin', 'editor') AND is_active = true`,
+        [decoded.id]
+      );
+
+      if (result.rows.length === 0) {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid token or user not found'
+        });
+      }
+
+      user = result.rows[0];
     }
-
-    const user = result.rows[0];
 
     res.json({
       success: true,
@@ -240,23 +283,37 @@ export const requireAdminAuth = async (req, res, next) => {
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
 
-    // Verify user still exists and has admin privileges
-    const result = await getDbPool().query(
-      `SELECT id, username, role, is_active
-       FROM users 
-       WHERE id = $1 AND role IN ('admin', 'super_admin', 'editor') AND is_active = true`,
-      [decoded.id]
-    );
+    let user = null;
 
-    if (result.rows.length === 0) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid authentication or insufficient permissions'
-      });
+    // If this is a CoreDB admin user (id = 1), use static data
+    if (decoded.id === 1) {
+      user = {
+        id: 1,
+        username: decoded.username,
+        role: 'admin',
+        is_active: true
+      };
+    } else {
+      // For legacy PostgreSQL users, verify in database
+      const result = await getDbPool().query(
+        `SELECT id, username, role, is_active
+         FROM users 
+         WHERE id = $1 AND role IN ('admin', 'super_admin', 'editor') AND is_active = true`,
+        [decoded.id]
+      );
+
+      if (result.rows.length === 0) {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid authentication or insufficient permissions'
+        });
+      }
+
+      user = result.rows[0];
     }
 
     // Add user info to request
-    req.adminUser = result.rows[0];
+    req.adminUser = user;
     next();
 
   } catch (error) {
