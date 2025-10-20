@@ -16,6 +16,7 @@ const DatabaseManagement = () => {
   const [testResults, setTestResults] = useState({});
   const [switchingDatabase, setSwitchingDatabase] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [editingConnection, setEditingConnection] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
     type: 'postgresql',
@@ -239,6 +240,7 @@ const DatabaseManagement = () => {
 
   const testDatabaseConnection = async (connectionId) => {
     try {
+      console.log('Testing connection with ID:', connectionId);
       setTestResults(prev => ({ ...prev, [connectionId]: 'testing' }));
       
       const response = await fetch(`${API_ENDPOINTS.DATABASE.CONNECTIONS}/${connectionId}/test`, {
@@ -248,6 +250,8 @@ const DatabaseManagement = () => {
       });
       
       const data = await response.json();
+      console.log('Test response:', data);
+      
       setTestResults(prev => ({ 
         ...prev, 
         [connectionId]: response.ok ? 'success' : 'failed' 
@@ -259,6 +263,7 @@ const DatabaseManagement = () => {
         setSuccess(`Connection test successful - Response time: ${data.responseTime}ms`);
       }
     } catch (error) {
+      console.error('Test error:', error);
       setTestResults(prev => ({ ...prev, [connectionId]: 'failed' }));
       setError('Network error during database test');
     }
@@ -315,8 +320,14 @@ const DatabaseManagement = () => {
     setSuccess('');
     
     try {
-      const response = await fetch(API_ENDPOINTS.DATABASE.CREATE_CONNECTION, {
-        method: 'POST',
+      const isEditing = editingConnection !== null;
+      const url = isEditing 
+        ? API_ENDPOINTS.DATABASE.UPDATE_CONNECTION(editingConnection)
+        : API_ENDPOINTS.DATABASE.CREATE_CONNECTION;
+      const method = isEditing ? 'PUT' : 'POST';
+
+      const response = await fetch(url, {
+        method,
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('adminToken')}`,
           'Content-Type': 'application/json',
@@ -327,8 +338,9 @@ const DatabaseManagement = () => {
       const data = await response.json();
 
       if (response.ok) {
-        setSuccess('Database connection created successfully');
+        setSuccess(isEditing ? 'Database connection updated successfully' : 'Database connection created successfully');
         setShowAddForm(false);
+        setEditingConnection(null);
         setFormData({
           name: '',
           type: 'postgresql',
@@ -341,11 +353,41 @@ const DatabaseManagement = () => {
         });
         fetchDatabaseConnections(); // Refresh connections list
       } else {
-        setError(data.message || 'Failed to create database connection');
+        setError(data.message || `Failed to ${isEditing ? 'update' : 'create'} database connection`);
       }
     } catch (error) {
-      setError('Network error occurred while creating connection');
+      setError(`Network error occurred while ${editingConnection ? 'updating' : 'creating'} connection`);
     }
+  };
+
+  const handleEditConnection = (connection) => {
+    setEditingConnection(connection.id);
+    setFormData({
+      name: connection.name,
+      type: connection.type,
+      host: connection.host,
+      port: connection.port.toString(),
+      database: connection.database,
+      username: connection.username,
+      password: '', // Leave empty for security
+      ssl_mode: connection.ssl_mode
+    });
+    setShowAddForm(true);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingConnection(null);
+    setShowAddForm(false);
+    setFormData({
+      name: '',
+      type: 'postgresql',
+      host: '',
+      port: '5432',
+      database: '',
+      username: '',
+      password: '',
+      ssl_mode: 'require'
+    });
   };
 
   const handleDeleteConnection = async (connectionId, connectionName) => {
@@ -461,10 +503,10 @@ const DatabaseManagement = () => {
           </button>
         </div>
 
-        {/* Add Connection Form */}
+        {/* Add/Edit Connection Form */}
         {showAddForm && (
           <div className="bg-gray-50 p-4 rounded-lg mb-4">
-            <h4 className="font-semibold mb-3">Add New Database Connection</h4>
+            <h4 className="font-semibold mb-3">{editingConnection ? 'Edit Database Connection' : 'Add New Database Connection'}</h4>
             <form onSubmit={handleAddConnection} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -547,8 +589,8 @@ const DatabaseManagement = () => {
                     value={formData.password}
                     onChange={handleInputChange}
                     className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="••••••••"
-                    required
+                    placeholder={editingConnection ? "Leave empty to keep current password" : "••••••••"}
+                    required={!editingConnection}
                   />
                 </div>
                 <div>
@@ -571,11 +613,11 @@ const DatabaseManagement = () => {
                   type="submit"
                   className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
                 >
-                  Create Connection
+                  {editingConnection ? 'Update Connection' : 'Create Connection'}
                 </button>
                 <button
                   type="button"
-                  onClick={() => setShowAddForm(false)}
+                  onClick={handleCancelEdit}
                   className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
                 >
                   Cancel
@@ -635,6 +677,14 @@ const DatabaseManagement = () => {
                         {switchingDatabase ? 'Switching...' : 'Switch'}
                       </button>
                     )}
+                    
+                    {/* Edit Connection */}
+                    <button
+                      onClick={() => handleEditConnection(connection)}
+                      className="bg-yellow-500 text-white px-3 py-1 rounded text-sm hover:bg-yellow-600"
+                    >
+                      Edit
+                    </button>
                     
                     {/* Delete Connection */}
                     <button

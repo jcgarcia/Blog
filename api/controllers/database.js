@@ -470,23 +470,28 @@ export const getDatabaseConnections = async (req, res) => {
  */
 export const testDatabaseConnection = async (req, res) => {
   try {
-    const { database } = req.params;
+    const { id } = req.params;
     const coreDB = CoreDB.getInstance();
+    
+    console.log('Testing database connection with ID:', id);
     
     // Get the database connection with encrypted password
     const connection = await coreDB.db.get(`
       SELECT id, name, type, host, port, database_name as database, 
              username, password_encrypted, ssl_mode, active
       FROM external_databases 
-      WHERE id = ? OR name = ? OR type = ?
-    `, [database, database, database]);
+      WHERE id = ?
+    `, [id]);
 
     if (!connection) {
+      console.log('Connection not found for ID:', id);
       return res.status(404).json({
         success: false,
-        message: `Database connection "${database}" not found`
+        message: `Database connection with ID "${id}" not found`
       });
     }
+    
+    console.log('Found connection:', connection.name);
 
     // Get decrypted password
     const decryptedPassword = coreDB.decrypt(connection.password_encrypted);
