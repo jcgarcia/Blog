@@ -205,7 +205,7 @@ const server = app.listen(PORT, async () => {
   // Initialize CoreDB first (essential for admin authentication)
   try {
     console.log('🔧 Initializing CoreDB...');
-    const coreDB = new CoreDB();
+    const coreDB = CoreDB.getInstance();
     await coreDB.initialize();
     console.log('✅ CoreDB initialized successfully');
   } catch (error) {

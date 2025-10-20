@@ -15,11 +15,17 @@ const __dirname = path.dirname(__filename);
  */
 class CoreDB {
     constructor() {
+        if (CoreDB.instance) {
+            return CoreDB.instance;
+        }
+        
         this.dbPath = process.env.CORE_DB_PATH || path.join(__dirname, '../config/coredb.sqlite');
         this.db = null;
         this.encryptionKey = process.env.CORE_DB_ENCRYPTION_KEY || this.generateEncryptionKey();
         this.schemaPath = path.join(__dirname, '../config/coredb-schema.sql');
         this.initialized = false;
+        
+        CoreDB.instance = this;
     }
 
     /**
@@ -368,6 +374,19 @@ class CoreDB {
         
         return stats;
     }
+    
+    /**
+     * Get the singleton instance
+     */
+    static getInstance() {
+        if (!CoreDB.instance) {
+            CoreDB.instance = new CoreDB();
+        }
+        return CoreDB.instance;
+    }
 }
+
+// Initialize static instance property
+CoreDB.instance = null;
 
 export default CoreDB;

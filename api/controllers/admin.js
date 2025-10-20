@@ -3,6 +3,9 @@ import jwt from 'jsonwebtoken';
 import { getDbPool } from '../db.js';
 import CoreDB from '../services/CoreDB.js';
 
+// Get CoreDB singleton instance
+const coreDb = CoreDB.getInstance();
+
 // Simple in-memory rate limiting (in production, use Redis or similar)
 const loginAttempts = new Map();
 const MAX_ATTEMPTS = 5;
