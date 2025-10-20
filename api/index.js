@@ -17,6 +17,7 @@ import viewsRoutes from "./routes/views.js";
 import analyticsRoutes from "./routes/analytics.js";
 import awsRoutes from "./routes/aws.js";
 import metaRoutes from "./routes/meta.js";
+import coredbRoutes from "./routes/coredb.js";
 import cookieParser from "cookie-parser";
 import multer from "multer";
 import passport from "passport";
@@ -188,6 +189,7 @@ app.use("/api/test", testCommentsRoutes);
 app.use("/api/views", viewsRoutes);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/aws", awsRoutes);
+app.use("/api/coredb", coredbRoutes);
 app.use("/api/meta", metaRoutes);
 
 // Social media sharing routes (for crawlers)
