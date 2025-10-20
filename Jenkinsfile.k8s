@@ -3,10 +3,8 @@ pipeline {
         label 'local-agent'
     }
     environment {
-        // Database and security credentials - will be set in the pipeline
-        DATABASE_URL = credentials('db-connection-string')
+        // Security credentials - JWT secret is available globally
         JWT_SECRET = credentials('jwt-secret')
-        DB_PASSWORD = credentials('db-key')
         // Image configuration
         BUILD_NUMBER = "${env.BUILD_NUMBER}"
         // Environment configuration
@@ -139,21 +137,20 @@ pipeline {
                 script {
                     echo "🧪 Testing backend container..."
                     withCredentials([
-                        string(credentialsId: 'db-host', variable: 'PGHOST'),
-                        string(credentialsId: 'db-port', variable: 'PGPORT'),
-                        string(credentialsId: 'db-name', variable: 'PGDATABASE'),
-                        string(credentialsId: 'db-user', variable: 'PGUSER'),
-                        string(credentialsId: 'db-key', variable: 'PGPASSWORD')
+                        string(credentialsId: 'postgres-host', variable: 'PGHOST'),
+                        string(credentialsId: 'postgres-port', variable: 'PGPORT'),
+                        string(credentialsId: 'postgres-database', variable: 'PGDATABASE'),
+                        string(credentialsId: 'postgres-user', variable: 'PGUSER'),
+                        string(credentialsId: 'postgres-password', variable: 'PGPASSWORD')
                     ]) {
                         sh """
-                            # Start backend container for testing with AWS RDS credentials from Jenkins
+                            # Start backend container for testing with PostgreSQL container credentials from Jenkins
                             docker run -d -p 5002:5000 --name test-backend-${BUILD_NUMBER} \
-                                -e PGHOST='\${PGHOST}' \
-                                -e PGPORT='\${PGPORT}' \
-                                -e PGDATABASE='\${PGDATABASE}' \
-                                -e PGUSER='\${PGUSER}' \
-                                -e PGPASSWORD='\${PGPASSWORD}' \
-                                -e PGSSLMODE='require' \
+                                -e PGHOST="${PGHOST}" \
+                                -e PGPORT="${PGPORT}" \
+                                -e PGDATABASE="${PGDATABASE}" \
+                                -e PGUSER="${PGUSER}" \
+                                -e PGPASSWORD="${PGPASSWORD}" \
                                 -e CORS_ORIGIN="${CORS_ORIGIN}" \
                                 -e NODE_ENV=production \
                                 ${env.BACKEND_IMAGE}
@@ -244,29 +241,33 @@ pipeline {
                 script {
                     echo "🔐 Updating Kubernetes secrets with Jenkins credentials..."
                     withCredentials([
-                        string(credentialsId: 'db-host', variable: 'PGHOST'),
-                        string(credentialsId: 'db-port', variable: 'PGPORT'),
-                        string(credentialsId: 'db-name', variable: 'PGDATABASE'),
-                        string(credentialsId: 'db-user', variable: 'PGUSER'),
-                        string(credentialsId: 'db-key', variable: 'PGPASSWORD'),
-                        string(credentialsId: 'jwt-secret', variable: 'JWT_SECRET')
+                        string(credentialsId: 'postgres-host', variable: 'PGHOST'),
+                        string(credentialsId: 'postgres-port', variable: 'PGPORT'),
+                        string(credentialsId: 'postgres-database', variable: 'PGDATABASE'),
+                        string(credentialsId: 'postgres-user', variable: 'PGUSER'),
+                        string(credentialsId: 'postgres-password', variable: 'PGPASSWORD'),
+                        string(credentialsId: 'postgres-root-password', variable: 'POSTGRES_PASSWORD'),
+                        string(credentialsId: 'coredb-admin-user', variable: 'COREDB_ADMIN_USER'),
+                        string(credentialsId: 'coredb-admin-password', variable: 'COREDB_ADMIN_PASSWORD'),
+                        string(credentialsId: 'jwt-secret', variable: 'JWT_SECRET'),
+                        string(credentialsId: 'session-secret', variable: 'SESSION_SECRET')
                     ]) {
                         sh """
                             # Delete existing secret if it exists (ignore errors)
                             kubectl delete secret blog-secrets -n blog || true
                             
-                            # Create new secret with current credentials from Jenkins + PostgreSQL container info
+                            # Create new secret with PostgreSQL container credentials from Jenkins
                             kubectl create secret generic blog-secrets -n blog \
-                                --from-literal=PGHOST='\${PGHOST}' \
-                                --from-literal=PGPORT='\${PGPORT}' \
-                                --from-literal=PGDATABASE='\${PGDATABASE}' \
-                                --from-literal=PGUSER='\${PGUSER}' \
-                                --from-literal=PGPASSWORD='\${PGPASSWORD}' \
-                                --from-literal=POSTGRES_CONTAINER_HOST='blog-postgres-service.blog.svc.cluster.local' \
-                                --from-literal=POSTGRES_CONTAINER_PORT='5432' \
-                                --from-literal=POSTGRES_CONTAINER_USER='blogadmin' \
-                                --from-literal=POSTGRES_CONTAINER_PASSWORD='blogpassword' \
-                                --from-literal=POSTGRES_CONTAINER_DATABASE='blog' \
+                                --from-literal=PGHOST="${PGHOST}" \
+                                --from-literal=PGPORT="${PGPORT}" \
+                                --from-literal=PGDATABASE="${PGDATABASE}" \
+                                --from-literal=PGUSER="${PGUSER}" \
+                                --from-literal=PGPASSWORD="${PGPASSWORD}" \
+                                --from-literal=POSTGRES_PASSWORD="${POSTGRES_PASSWORD}" \
+                                --from-literal=COREDB_ADMIN_USER="${COREDB_ADMIN_USER}" \
+                                --from-literal=COREDB_ADMIN_PASSWORD="${COREDB_ADMIN_PASSWORD}" \
+                                --from-literal=JWT_SECRET="${JWT_SECRET}" \
+                                --from-literal=SESSION_SECRET="${SESSION_SECRET}" \
                                 --from-literal=BLOG_API_KEY='81128b70915fe2d690a4e55eebeb13cedf069659e8e524c1198426d7665462b0' \
                                 --from-literal=GOOGLE_CLIENT_ID='dummy-google-client-id' \
                                 --from-literal=GOOGLE_CLIENT_SECRET='dummy-google-client-secret'
