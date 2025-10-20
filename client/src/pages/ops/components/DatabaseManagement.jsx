@@ -25,7 +25,7 @@ const DatabaseManagement = () => {
     database: '',
     username: '',
     password: '',
-    ssl_mode: 'require'
+    ssl_mode: 'disable'
   });
 
   useEffect(() => {
@@ -322,9 +322,25 @@ const DatabaseManagement = () => {
     try {
       const isEditing = editingConnection !== null;
       const url = isEditing 
-        ? API_ENDPOINTS.DATABASE.UPDATE_CONNECTION(editingConnection)
+        ? API_ENDPOINTS.DATABASE.UPDATE_CONNECTION(editingConnection.id)
         : API_ENDPOINTS.DATABASE.CREATE_CONNECTION;
       const method = isEditing ? 'PUT' : 'POST';
+
+      // Prepare the data - for updates, only include password if it's provided
+      const connectionData = {
+        name: formData.name,
+        type: formData.type,
+        host: formData.host,
+        port: parseInt(formData.port),
+        database: formData.database,
+        username: formData.username,
+        ssl_mode: formData.ssl_mode
+      };
+
+      // Only include password if it's provided (for updates, password is optional)
+      if (formData.password) {
+        connectionData.password = formData.password;
+      }
 
       const response = await fetch(url, {
         method,
@@ -332,7 +348,7 @@ const DatabaseManagement = () => {
           'Authorization': `Bearer ${localStorage.getItem('adminToken')}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(connectionData),
       });
 
       const data = await response.json();
@@ -349,7 +365,7 @@ const DatabaseManagement = () => {
           database: '',
           username: '',
           password: '',
-          ssl_mode: 'require'
+          ssl_mode: 'disable'
         });
         fetchDatabaseConnections(); // Refresh connections list
       } else {
