@@ -1,6 +1,6 @@
 import sqlite3 from 'sqlite3';
 import { open } from 'sqlite';
-import bcrypt from 'bcrypt';
+import argon2 from 'argon2';
 import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
@@ -106,7 +106,7 @@ class CoreDB {
         
         if (!existingAdmin) {
             const defaultPassword = 'admin123'; // TODO: Generate random password
-            const passwordHash = await bcrypt.hash(defaultPassword, 10);
+            const passwordHash = await argon2.hash(defaultPassword);
             
             await this.db.run(
                 `INSERT INTO admin_users (username, password_hash, email) 
@@ -137,7 +137,7 @@ class CoreDB {
             return null;
         }
 
-        const isValid = await bcrypt.compare(password, user.password_hash);
+        const isValid = await argon2.verify(user.password_hash, password);
         
         if (isValid) {
             // Update last login
