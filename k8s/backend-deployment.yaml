@@ -57,7 +57,7 @@ spec:
               name: blog-secrets
               key: PGPASSWORD
         - name: PGSSLMODE
-          value: "disable"
+          value: "require"
         - name: BLOG_API_KEY
           valueFrom:
             secretKeyRef:
