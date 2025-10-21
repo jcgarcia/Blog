@@ -252,11 +252,20 @@ const DatabaseManagement = () => {
       
       if (response.ok) {
         const data = await response.json();
-        setConnections(data.connections || []);
-        setActiveConnection(data.active || null);
+        // Only update connections if we got valid data
+        if (data && Array.isArray(data.connections)) {
+          setConnections(data.connections);
+          setActiveConnection(data.active || null);
+        } else {
+          console.warn('Received invalid connections data:', data);
+        }
+      } else {
+        console.error('Failed to fetch database connections:', response.status, response.statusText);
+        // Don't clear connections on API failure - preserve existing state
       }
     } catch (error) {
-      console.error('Failed to fetch database connections:', error);
+      console.error('Network error fetching database connections:', error);
+      // Don't clear connections on network failure - preserve existing state
     }
   };
 
@@ -445,11 +454,14 @@ const DatabaseManagement = () => {
 
       if (response.ok) {
         setSuccess('Database connection deleted successfully');
+        console.log('Delete successful, refreshing connections...');
         fetchDatabaseConnections(); // Refresh connections list
       } else {
+        console.error('Delete failed:', response.status, data);
         setError(data.message || 'Failed to delete database connection');
       }
     } catch (error) {
+      console.error('Delete network error:', error);
       setError('Network error occurred while deleting connection');
     }
   };
