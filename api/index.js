@@ -30,34 +30,23 @@ import { createHealthCheckEndpoint, createConnectionInfoEndpoint } from "./utils
 import { initializeDatabaseMigrations } from "./migrations.js";
 import CoreDB from "./services/CoreDB.js";
 
-// Load environment variables for database connection only
+// Load environment variables
 dotenv.config({ path: '.env.local' });
 dotenv.config();
 
-// Validate PostgreSQL environment variables
-const rdsRequiredVars = ['PGHOST', 'PGPORT', 'PGUSER', 'PGPASSWORD', 'PGDATABASE'];
-const containerOptionalVars = ['POSTGRES_CONTAINER_HOST', 'POSTGRES_CONTAINER_USER', 'POSTGRES_CONTAINER_PASSWORD', 'POSTGRES_CONTAINER_DB'];
+// Validate CoreDB environment variables (only credentials needed from Jenkins)
+const coredbRequiredVars = ['COREDB_ADMIN_USER', 'COREDB_ADMIN_PASSWORD', 'COREDB_ENCRYPTION_KEY'];
+const missingCoredbVars = coredbRequiredVars.filter(varName => !process.env[varName]);
 
-const missingRdsVars = rdsRequiredVars.filter(varName => !process.env[varName]);
-const hasContainerVars = containerOptionalVars.some(varName => process.env[varName]);
-
-if (missingRdsVars.length > 0 && !hasContainerVars) {
-  console.error('❌ No valid database configuration found!');
-  console.error('📝 Please provide either:');
-  console.error('   AWS RDS variables:', rdsRequiredVars.join(', '));
-  console.error('   OR Container PostgreSQL variables:', containerOptionalVars.join(', '));
+if (missingCoredbVars.length > 0) {
+  console.error('❌ Missing required CoreDB credentials!');
+  console.error('📝 Required environment variables:', coredbRequiredVars.join(', '));
+  console.error('   These should be injected by Jenkins from credential store');
   process.exit(1);
 }
 
-if (missingRdsVars.length === 0) {
-  console.log('✅ AWS RDS configuration loaded successfully');
-}
-
-if (hasContainerVars) {
-  console.log('✅ Container PostgreSQL configuration detected');
-}
-
-console.log('🔧 Multi-database system initialized - configuration will be loaded from active database');
+console.log('✅ CoreDB credentials loaded successfully');
+console.log('🔧 CoreDB-centric architecture - database connections configured through ops panel');
 
 const app = express();
 
@@ -198,6 +187,35 @@ import { socialCrawlerMiddleware } from './middleware/socialCrawler.js';
 app.get('/share/post/:id', socialCrawlerMiddleware);
 app.get('/share', socialCrawlerMiddleware);
 
+/**
+ * Initialize default database connections in CoreDB
+ * In the CoreDB-centric architecture, database connections are configured manually
+ * through the ops panel, not injected from Jenkins
+ */
+async function initializeDefaultDatabaseConnections(coreDB) {
+  try {
+    // Check if we already have database connections
+    const existingConnections = await coreDB.getDatabaseConnections();
+    if (existingConnections.length > 0) {
+      console.log(`✅ CoreDB: Found ${existingConnections.length} existing database connections`);
+      return;
+    }
+    
+    console.log('⚠️  CoreDB: No database connections configured');
+    console.log('   🔧 Database connections must be configured manually through the ops panel');
+    console.log('   📝 Use the Database Management interface to add your PostgreSQL connection:');
+    console.log('      - Host: blog-postgres-service (internal) or dbdb.ingasti.com (external)');
+    console.log('      - Port: 5432');
+    console.log('      - Database: blog');
+    console.log('      - Username: dbcore_usr_2025');
+    console.log('      - Password: DbSecure2025#XpL3vN7wE5xT6gH4uY1zC0');
+    console.log('   🌐 Access the ops panel at: /ops');
+    
+  } catch (error) {
+    console.error('❌ Failed to check default database connections:', error);
+  }
+}
+
 const PORT = process.env.PORT || 5000;
 const server = app.listen(PORT, async () => {
   console.log(`Connected! Server running on port ${PORT}`);
@@ -208,6 +226,9 @@ const server = app.listen(PORT, async () => {
     const coreDB = CoreDB.getInstance();
     await coreDB.initialize();
     console.log('✅ CoreDB initialized successfully');
+    
+    // Initialize default database connections from environment variables
+    await initializeDefaultDatabaseConnections(coreDB);
   } catch (error) {
     console.error('❌ Failed to initialize CoreDB:', error);
     console.error('🔄 Admin authentication may not work properly');

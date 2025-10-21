@@ -48,12 +48,23 @@ function createFallbackPool() {
     return fallbackPool;
   }
   
+  // In CoreDB-centric architecture, PostgreSQL env vars are not provided by Jenkins
   // Check for required environment variables
   const requiredVars = ['PGHOST', 'PGPORT', 'PGUSER', 'PGPASSWORD', 'PGDATABASE'];
   const missing = requiredVars.filter(v => !process.env[v]);
   
   if (missing.length > 0) {
-    throw new Error(`Missing required DB environment variables: ${missing.join(', ')}`);
+    console.warn('⚠️  No PostgreSQL environment variables found - this is expected in CoreDB-centric architecture');
+    console.warn('   Database connections should be configured through CoreDB/DatabaseManager');
+    // Return a mock pool that will fail gracefully for database operations
+    return {
+      query: () => Promise.reject(new Error('No database connection configured. Please configure database connections through the ops panel.')),
+      connect: () => Promise.reject(new Error('No database connection configured. Please configure database connections through the ops panel.')),
+      end: () => Promise.resolve(),
+      totalCount: 0,
+      idleCount: 0,
+      waitingCount: 0
+    };
   }
 
   console.log('🔄 Creating fallback database pool during initialization...');

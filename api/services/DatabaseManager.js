@@ -23,18 +23,15 @@ class DatabaseManager {
   }
 
   /**
-   * Initialize the database manager with both RDS and container configurations
+   * Initialize the database manager using CoreDB-stored configurations
    */
   async initialize() {
     if (this.initialized) return;
 
-    console.log('🔧 Initializing DatabaseManager...');
+    console.log('🔧 Initializing DatabaseManager with CoreDB configurations...');
 
-    // Initialize RDS connection
-    await this.initializeRDSConnection();
-    
-    // Initialize Container PostgreSQL connection
-    await this.initializeContainerConnection();
+    // Initialize connections from CoreDB
+    await this.initializeFromCoreDB();
 
     // Start health monitoring
     this.startHealthMonitoring();
@@ -44,78 +41,62 @@ class DatabaseManager {
   }
 
   /**
-   * Initialize AWS RDS connection using existing environment variables
+   * Initialize database connections from CoreDB configurations
    */
-  async initializeRDSConnection() {
-    const rdsRequiredVars = ['PGHOST', 'PGPORT', 'PGUSER', 'PGPASSWORD', 'PGDATABASE'];
-    const missingRds = rdsRequiredVars.filter(v => !process.env[v]);
-    
-    if (missingRds.length > 0) {
-      console.warn(`⚠️  RDS connection unavailable - missing: ${missingRds.join(', ')}`);
-      this.healthChecks.rds = { status: 'unavailable', error: 'Missing environment variables' };
-      return;
-    }
-
+  async initializeFromCoreDB() {
     try {
-      this.pools.rds = new Pool({
-        host: process.env.PGHOST,
-        port: parseInt(process.env.PGPORT) || 5432,
-        user: process.env.PGUSER,
-        password: process.env.PGPASSWORD,
-        database: process.env.PGDATABASE,
-        ssl: process.env.PGSSLMODE === 'require' ? { rejectUnauthorized: false } : false,
-        max: 10,
-        min: 1,
-        idle: 5000,
-        acquire: 30000,
-        connectionTimeoutMillis: 5000,
-        idleTimeoutMillis: 10000,
-        allowExitOnIdle: true,
-        statement_timeout: 30000,
-        query_timeout: 25000,
-        keepAlive: true,
-        keepAliveInitialDelayMillis: 0
-      });
-
-      // Test connection
-      const client = await this.pools.rds.connect();
-      await client.query('SELECT 1');
-      client.release();
-
-      this.pools.rds.on('error', (err) => {
-        console.error('RDS pool error:', err);
-        this.healthChecks.rds = { status: 'error', error: err.message, timestamp: new Date() };
-      });
-
-      console.log('🟢 RDS connection initialized');
-      this.healthChecks.rds = { status: 'healthy', timestamp: new Date() };
+      // Import CoreDB dynamically to avoid circular dependencies
+      const { default: CoreDB } = await import('./CoreDB.js');
+      const coreDB = CoreDB.getInstance();
+      
+      // Get all database connections from CoreDB
+      const connections = await coreDB.getDatabaseConnections();
+      
+      if (connections.length === 0) {
+        console.warn('⚠️  No database connections found in CoreDB');
+        console.warn('   Database connections must be configured through the ops panel');
+        return;
+      }
+      
+      console.log(`🔧 Found ${connections.length} database connections in CoreDB`);
+      
+      // Initialize each connection
+      for (const conn of connections) {
+        await this.initializeConnection(conn);
+      }
+      
+      // Set the active database from CoreDB
+      const activeConfig = await coreDB.getActiveDatabaseConfig();
+      if (activeConfig) {
+        // Find the corresponding pool key for the active connection
+        const poolKey = this.getPoolKeyForConnection(activeConfig);
+        if (poolKey && this.pools[poolKey]) {
+          this.currentDatabase = poolKey;
+          console.log(`✅ Active database set to: ${activeConfig.name} (${poolKey})`);
+        }
+      }
+      
     } catch (error) {
-      console.error('❌ Failed to initialize RDS connection:', error.message);
-      this.healthChecks.rds = { status: 'error', error: error.message, timestamp: new Date() };
+      console.error('❌ Failed to initialize from CoreDB:', error.message);
     }
   }
 
   /**
-   * Initialize Container PostgreSQL connection
+   * Initialize a single database connection from CoreDB configuration
    */
-  async initializeContainerConnection() {
-    const containerRequiredVars = ['POSTGRES_CONTAINER_HOST', 'POSTGRES_CONTAINER_USER', 'POSTGRES_CONTAINER_PASSWORD', 'POSTGRES_CONTAINER_DB'];
-    const missingContainer = containerRequiredVars.filter(v => !process.env[v]);
+  async initializeConnection(config) {
+    const poolKey = this.getPoolKeyForConnection(config);
     
-    if (missingContainer.length > 0) {
-      console.warn(`⚠️  Container PostgreSQL unavailable - missing: ${missingContainer.join(', ')}`);
-      this.healthChecks.container = { status: 'unavailable', error: 'Missing environment variables' };
-      return;
-    }
-
     try {
-      this.pools.container = new Pool({
-        host: process.env.POSTGRES_CONTAINER_HOST,
-        port: parseInt(process.env.POSTGRES_CONTAINER_PORT) || 5432,
-        user: process.env.POSTGRES_CONTAINER_USER,
-        password: process.env.POSTGRES_CONTAINER_PASSWORD,
-        database: process.env.POSTGRES_CONTAINER_DB,
-        ssl: false, // Container typically doesn't use SSL
+      console.log(`🔧 Initializing connection: ${config.name} (${config.host}:${config.port})`);
+      
+      this.pools[poolKey] = new Pool({
+        host: config.host,
+        port: config.port,
+        user: config.username,
+        password: config.password,
+        database: config.database,
+        ssl: config.ssl_mode === 'require' ? { rejectUnauthorized: false } : false,
         max: 10,
         min: 1,
         idle: 5000,
@@ -130,21 +111,30 @@ class DatabaseManager {
       });
 
       // Test connection
-      const client = await this.pools.container.connect();
+      const client = await this.pools[poolKey].connect();
       await client.query('SELECT 1');
       client.release();
 
-      this.pools.container.on('error', (err) => {
-        console.error('Container PostgreSQL pool error:', err);
-        this.healthChecks.container = { status: 'error', error: err.message, timestamp: new Date() };
+      this.pools[poolKey].on('error', (err) => {
+        console.error(`${config.name} pool error:`, err);
+        this.healthChecks[poolKey] = { status: 'error', error: err.message, timestamp: new Date() };
       });
 
-      console.log('🟢 Container PostgreSQL connection initialized');
-      this.healthChecks.container = { status: 'healthy', timestamp: new Date() };
+      console.log(`✅ ${config.name} connection initialized successfully`);
+      this.healthChecks[poolKey] = { status: 'healthy', timestamp: new Date() };
+      
     } catch (error) {
-      console.error('❌ Failed to initialize Container PostgreSQL connection:', error.message);
-      this.healthChecks.container = { status: 'error', error: error.message, timestamp: new Date() };
+      console.error(`❌ Failed to initialize ${config.name}:`, error.message);
+      this.healthChecks[poolKey] = { status: 'error', error: error.message, timestamp: new Date() };
     }
+  }
+
+  /**
+   * Generate a pool key for a database connection configuration
+   */
+  getPoolKeyForConnection(config) {
+    // Generate a unique key based on connection properties
+    return `${config.type}_${config.host}_${config.port}_${config.database}`.replace(/[^a-zA-Z0-9_]/g, '_');
   }
 
   /**
@@ -164,65 +154,79 @@ class DatabaseManager {
   }
 
   /**
-   * Switch to a different database
-   * @param {string} database - 'rds' or 'container'
+   * Switch to a different database connection by ID (CoreDB-centric)
+   * @param {number} connectionId - Database connection ID from CoreDB
    */
-  async switchDatabase(database) {
-    if (!['rds', 'container'].includes(database)) {
-      throw new Error('Invalid database. Must be "rds" or "container"');
-    }
-
-    if (!this.pools[database]) {
-      throw new Error(`Database ${database} is not available`);
-    }
-
-    // Test connection before switching
+  async switchDatabase(connectionId) {
     try {
-      const client = await this.pools[database].connect();
-      await client.query('SELECT 1');
-      client.release();
+      // Import CoreDB dynamically to avoid circular dependencies
+      const { default: CoreDB } = await import('./CoreDB.js');
+      const coreDB = CoreDB.getInstance();
+      
+      // Get the connection configuration from CoreDB
+      const connections = await coreDB.getDatabaseConnections();
+      const targetConnection = connections.find(conn => conn.id === connectionId);
+      
+      if (!targetConnection) {
+        throw new Error(`Database connection with ID ${connectionId} not found`);
+      }
+      
+      const poolKey = this.getPoolKeyForConnection(targetConnection);
+      
+      if (!this.pools[poolKey]) {
+        throw new Error(`Database connection "${targetConnection.name}" is not available`);
+      }
+
+      // Test connection before switching
+      try {
+        const client = await this.pools[poolKey].connect();
+        await client.query('SELECT 1');
+        client.release();
+      } catch (error) {
+        throw new Error(`Cannot switch to "${targetConnection.name}": ${error.message}`);
+      }
+
+      const oldDatabase = this.currentDatabase;
+      this.currentDatabase = poolKey;
+      
+      // Update active connection in CoreDB
+      await coreDB.setActiveDatabaseConnection(connectionId);
+
+      console.log(`🔄 Switched database from ${oldDatabase} to ${targetConnection.name}`);
+      return {
+        success: true,
+        oldDatabase,
+        newDatabase: targetConnection.name,
+        connectionId,
+        timestamp: new Date()
+      };
     } catch (error) {
-      throw new Error(`Cannot switch to ${database}: ${error.message}`);
+      throw new Error(`Failed to switch database: ${error.message}`);
     }
-
-    const oldDatabase = this.currentDatabase;
-    this.currentDatabase = database;
-
-    console.log(`🔄 Switched database from ${oldDatabase} to ${database}`);
-    return {
-      success: true,
-      oldDatabase,
-      newDatabase: database,
-      timestamp: new Date()
-    };
   }
 
   /**
-   * Get health status for all databases
+   * Get health status for all databases (CoreDB-centric)
    */
   getHealthStatus() {
+    const databases = {};
+    
+    // Build status for each configured pool
+    for (const [poolKey, pool] of Object.entries(this.pools)) {
+      databases[poolKey] = {
+        ...this.healthChecks[poolKey],
+        available: !!pool,
+        poolStats: pool ? {
+          total: pool.totalCount,
+          idle: pool.idleCount,
+          waiting: pool.waitingCount
+        } : null
+      };
+    }
+    
     return {
       current: this.currentDatabase,
-      databases: {
-        rds: {
-          ...this.healthChecks.rds,
-          available: !!this.pools.rds,
-          poolStats: this.pools.rds ? {
-            total: this.pools.rds.totalCount,
-            idle: this.pools.rds.idleCount,
-            waiting: this.pools.rds.waitingCount
-          } : null
-        },
-        container: {
-          ...this.healthChecks.container,
-          available: !!this.pools.container,
-          poolStats: this.pools.container ? {
-            total: this.pools.container.totalCount,
-            idle: this.pools.container.idleCount,
-            waiting: this.pools.container.waitingCount
-          } : null
-        }
-      }
+      databases
     };
   }
 
