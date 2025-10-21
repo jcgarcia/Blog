@@ -393,7 +393,54 @@ export const getDatabaseHealthStatus = async (req, res) => {
 };
 
 /**
- * Switch to a different database
+ * Activate a database connection by ID (replaces legacy switchDatabase)
+ */
+export const activateDatabaseConnection = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: 'Connection ID is required'
+      });
+    }
+
+    const coreDB = CoreDB.getInstance();
+    
+    // Check if connection exists
+    const connections = await coreDB.getDatabaseConnections();
+    const connection = connections.find(conn => conn.id === parseInt(id));
+    
+    if (!connection) {
+      return res.status(404).json({
+        success: false,
+        message: 'Database connection not found'
+      });
+    }
+
+    // Set as active connection
+    await coreDB.setActiveDatabaseConnection(id);
+    
+    console.log(`📊 Database connection activated: ${connection.name} (ID: ${id})`);
+    
+    res.json({
+      success: true,
+      message: `Successfully activated connection: ${connection.name}`,
+      connection: connection
+    });
+  } catch (error) {
+    console.error('Error activating database connection:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to activate database connection',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Legacy switch database function (kept for backward compatibility)
  */
 export const switchDatabase = async (req, res) => {
   try {
@@ -406,21 +453,33 @@ export const switchDatabase = async (req, res) => {
       });
     }
 
-    if (!['rds', 'container'].includes(database)) {
+    // For legacy compatibility, try to find connection by name
+    const coreDB = CoreDB.getInstance();
+    const connections = await coreDB.getDatabaseConnections();
+    
+    // Try to find connection that matches legacy naming
+    let connection = connections.find(conn => 
+      conn.name.toLowerCase().includes(database.toLowerCase()) ||
+      (database === 'container' && conn.host.includes('postgres-service')) ||
+      (database === 'rds' && conn.host.includes('rds'))
+    );
+
+    if (!connection) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid database. Must be "rds" or "container"'
+        message: `No connection found matching "${database}". Use /api/database/connections/{id}/activate instead.`
       });
     }
 
-    const result = await databaseManager.switchDatabase(database);
+    // Activate the found connection
+    await coreDB.setActiveDatabaseConnection(connection.id);
     
-    console.log(`📊 Database switched by admin user: ${req.user?.username || 'unknown'}`);
+    console.log(`📊 Database switched (legacy): ${connection.name} via "${database}"`);
     
     res.json({
       success: true,
-      message: `Successfully switched to ${database} database`,
-      ...result
+      message: `Successfully switched to ${connection.name}`,
+      connection: connection
     });
   } catch (error) {
     console.error('Error switching database:', error);
@@ -632,6 +691,44 @@ export const deleteDatabaseConnection = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to delete database connection',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Activate a database connection by ID
+ */
+export const activateDatabaseConnection = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const coreDB = CoreDB.getInstance();
+    
+    // Get the connection details first
+    const connections = await coreDB.getDatabaseConnections();
+    const connection = connections.find(c => c.id == id);
+    
+    if (!connection) {
+      return res.status(404).json({
+        success: false,
+        message: 'Database connection not found'
+      });
+    }
+    
+    // Set this connection as active
+    await coreDB.setActiveDatabaseConnection(id);
+
+    res.json({
+      success: true,
+      message: `Successfully activated connection "${connection.name}"`,
+      activeConnection: connection.name
+    });
+  } catch (error) {
+    console.error('Error activating database connection:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to activate database connection',
       error: error.message
     });
   }

@@ -300,8 +300,8 @@ const DatabaseManagement = () => {
     }
   };
 
-  const switchDatabase = async (databaseType) => {
-    if (!window.confirm(`Are you sure you want to switch to ${databaseType}? This will affect all blog operations.`)) {
+  const activateConnection = async (connectionId, connectionName) => {
+    if (!window.confirm(`Are you sure you want to activate "${connectionName}"? This will affect all blog operations.`)) {
       return;
     }
 
@@ -310,27 +310,26 @@ const DatabaseManagement = () => {
     setSuccess('');
 
     try {
-      const response = await fetch(API_ENDPOINTS.DATABASE.SWITCH, {
+      const response = await fetch(`${API_ENDPOINTS.DATABASE.CONNECTIONS}/${connectionId}/activate`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('adminToken')}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ database: databaseType }),
       });
 
       const data = await response.json();
 
       if (response.ok) {
-        setSuccess(`Successfully switched to ${databaseType} database`);
-        setActiveConnection(databaseType);
+        setSuccess(`Successfully activated connection: ${connectionName}`);
+        setActiveConnection(connectionName);
         fetchDatabaseInfo(); // Refresh database info
         fetchDatabaseConnections(); // Refresh connections
       } else {
-        setError(data.message || 'Failed to switch database');
+        setError(data.message || 'Failed to activate database connection');
       }
     } catch (error) {
-      setError('Network error occurred during database switch');
+      setError('Network error occurred during connection activation');
     } finally {
       setSwitchingDatabase(false);
     }
@@ -543,6 +542,22 @@ const DatabaseManagement = () => {
 
       {/* Database Configuration */}
       <div className="bg-white p-4 rounded-lg border mb-6">
+        {/* Help Information Card */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+          <div className="flex items-start gap-2">
+            <div className="text-blue-600 text-lg">ℹ️</div>
+            <div>
+              <h4 className="font-semibold text-blue-900 mb-2">Database Connection Management</h4>
+              <ul className="text-sm text-blue-800 space-y-1">
+                <li>• <strong>Active Connection:</strong> The connection currently used for all blog operations, backups, and restores</li>
+                <li>• <strong>Multiple Connections:</strong> You can store multiple database configurations but only one can be active</li>
+                <li>• <strong>Connection Types:</strong> Internal cluster connections are faster, external connections allow remote access</li>
+                <li>• <strong>Activate:</strong> Click "Activate" to switch which database connection is used for operations</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-lg font-semibold">Database Configuration</h3>
           <button
@@ -720,11 +735,11 @@ const DatabaseManagement = () => {
                     {/* Switch Database */}
                     {activeConnection !== connection.name && (
                       <button
-                        onClick={() => switchDatabase(connection.name)}
+                        onClick={() => activateConnection(connection.id, connection.name)}
                         className="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600 disabled:opacity-50"
                         disabled={switchingDatabase}
                       >
-                        {switchingDatabase ? 'Switching...' : 'Switch'}
+                        {switchingDatabase ? 'Activating...' : 'Activate'}
                       </button>
                     )}
                     

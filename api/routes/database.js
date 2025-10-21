@@ -11,6 +11,7 @@ import {
   getDatabaseInfo,
   getDatabaseHealthStatus,
   switchDatabase,
+  activateDatabaseConnection,
   getDatabaseConnections,
   testDatabaseConnection,
   createDatabaseConnection,
@@ -47,6 +48,7 @@ router.post("/connections", createDatabaseConnection);
 router.put("/connections/:id", updateDatabaseConnection);
 router.delete("/connections/:id", deleteDatabaseConnection);
 router.get("/connections/:id/test", testDatabaseConnection);
+router.post("/connections/:id/activate", activateDatabaseConnection);
 router.post("/switch", switchDatabase);
 router.get("/test/:database", testDatabaseConnection);
 
