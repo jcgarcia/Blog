@@ -2,17 +2,15 @@ pipeline {
     agent any
     
     environment {
-        // Database and security credentials
-        DATABASE_URL = credentials('blog-database-url')
-        JWT_SECRET = credentials('blog-jwt-secret')
-
-        // PostgreSQL connection variables (replace with Jenkins credentials or static values as needed)
-        PGHOST = credentials('db-host')
-        PGPORT = credentials('db-port')
-        PGUSER = credentials('db-user')
-        PGPASSWORD = credentials('db-key')
-        PGDATABASE = credentials('db-name')
-        PGSSLMODE = 'require'
+        // CoreDB credentials - the ONLY database credentials needed
+        // CoreDB stores all database connection configurations
+        COREDB_ADMIN_USER = credentials('coredb-admin-user')
+        COREDB_ADMIN_PASSWORD = credentials('coredb-admin-password')
+        COREDB_ENCRYPTION_KEY = credentials('coredb-encryption-key')
+        
+        // Application security credentials
+        JWT_SECRET = credentials('jwt-secret')
+        SESSION_SECRET = credentials('session-secret')
 
         // Image configuration
         BUILD_NUMBER = "${env.BUILD_NUMBER}"
@@ -102,38 +100,28 @@ pipeline {
         
         stage('Test Backend Container') {
             steps {
-                withCredentials([
-                    string(credentialsId: 'db-host', variable: 'PGHOST'),
-                    string(credentialsId: 'db-port', variable: 'PGPORT'),
-                    string(credentialsId: 'db-user', variable: 'PGUSER'),
-                    string(credentialsId: 'db-key', variable: 'PGPASSWORD'),
-                    string(credentialsId: 'db-name', variable: 'PGDATABASE')
-                ]) {
-                    script {
-                        echo "🧪 Testing backend container..."
-                        sh """
-                            # Start backend container for testing
-                            docker run -d -p 5001:5000 --name test-backend-${BUILD_NUMBER} \
-                                -e PGHOST="${PGHOST}" \
-                                -e PGPORT="${PGPORT}" \
-                                -e PGUSER="${PGUSER}" \
-                                -e PGPASSWORD="${PGPASSWORD}" \
-                                -e PGDATABASE="${PGDATABASE}" \
-                                -e PGSSLMODE="${PGSSLMODE}" \
-                                -e JWT_SECRET="${JWT_SECRET}" \
-                                -e CORS_ORIGIN="${CORS_ORIGIN}" \
-                                -e NODE_ENV=production \
-                                ${env.BACKEND_IMAGE}
-                            
-                            # Wait for container to start
-                            sleep 15
-                            
-                            # Test health endpoint
-                            curl -f http://localhost:5001/health || (echo "Backend health check failed" && exit 1)
-                            
-                            echo "✅ Backend container test passed"
-                        """
-                    }
+                script {
+                    echo "🧪 Testing backend container..."
+                    sh """
+                        # Start backend container for testing with CoreDB credentials only
+                        docker run -d -p 5001:5000 --name test-backend-${BUILD_NUMBER} \
+                            -e COREDB_ADMIN_USER="${COREDB_ADMIN_USER}" \
+                            -e COREDB_ADMIN_PASSWORD="${COREDB_ADMIN_PASSWORD}" \
+                            -e COREDB_ENCRYPTION_KEY="${COREDB_ENCRYPTION_KEY}" \
+                            -e JWT_SECRET="${JWT_SECRET}" \
+                            -e SESSION_SECRET="${SESSION_SECRET}" \
+                            -e CORS_ORIGIN="${CORS_ORIGIN}" \
+                            -e NODE_ENV=production \
+                            ${env.BACKEND_IMAGE}
+                        
+                        # Wait for container to start
+                        sleep 15
+                        
+                        # Test health endpoint
+                        curl -f http://localhost:5001/health || (echo "Backend health check failed" && exit 1)
+                        
+                        echo "✅ Backend container test passed"
+                    """
                 }
             }
             post {
