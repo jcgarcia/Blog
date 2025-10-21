@@ -266,6 +266,7 @@ pipeline {
                                 --from-literal=POSTGRES_PASSWORD="${POSTGRES_PASSWORD}" \
                                 --from-literal=COREDB_ADMIN_USER="${COREDB_ADMIN_USER}" \
                                 --from-literal=COREDB_ADMIN_PASSWORD="${COREDB_ADMIN_PASSWORD}" \
+                                --from-literal=COREDB_ENCRYPTION_KEY="${COREDB_ENCRYPTION_KEY}" \
                                 --from-literal=JWT_SECRET="${JWT_SECRET}" \
                                 --from-literal=SESSION_SECRET="${SESSION_SECRET}" \
                                 --from-literal=BLOG_API_KEY='81128b70915fe2d690a4e55eebeb13cedf069659e8e524c1198426d7665462b0' \
