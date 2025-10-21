@@ -31,33 +31,6 @@ spec:
         - containerPort: 5000
           name: http
         env:
-        - name: PGHOST
-          valueFrom:
-            secretKeyRef:
-              name: blog-secrets
-              key: PGHOST
-        - name: PGPORT
-          valueFrom:
-            secretKeyRef:
-              name: blog-secrets
-              key: PGPORT
-        - name: PGDATABASE
-          valueFrom:
-            secretKeyRef:
-              name: blog-secrets
-              key: PGDATABASE
-        - name: PGUSER
-          valueFrom:
-            secretKeyRef:
-              name: blog-secrets
-              key: PGUSER
-        - name: PGPASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: blog-secrets
-              key: PGPASSWORD
-        - name: PGSSLMODE
-          value: "require"
         - name: BLOG_API_KEY
           valueFrom:
             secretKeyRef:
