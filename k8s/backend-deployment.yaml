@@ -109,6 +109,11 @@ spec:
             secretKeyRef:
               name: blog-secrets
               key: COREDB_ADMIN_PASSWORD
+        - name: COREDB_ENCRYPTION_KEY
+          valueFrom:
+            secretKeyRef:
+              name: blog-secrets
+              key: COREDB_ENCRYPTION_KEY
         resources:
           requests:
             memory: "256Mi"
