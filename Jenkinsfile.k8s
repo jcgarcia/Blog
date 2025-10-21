@@ -136,17 +136,23 @@ pipeline {
             steps {
                 script {
                     echo "🧪 Testing backend container..."
-                    sh """
-                        # Start backend container for testing with CoreDB credentials only
-                        docker run -d -p 5002:5000 --name test-backend-${BUILD_NUMBER} \
-                            -e COREDB_ADMIN_USER="${COREDB_ADMIN_USER}" \
-                            -e COREDB_ADMIN_PASSWORD="${COREDB_ADMIN_PASSWORD}" \
-                            -e COREDB_ENCRYPTION_KEY="${COREDB_ENCRYPTION_KEY}" \
-                            -e JWT_SECRET="${JWT_SECRET}" \
-                            -e SESSION_SECRET="${SESSION_SECRET}" \
-                            -e CORS_ORIGIN="${CORS_ORIGIN}" \
-                            -e NODE_ENV=production \
-                            ${env.BACKEND_IMAGE}
+                    withCredentials([
+                        string(credentialsId: 'coredb-admin-user', variable: 'COREDB_ADMIN_USER'),
+                        string(credentialsId: 'coredb-admin-password', variable: 'COREDB_ADMIN_PASSWORD'),
+                        string(credentialsId: 'coredb-encryption-key', variable: 'COREDB_ENCRYPTION_KEY'),
+                        string(credentialsId: 'session-secret', variable: 'SESSION_SECRET')
+                    ]) {
+                        sh """
+                            # Start backend container for testing with CoreDB credentials only
+                            docker run -d -p 5002:5000 --name test-backend-${BUILD_NUMBER} \
+                                -e COREDB_ADMIN_USER="${COREDB_ADMIN_USER}" \
+                                -e COREDB_ADMIN_PASSWORD="${COREDB_ADMIN_PASSWORD}" \
+                                -e COREDB_ENCRYPTION_KEY="${COREDB_ENCRYPTION_KEY}" \
+                                -e JWT_SECRET="${JWT_SECRET}" \
+                                -e SESSION_SECRET="${SESSION_SECRET}" \
+                                -e CORS_ORIGIN="${CORS_ORIGIN}" \
+                                -e NODE_ENV=production \
+                                ${env.BACKEND_IMAGE}
                         
                         # Wait for container to start
                         sleep 15
@@ -165,7 +171,8 @@ pipeline {
                             echo "❌ Container failed to start or exited"
                             exit 1
                         fi
-                    """
+                        """
+                    }
                 }
             }
             post {
@@ -241,6 +248,7 @@ pipeline {
                         string(credentialsId: 'postgres-root-password', variable: 'POSTGRES_PASSWORD'),
                         string(credentialsId: 'coredb-admin-user', variable: 'COREDB_ADMIN_USER'),
                         string(credentialsId: 'coredb-admin-password', variable: 'COREDB_ADMIN_PASSWORD'),
+                        string(credentialsId: 'coredb-encryption-key', variable: 'COREDB_ENCRYPTION_KEY'),
                         string(credentialsId: 'jwt-secret', variable: 'JWT_SECRET'),
                         string(credentialsId: 'session-secret', variable: 'SESSION_SECRET')
                     ]) {
