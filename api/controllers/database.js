@@ -696,40 +696,4 @@ export const deleteDatabaseConnection = async (req, res) => {
   }
 };
 
-/**
- * Activate a database connection by ID
- */
-export const activateDatabaseConnection = async (req, res) => {
-  try {
-    const { id } = req.params;
-    
-    const coreDB = CoreDB.getInstance();
-    
-    // Get the connection details first
-    const connections = await coreDB.getDatabaseConnections();
-    const connection = connections.find(c => c.id == id);
-    
-    if (!connection) {
-      return res.status(404).json({
-        success: false,
-        message: 'Database connection not found'
-      });
-    }
-    
-    // Set this connection as active
-    await coreDB.setActiveDatabaseConnection(id);
 
-    res.json({
-      success: true,
-      message: `Successfully activated connection "${connection.name}"`,
-      activeConnection: connection.name
-    });
-  } catch (error) {
-    console.error('Error activating database connection:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to activate database connection',
-      error: error.message
-    });
-  }
-};
