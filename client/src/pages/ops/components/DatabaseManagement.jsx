@@ -9,6 +9,7 @@ const DatabaseManagement = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [confirmRestore, setConfirmRestore] = useState('');
+  const [selectedFile, setSelectedFile] = useState(null);
   
   // Database configuration state
   const [connections, setConnections] = useState([]);
@@ -176,13 +177,30 @@ const DatabaseManagement = () => {
     }
   };
 
-  const restoreBackup = async (filename) => {
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (!file.name.endsWith('.sql')) {
+        setError('Please select a .sql file');
+        return;
+      }
+      setSelectedFile(file);
+      setError('');
+    }
+  };
+
+  const handleRestoreUpload = async () => {
+    if (!selectedFile) {
+      setError('Please select a file first');
+      return;
+    }
+
     if (confirmRestore !== 'RESTORE') {
       setError('Please type RESTORE in the confirmation field');
       return;
     }
 
-    if (!window.confirm(`WARNING: This will overwrite ALL database data with the backup from ${filename}. This action cannot be undone. Are you absolutely sure?`)) {
+    if (!window.confirm(`WARNING: This will overwrite ALL database data with the uploaded backup file "${selectedFile.name}". This action cannot be undone. Are you absolutely sure?`)) {
       return;
     }
 
@@ -191,29 +209,33 @@ const DatabaseManagement = () => {
     setSuccess('');
 
     try {
+      const formData = new FormData();
+      formData.append('backup', selectedFile);
+      formData.append('confirmRestore', 'true');
+
       const response = await fetch(API_ENDPOINTS.DATABASE.RESTORE, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('adminToken')}`,
-          'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          filename,
-          confirmRestore: true
-        }),
+        body: formData,
       });
 
       const data = await response.json();
 
       if (response.ok) {
-        setSuccess(data.message);
+        setSuccess(`Database successfully restored from ${selectedFile.name}`);
         setConfirmRestore('');
+        setSelectedFile(null);
+        // Reset file input
+        const fileInput = document.querySelector('input[type="file"]');
+        if (fileInput) fileInput.value = '';
         fetchDatabaseInfo(); // Refresh database info
       } else {
         setError(data.message || 'Failed to restore backup');
       }
     } catch (error) {
-      setError('Network error occurred');
+      setError('Network error occurred during restore');
     } finally {
       setLoading(false);
     }
@@ -807,27 +829,36 @@ const DatabaseManagement = () => {
           </label>
         </div>
 
-        {backups.length > 0 && (
+        {confirmRestore === 'RESTORE' && (
           <div>
-            <h4 className="font-semibold mb-2">Select Backup to Restore</h4>
-            <div className="space-y-2">
-              {backups.map((backup) => (
-                <div key={backup.filename} className="flex items-center justify-between p-2 border rounded">
-                  <div>
-                    <div className="font-mono text-sm">{backup.filename}</div>
-                    <div className="text-xs text-gray-600">
-                      {backup.size} • {formatDate(backup.created)}
-                    </div>
-                  </div>
+            <h4 className="font-semibold mb-2">Upload Backup File to Restore</h4>
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
+              <input
+                type="file"
+                accept=".sql"
+                onChange={handleFileUpload}
+                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+              />
+              <p className="mt-2 text-sm text-gray-600">
+                Select a .sql backup file to restore. Only SQL backup files are supported.
+              </p>
+              {selectedFile && (
+                <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded">
+                  <p className="text-sm text-blue-800">
+                    <strong>Selected file:</strong> {selectedFile.name}
+                  </p>
+                  <p className="text-xs text-blue-600">
+                    Size: {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                  </p>
                   <button
-                    onClick={() => restoreBackup(backup.filename)}
-                    className="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700 disabled:opacity-50"
-                    disabled={loading || confirmRestore !== 'RESTORE'}
+                    onClick={handleRestoreUpload}
+                    className="mt-2 bg-red-600 text-white px-4 py-2 rounded text-sm hover:bg-red-700 disabled:opacity-50"
+                    disabled={loading}
                   >
-                    {loading ? 'Restoring...' : 'Restore'}
+                    {loading ? 'Restoring...' : 'Restore Database'}
                   </button>
                 </div>
-              ))}
+              )}
             </div>
           </div>
         )}

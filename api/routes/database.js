@@ -1,4 +1,5 @@
 import express from "express";
+import multer from "multer";
 import { requireAdminAuth } from "../controllers/admin.js";
 import { 
   createBackup, 
@@ -18,6 +19,20 @@ import {
 } from "../controllers/database.js";
 
 const router = express.Router();
+
+// Configure multer for file uploads
+const upload = multer({ 
+  dest: 'uploads/',
+  limits: { fileSize: 100 * 1024 * 1024 }, // 100MB limit
+  fileFilter: (req, file, cb) => {
+    // Accept .sql files only
+    if (file.mimetype === 'application/sql' || file.originalname.endsWith('.sql')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only .sql files are allowed'), false);
+    }
+  }
+});
 
 // All database operations require admin authentication
 router.use(requireAdminAuth);
@@ -45,6 +60,6 @@ router.get("/backups/:filename/download", downloadBackup);
 router.post("/export/:table", exportTable);
 
 // Restore operations
-router.post("/restore", restoreBackup);
+router.post("/restore", requireAdminAuth, upload.single('backup'), restoreBackup);
 
 export default router;
