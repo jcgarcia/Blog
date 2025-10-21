@@ -5,15 +5,6 @@ import CoreDB from '../services/CoreDB.js';
 
 const execAsync = promisify(exec);
 
-// Database connection details from environment (use the same config as the app)
-const DB_CONFIG = {
-  host: process.env.DB_HOST || process.env.PGHOST,
-  port: process.env.DB_PORT || process.env.PGPORT || 5432,
-  database: process.env.DB_NAME || process.env.PGDATABASE,
-  username: process.env.DB_USER || process.env.PGUSER,
-  password: process.env.DB_PASSWORD || process.env.PGPASSWORD
-};
-
 // Get database information and status
 export const getDatabaseInfo = async (req, res) => {
   try {
@@ -63,41 +54,44 @@ export const getDatabaseInfo = async (req, res) => {
 // Create and download database backup (stream directly to user)
 export const createBackup = async (req, res) => {
   try {
-    console.log('🔧 Database config check:', {
-      host: DB_CONFIG.host ? 'SET' : 'MISSING',
-      port: DB_CONFIG.port,
-      database: DB_CONFIG.database ? 'SET' : 'MISSING',
-      username: DB_CONFIG.username ? 'SET' : 'MISSING',
-      password: DB_CONFIG.password ? 'SET' : 'MISSING'
-    });
-
-    // Validate database config
-    if (!DB_CONFIG.host || !DB_CONFIG.database || !DB_CONFIG.username || !DB_CONFIG.password) {
-      throw new Error('Missing required database configuration parameters');
+    // Get active database connection from CoreDB
+    const coredb = new CoreDB();
+    await coredb.initialize();
+    const activeConnection = await coredb.getActiveDatabaseConfig();
+    
+    if (!activeConnection) {
+      return res.status(400).json({
+        success: false,
+        message: 'No active database connection configured in CoreDB. Please configure a database connection first.'
+      });
     }
 
+    console.log('🔧 Using CoreDB connection:', {
+      name: activeConnection.name,
+      host: activeConnection.host,
+      port: activeConnection.port,
+      database: activeConnection.database
+    });
+
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const filename = `backup-${DB_CONFIG.database}-${timestamp}.sql`;
+    const filename = `backup-${activeConnection.database}-${timestamp}.sql`;
     
     // Set headers for file download
     res.setHeader('Content-Type', 'application/sql');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    
-    // Build pg_dump command that outputs to stdout
-    const cmd = `PGPASSWORD="${DB_CONFIG.password}" pg_dump -h ${DB_CONFIG.host} -p ${DB_CONFIG.port} -U ${DB_CONFIG.username} -d ${DB_CONFIG.database} --no-password`;
     
     console.log('Streaming database backup:', filename);
     
     // Execute command and stream output directly to response
     const { spawn } = await import('child_process');
     const pgDump = spawn('pg_dump', [
-      '-h', DB_CONFIG.host,
-      '-p', DB_CONFIG.port.toString(),
-      '-U', DB_CONFIG.username,
-      '-d', DB_CONFIG.database,
+      '-h', activeConnection.host,
+      '-p', activeConnection.port.toString(),
+      '-U', activeConnection.username,
+      '-d', activeConnection.database,
       '--no-password'
     ], {
-      env: { ...process.env, PGPASSWORD: DB_CONFIG.password }
+      env: { ...process.env, PGPASSWORD: activeConnection.password }
     });
 
     // Stream stdout directly to response
