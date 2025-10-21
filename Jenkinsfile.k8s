@@ -136,24 +136,17 @@ pipeline {
             steps {
                 script {
                     echo "🧪 Testing backend container..."
-                    withCredentials([
-                        string(credentialsId: 'postgres-host', variable: 'PGHOST'),
-                        string(credentialsId: 'postgres-port', variable: 'PGPORT'),
-                        string(credentialsId: 'postgres-database', variable: 'PGDATABASE'),
-                        string(credentialsId: 'postgres-user', variable: 'PGUSER'),
-                        string(credentialsId: 'postgres-password', variable: 'PGPASSWORD')
-                    ]) {
-                        sh """
-                            # Start backend container for testing with PostgreSQL container credentials from Jenkins
-                            docker run -d -p 5002:5000 --name test-backend-${BUILD_NUMBER} \
-                                -e PGHOST="${PGHOST}" \
-                                -e PGPORT="${PGPORT}" \
-                                -e PGDATABASE="${PGDATABASE}" \
-                                -e PGUSER="${PGUSER}" \
-                                -e PGPASSWORD="${PGPASSWORD}" \
-                                -e CORS_ORIGIN="${CORS_ORIGIN}" \
-                                -e NODE_ENV=production \
-                                ${env.BACKEND_IMAGE}
+                    sh """
+                        # Start backend container for testing with CoreDB credentials only
+                        docker run -d -p 5002:5000 --name test-backend-${BUILD_NUMBER} \
+                            -e COREDB_ADMIN_USER="${COREDB_ADMIN_USER}" \
+                            -e COREDB_ADMIN_PASSWORD="${COREDB_ADMIN_PASSWORD}" \
+                            -e COREDB_ENCRYPTION_KEY="${COREDB_ENCRYPTION_KEY}" \
+                            -e JWT_SECRET="${JWT_SECRET}" \
+                            -e SESSION_SECRET="${SESSION_SECRET}" \
+                            -e CORS_ORIGIN="${CORS_ORIGIN}" \
+                            -e NODE_ENV=production \
+                            ${env.BACKEND_IMAGE}
                         
                         # Wait for container to start
                         sleep 15
