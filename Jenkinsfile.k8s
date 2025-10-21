@@ -165,9 +165,9 @@ pipeline {
                             echo "❌ Container failed to start or exited"
                             exit 1
                         fi
-                        """
-                    }
+                    """
                 }
+            }
             }
             post {
                 always {
