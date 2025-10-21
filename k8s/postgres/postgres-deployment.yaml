@@ -68,6 +68,27 @@ spec:
             configMapKeyRef:
               name: postgres-config
               key: shared_buffers
+        # SSL configuration
+        - name: POSTGRES_SSL
+          valueFrom:
+            configMapKeyRef:
+              name: postgres-config
+              key: ssl
+        - name: POSTGRES_SSL_CERT_FILE
+          valueFrom:
+            configMapKeyRef:
+              name: postgres-config
+              key: ssl_cert_file
+        - name: POSTGRES_SSL_KEY_FILE
+          valueFrom:
+            configMapKeyRef:
+              name: postgres-config
+              key: ssl_key_file
+        - name: POSTGRES_SSL_CA_FILE
+          valueFrom:
+            configMapKeyRef:
+              name: postgres-config
+              key: ssl_ca_file
         ports:
         - name: postgres
           containerPort: 5432
