@@ -10,7 +10,6 @@ RUN apk add --no-cache \
     python3 \
     make \
     g++ \
-    sqlite-dev \
     && corepack enable \
     && corepack prepare pnpm@latest --activate
 
@@ -29,9 +28,6 @@ RUN pnpm install --force --production=false
 
 # Install node-gyp globally and force rebuild native modules for ARM64
 RUN npm install -g node-gyp && \
-    echo "Rebuilding SQLite3 for ARM64..." && \
-    cd /app/node_modules/.pnpm/sqlite3@5.1.7/node_modules/sqlite3 && \
-    node-gyp rebuild && \
     echo "Rebuilding Argon2 for ARM64..." && \
     cd /app/node_modules/.pnpm/argon2@0.43.1/node_modules/argon2 && \
     node-gyp rebuild

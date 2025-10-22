@@ -2,11 +2,14 @@ pipeline {
     agent any
     
     environment {
-        // CoreDB credentials - the ONLY database credentials needed
+        // CoreDB credentials - the ONLY configuration database credentials needed
         // CoreDB stores all database connection configurations
         COREDB_ADMIN_USER = credentials('coredb-admin-user')
         COREDB_ADMIN_PASSWORD = credentials('coredb-admin-password')
         COREDB_ENCRYPTION_KEY = credentials('coredb-encryption-key')
+        
+        // PostgreSQL credentials for CoreDB and DataDB access
+        POSTGRES_PASSWORD = credentials('postgres-password')
         
         // Application security credentials
         JWT_SECRET = credentials('jwt-secret')
@@ -108,6 +111,7 @@ pipeline {
                             -e COREDB_ADMIN_USER="${COREDB_ADMIN_USER}" \
                             -e COREDB_ADMIN_PASSWORD="${COREDB_ADMIN_PASSWORD}" \
                             -e COREDB_ENCRYPTION_KEY="${COREDB_ENCRYPTION_KEY}" \
+                            -e POSTGRES_PASSWORD="${POSTGRES_PASSWORD}" \
                             -e JWT_SECRET="${JWT_SECRET}" \
                             -e SESSION_SECRET="${SESSION_SECRET}" \
                             -e CORS_ORIGIN="${CORS_ORIGIN}" \

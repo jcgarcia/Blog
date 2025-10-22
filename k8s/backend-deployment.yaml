@@ -87,6 +87,11 @@ spec:
             secretKeyRef:
               name: blog-secrets
               key: COREDB_ENCRYPTION_KEY
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: blog-secrets
+              key: POSTGRES_PASSWORD
         resources:
           requests:
             memory: "256Mi"
