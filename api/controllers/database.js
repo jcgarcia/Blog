@@ -93,8 +93,7 @@ export const getDatabaseConnectionStatus = async (req, res) => {
 export const createBackup = async (req, res) => {
   try {
     // Get active database connection from CoreDB
-    const coredb = new CoreDB();
-    await coredb.initialize();
+    const coredb = CoreDB.getInstance();
     const activeConnection = await coredb.getActiveDatabaseConfig();
     
     if (!activeConnection) {
