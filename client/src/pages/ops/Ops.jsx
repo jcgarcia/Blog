@@ -17,17 +17,17 @@ import DatabaseManagement from './components/DatabaseManagement';
 export default function Ops() {
   const [activeTab, setActiveTab] = useState('content');
   const { adminUser, adminLogout } = useAdmin();
-  const { connected, loading } = useDatabaseConnection();
+  const { hasActiveConnection, connectionLoading } = useDatabaseConnection();
   
   // Get available panels based on database connection status
-  const availablePanels = getAvailablePanels(connected);
+  const availablePanels = getAvailablePanels(hasActiveConnection);
   
   // If current tab is not available, switch to the first available one
   React.useEffect(() => {
-    if (!loading && !availablePanels.find(panel => panel.id === activeTab)) {
+    if (!connectionLoading && !availablePanels.find(panel => panel.id === activeTab)) {
       setActiveTab(availablePanels[0]?.id || 'database');
     }
-  }, [connected, loading, activeTab, availablePanels]);
+  }, [hasActiveConnection, connectionLoading, activeTab, availablePanels]);
 
   const renderContent = () => {
     switch (activeTab) {
@@ -80,7 +80,7 @@ export default function Ops() {
       </div>
 
       <div className="ops-content">
-        {!connected && !loading && <DatabaseConnectionAlert />}
+        {!hasActiveConnection && !connectionLoading && <DatabaseConnectionAlert />}
         {renderContent()}
       </div>
     </div>

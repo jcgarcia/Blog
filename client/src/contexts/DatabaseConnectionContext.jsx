@@ -26,7 +26,7 @@ export const DatabaseConnectionProvider = ({ children }) => {
   const checkConnectionStatus = async () => {
     try {
       setConnectionError(null);
-      const response = await fetch('/api/database/connection-status', {
+      const response = await fetch('https://bapi.ingasti.com/api/database/connection-status', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('adminToken')}`,
         },
@@ -34,8 +34,13 @@ export const DatabaseConnectionProvider = ({ children }) => {
 
       if (response.ok) {
         const data = await response.json();
-        setHasActiveConnection(data.hasActiveConnection && data.isConnected);
-        setActiveConnection(data.activeConnection);
+        setHasActiveConnection(data.connected || false);
+        setActiveConnection(data.connected ? {
+          name: data.connectionName,
+          database: data.database,
+          host: data.host,
+          port: data.port
+        } : null);
       } else {
         setHasActiveConnection(false);
         setActiveConnection(null);
@@ -55,8 +60,8 @@ export const DatabaseConnectionProvider = ({ children }) => {
   useEffect(() => {
     checkConnectionStatus();
     
-    // Poll every 30 seconds for connection status
-    const interval = setInterval(checkConnectionStatus, 30000);
+    // Poll every 5 seconds for connection status
+    const interval = setInterval(checkConnectionStatus, 5000);
     
     return () => clearInterval(interval);
   }, []);

@@ -56,7 +56,8 @@ export const getDatabaseConnectionStatus = async (req, res) => {
   try {
     // Check if we have an active database connection
     const pool = getDbPool();
-    const activeConnection = CoreDB.getActiveConnection();
+    const coreDB = CoreDB.getInstance();
+    const activeConnection = await coreDB.getActiveDatabaseConfig();
     
     if (!pool || !activeConnection) {
       return res.json({
