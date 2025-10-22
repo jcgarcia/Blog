@@ -1,5 +1,5 @@
-import sqlite3 from 'sqlite3';
-import { open } from 'sqlite';
+import pkg from 'pg';
+const { Pool } = pkg;
 import argon2 from 'argon2';
 import crypto from 'crypto';
 import fs from 'fs';
@@ -19,8 +19,20 @@ class CoreDB {
             return CoreDB.instance;
         }
         
-        this.dbPath = process.env.CORE_DB_PATH || path.join(__dirname, '../config/coredb.sqlite');
-        this.db = null;
+        // PostgreSQL connection configuration - CONNECTS TO COREDB DATABASE
+        this.connectionConfig = {
+            host: process.env.COREDB_HOST || 'blog-postgres-service',
+            port: process.env.COREDB_PORT || 5432,
+            database: process.env.COREDB_DATABASE || 'coredb',  // CRITICAL: CoreDB connects to 'coredb' database
+            user: process.env.COREDB_USER || 'dbcore_usr_2025',
+            password: process.env.COREDB_PASSWORD || 'DbSecure2025#XpL3vN7wE5xT6gH4uY1zC0',
+            ssl: false,
+            max: 5, // Maximum pool connections
+            idleTimeoutMillis: 30000,
+            connectionTimeoutMillis: 2000,
+        };
+        
+        this.pool = null;
         
         // CRITICAL: Must use Jenkins credential - NEVER generate new keys
         if (!process.env.COREDB_ENCRYPTION_KEY) {
@@ -28,40 +40,35 @@ class CoreDB {
         }
         this.encryptionKey = process.env.COREDB_ENCRYPTION_KEY;
         
-        this.schemaPath = path.join(__dirname, '../config/coredb-schema.sql');
+        this.schemaPath = path.join(__dirname, '../../coredb-schema.sql');
         this.initialized = false;
         
         CoreDB.instance = this;
     }
 
     /**
-     * Initialize CoreDB - create database and run schema
+     * Initialize CoreDB - create PostgreSQL connection and schema
      */
     async initialize() {
         try {
-            // Ensure directory exists
-            const dir = path.dirname(this.dbPath);
-            if (!fs.existsSync(dir)) {
-                fs.mkdirSync(dir, { recursive: true });
-            }
+            // Create PostgreSQL connection pool
+            this.pool = new Pool(this.connectionConfig);
 
-            // Open database connection
-            this.db = await open({
-                filename: this.dbPath,
-                driver: sqlite3.Database
-            });
+            console.log(`🔧 CoreDB: PostgreSQL pool created for ${this.connectionConfig.host}:${this.connectionConfig.port}/${this.connectionConfig.database}`);
 
-            console.log(`🔧 CoreDB: Database opened at ${this.dbPath}`);
+            // Test connection
+            const client = await this.pool.connect();
+            await client.query('SELECT NOW()');
+            client.release();
 
-            // Check if database needs initialization
-            const tables = await this.db.all(
-                "SELECT name FROM sqlite_master WHERE type='table'"
+            // Check if CoreDB tables exist
+            const result = await this.pool.query(
+                "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('admin_users', 'database_connections', 'storage_providers', 'system_config')"
             );
 
-            if (tables.length === 0) {
-                console.log('🔧 CoreDB: Running initial schema...');
+            if (result.rows.length < 4) {
+                console.log('🔧 CoreDB: Running PostgreSQL schema initialization...');
                 await this.runSchema();
-                await this.createDefaultAdmin();
             }
 
             // Verify database integrity
@@ -82,8 +89,8 @@ class CoreDB {
     async runSchema() {
         try {
             const schema = fs.readFileSync(this.schemaPath, 'utf8');
-            await this.db.exec(schema);
-            console.log('✅ CoreDB: Schema created successfully');
+            await this.pool.query(schema);
+            console.log('✅ CoreDB: PostgreSQL schema created successfully');
         } catch (error) {
             console.error('❌ CoreDB: Schema creation failed:', error);
             throw error;
@@ -94,15 +101,15 @@ class CoreDB {
      * Verify that all required tables exist
      */
     async verifySchema() {
-        const requiredTables = ['admin_users', 'external_databases', 'storage_providers', 'core_config'];
+        const requiredTables = ['admin_users', 'database_connections', 'storage_providers', 'system_config'];
         
         for (const table of requiredTables) {
-            const exists = await this.db.get(
-                "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
+            const result = await this.pool.query(
+                "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name = $1",
                 [table]
             );
             
-            if (!exists) {
+            if (result.rows.length === 0) {
                 throw new Error(`Required table '${table}' not found in CoreDB`);
             }
         }
@@ -140,21 +147,22 @@ class CoreDB {
             throw new Error('CoreDB not initialized');
         }
 
-        const user = await this.db.get(
-            'SELECT * FROM admin_users WHERE username = ? AND active = 1',
+        const result = await this.pool.query(
+            'SELECT * FROM admin_users WHERE username = $1 AND is_active = true',
             [username]
         );
 
-        if (!user) {
+        if (result.rows.length === 0) {
             return null;
         }
 
+        const user = result.rows[0];
         const isValid = await argon2.verify(user.password_hash, password);
         
         if (isValid) {
             // Update last login
-            await this.db.run(
-                'UPDATE admin_users SET last_login = CURRENT_TIMESTAMP WHERE id = ?',
+            await this.pool.query(
+                'UPDATE admin_users SET last_login = NOW() WHERE id = $1',
                 [user.id]
             );
             
@@ -177,17 +185,19 @@ class CoreDB {
             throw new Error('CoreDB not initialized');
         }
 
-        const config = await this.db.get(
-            'SELECT * FROM external_databases WHERE active = 1'
+        const result = await this.pool.query(
+            'SELECT * FROM database_connections WHERE is_active = true'
         );
 
-        if (config) {
+        if (result.rows.length > 0) {
+            const config = result.rows[0];
             // Decrypt password
             config.password = this.decrypt(config.password_encrypted);
             delete config.password_encrypted;
+            return config;
         }
 
-        return config;
+        return null;
     }
 
     /**
