@@ -16,13 +16,18 @@ router.post('/clear-corrupted-connections', async (req, res) => {
   try {
     console.log('🚨 EMERGENCY: Clearing corrupted database connections');
     
+    // Wait for CoreDB to be ready
+    if (!CoreDB.isInitialized()) {
+      throw new Error('CoreDB not initialized');
+    }
+    
     // Direct SQL to clear all database connections
     const clearConnectionsQuery = `DELETE FROM database_connections`;
-    CoreDB.db.run(clearConnectionsQuery);
+    CoreDB.getDatabase().run(clearConnectionsQuery);
     
     // Also clear any related metadata
     const clearActiveQuery = `UPDATE system_config SET value = NULL WHERE key = 'active_database_connection'`;
-    CoreDB.db.run(clearActiveQuery);
+    CoreDB.getDatabase().run(clearActiveQuery);
     
     console.log('✅ EMERGENCY: Corrupted connections cleared successfully');
     
@@ -47,9 +52,14 @@ router.post('/clear-corrupted-connections', async (req, res) => {
  */
 router.get('/coredb-status', async (req, res) => {
   try {
+    // Check if CoreDB is initialized
+    if (!CoreDB.isInitialized()) {
+      throw new Error('CoreDB not initialized');
+    }
+    
     // Test basic CoreDB operations
     const connectionsQuery = `SELECT COUNT(*) as count FROM database_connections`;
-    const result = CoreDB.db.get(connectionsQuery);
+    const result = CoreDB.getDatabase().get(connectionsQuery);
     
     // Test encryption key
     let encryptionStatus = 'working';
