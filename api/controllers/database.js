@@ -51,6 +51,43 @@ export const getDatabaseInfo = async (req, res) => {
   }
 };
 
+// Get database connection status
+export const getDatabaseConnectionStatus = async (req, res) => {
+  try {
+    // Check if we have an active database connection
+    const pool = getDbPool();
+    const activeConnection = CoreDB.getActiveConnection();
+    
+    if (!pool || !activeConnection) {
+      return res.json({
+        success: true,
+        connected: false,
+        message: 'No active database connection'
+      });
+    }
+    
+    // Test the connection with a simple query
+    const result = await pool.query('SELECT 1 as test');
+    
+    res.json({
+      success: true,
+      connected: true,
+      connectionName: activeConnection.name,
+      database: activeConnection.database,
+      host: activeConnection.host,
+      port: activeConnection.port
+    });
+  } catch (error) {
+    console.error('Database connection status error:', error);
+    res.json({
+      success: true,
+      connected: false,
+      message: 'Database connection failed',
+      error: error.message
+    });
+  }
+};
+
 // Create and download database backup (stream directly to user)
 export const createBackup = async (req, res) => {
   try {

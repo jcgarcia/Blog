@@ -9,6 +9,7 @@ import {
   deleteBackup,
   downloadBackup,
   getDatabaseInfo,
+  getDatabaseConnectionStatus,
   getDatabaseHealthStatus,
   switchDatabase,
   activateDatabaseConnection,
@@ -40,6 +41,7 @@ router.use(requireAdminAuth);
 
 // Database info and status
 router.get("/info", getDatabaseInfo);
+router.get("/connection-status", getDatabaseConnectionStatus);
 
 // Multi-database management
 router.get("/health", getDatabaseHealthStatus);
