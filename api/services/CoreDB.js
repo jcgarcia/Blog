@@ -21,8 +21,13 @@ class CoreDB {
         
         this.dbPath = process.env.CORE_DB_PATH || path.join(__dirname, '../config/coredb.sqlite');
         this.db = null;
-            // Initialize encryption (using Jenkins credential - must match deployment env var name)
-    this.encryptionKey = process.env.COREDB_ENCRYPTION_KEY || this.generateEncryptionKey();
+        
+        // CRITICAL: Must use Jenkins credential - NEVER generate new keys
+        if (!process.env.COREDB_ENCRYPTION_KEY) {
+            throw new Error('COREDB_ENCRYPTION_KEY environment variable is required. Check Jenkins credentials.');
+        }
+        this.encryptionKey = process.env.COREDB_ENCRYPTION_KEY;
+        
         this.schemaPath = path.join(__dirname, '../config/coredb-schema.sql');
         this.initialized = false;
         
@@ -283,14 +288,14 @@ class CoreDB {
     }
 
     /**
-     * Generate encryption key if not provided
+     * REMOVED: generateEncryptionKey() method
+     * 
+     * This method was causing encryption key inconsistency by generating
+     * new random keys when Jenkins credential wasn't properly injected.
+     * 
+     * CoreDB now requires COREDB_ENCRYPTION_KEY environment variable
+     * and will fail fast if not provided, ensuring consistent encryption.
      */
-    generateEncryptionKey() {
-        const key = crypto.randomBytes(32).toString('hex');
-        console.log('⚠️  Generated new encryption key for CoreDB');
-        console.log('⚠️  Set CORE_DB_ENCRYPTION_KEY environment variable to persist this key');
-        return key;
-    }
 
     /**
      * Add external database configuration
