@@ -137,14 +137,16 @@ pipeline {
                 script {
                     echo "🧪 Testing backend container..."
                     withCredentials([
+                        string(credentialsId: 'postgres-password', variable: 'POSTGRES_PASSWORD'),
                         string(credentialsId: 'coredb-admin-user', variable: 'COREDB_ADMIN_USER'),
                         string(credentialsId: 'coredb-admin-password', variable: 'COREDB_ADMIN_PASSWORD'),
                         string(credentialsId: 'coredb-encryption-key', variable: 'COREDB_ENCRYPTION_KEY'),
                         string(credentialsId: 'session-secret', variable: 'SESSION_SECRET')
                     ]) {
                         sh """
-                            # Start backend container for testing with CoreDB credentials only
+                            # Start backend container for testing with all required credentials
                             docker run -d -p 5002:5000 --name test-backend-${BUILD_NUMBER} \
+                                -e POSTGRES_PASSWORD="${POSTGRES_PASSWORD}" \
                                 -e COREDB_ADMIN_USER="${COREDB_ADMIN_USER}" \
                                 -e COREDB_ADMIN_PASSWORD="${COREDB_ADMIN_PASSWORD}" \
                                 -e COREDB_ENCRYPTION_KEY="${COREDB_ENCRYPTION_KEY}" \
