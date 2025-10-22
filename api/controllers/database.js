@@ -207,12 +207,23 @@ export const exportTable = async (req, res) => {
     
     console.log(`Streaming table export: ${table}`);
     
+    // Get active database connection from CoreDB
+    const coreDB = CoreDB.getInstance();
+    const activeConnection = await coreDB.getActiveConnection();
+    
+    if (!activeConnection) {
+      return res.status(400).json({
+        success: false,
+        message: 'No active database connection configured. Please configure a database connection first.'
+      });
+    }
+    
     // Build pg_dump arguments for table export
     const pgDumpArgs = [
-      '-h', DB_CONFIG.host,
-      '-p', DB_CONFIG.port.toString(),
-      '-U', DB_CONFIG.username,
-      '-d', DB_CONFIG.database,
+      '-h', activeConnection.host,
+      '-p', activeConnection.port.toString(),
+      '-U', activeConnection.username,
+      '-d', activeConnection.database,
       '--no-password',
       '-t', table
     ];
@@ -224,7 +235,7 @@ export const exportTable = async (req, res) => {
     // Execute command and stream output directly to response
     const { spawn } = await import('child_process');
     const pgDump = spawn('pg_dump', pgDumpArgs, {
-      env: { ...process.env, PGPASSWORD: DB_CONFIG.password }
+      env: { ...process.env, PGPASSWORD: activeConnection.password }
     });
 
     // Stream stdout directly to response
@@ -318,15 +329,28 @@ export const restoreBackup = async (req, res) => {
     console.log('RESTORING DATABASE FROM UPLOADED FILE:', req.file.originalname);
     console.log('WARNING: This will overwrite existing data');
     
+    // Get active database connection from CoreDB
+    const coreDB = CoreDB.getInstance();
+    const activeConnection = await coreDB.getActiveConnection();
+    
+    if (!activeConnection) {
+      return res.status(400).json({
+        success: false,
+        message: 'No active database connection configured. Please configure a database connection first.'
+      });
+    }
+    
+    console.log(`Using active connection: ${activeConnection.name} (${activeConnection.host}:${activeConnection.port})`);
+    
     // Stream the uploaded file directly to psql
     const { spawn } = await import('child_process');
     const psql = spawn('psql', [
-      '-h', DB_CONFIG.host,
-      '-p', DB_CONFIG.port.toString(),
-      '-U', DB_CONFIG.username,
-      '-d', DB_CONFIG.database
+      '-h', activeConnection.host,
+      '-p', activeConnection.port.toString(),
+      '-U', activeConnection.username,
+      '-d', activeConnection.database
     ], {
-      env: { ...process.env, PGPASSWORD: DB_CONFIG.password },
+      env: { ...process.env, PGPASSWORD: activeConnection.password },
       stdio: ['pipe', 'pipe', 'pipe']
     });
 
