@@ -60,8 +60,8 @@ export const DatabaseConnectionProvider = ({ children }) => {
   useEffect(() => {
     checkConnectionStatus();
     
-    // Poll every 5 seconds for connection status
-    const interval = setInterval(checkConnectionStatus, 5000);
+    // Poll every 10 seconds for connection status
+    const interval = setInterval(checkConnectionStatus, 10000);
     
     return () => clearInterval(interval);
   }, []);
