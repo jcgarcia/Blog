@@ -250,7 +250,10 @@ pipeline {
                         string(credentialsId: 'coredb-admin-password', variable: 'COREDB_ADMIN_PASSWORD'),
                         string(credentialsId: 'coredb-encryption-key', variable: 'COREDB_ENCRYPTION_KEY'),
                         string(credentialsId: 'jwt-secret', variable: 'JWT_SECRET'),
-                        string(credentialsId: 'session-secret', variable: 'SESSION_SECRET')
+                        string(credentialsId: 'session-secret', variable: 'SESSION_SECRET'),
+                        string(credentialsId: 'blog-api-key', variable: 'BLOG_API_KEY'),
+                        string(credentialsId: 'google-client-id', variable: 'GOOGLE_CLIENT_ID'),
+                        string(credentialsId: 'google-client-secret', variable: 'GOOGLE_CLIENT_SECRET')
                     ]) {
                         sh """
                             # Delete existing secret if it exists (ignore errors)
@@ -269,9 +272,9 @@ pipeline {
                                 --from-literal=COREDB_ENCRYPTION_KEY="${COREDB_ENCRYPTION_KEY}" \
                                 --from-literal=JWT_SECRET="${JWT_SECRET}" \
                                 --from-literal=SESSION_SECRET="${SESSION_SECRET}" \
-                                --from-literal=BLOG_API_KEY='81128b70915fe2d690a4e55eebeb13cedf069659e8e524c1198426d7665462b0' \
-                                --from-literal=GOOGLE_CLIENT_ID='dummy-google-client-id' \
-                                --from-literal=GOOGLE_CLIENT_SECRET='dummy-google-client-secret'
+                                --from-literal=BLOG_API_KEY="${BLOG_API_KEY}" \
+                                --from-literal=GOOGLE_CLIENT_ID="${GOOGLE_CLIENT_ID}" \
+                                --from-literal=GOOGLE_CLIENT_SECRET="${GOOGLE_CLIENT_SECRET}"
                             
                             # Verify secret was created
                             kubectl get secret blog-secrets -n blog
