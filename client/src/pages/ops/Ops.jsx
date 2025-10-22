@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
 import { useAdmin } from '../../contexts/AdminContext';
+import { useDatabaseConnection } from '../../contexts/DatabaseConnectionContext';
+import { PANEL_CONFIG, getAvailablePanels } from '../../config/panelConfig';
+import DatabaseConnectionAlert from '../../components/ops/DatabaseConnectionAlert';
 import './ops.css';
 import CognitoAdminPanel from '../../components/cognito-admin/CognitoAdminPanel';
 import ContentManagement from './components/ContentManagement';
@@ -14,6 +17,17 @@ import DatabaseManagement from './components/DatabaseManagement';
 export default function Ops() {
   const [activeTab, setActiveTab] = useState('content');
   const { adminUser, adminLogout } = useAdmin();
+  const { connected, loading } = useDatabaseConnection();
+  
+  // Get available panels based on database connection status
+  const availablePanels = getAvailablePanels(connected);
+  
+  // If current tab is not available, switch to the first available one
+  React.useEffect(() => {
+    if (!loading && !availablePanels.find(panel => panel.id === activeTab)) {
+      setActiveTab(availablePanels[0]?.id || 'database');
+    }
+  }, [connected, loading, activeTab, availablePanels]);
 
   const renderContent = () => {
     switch (activeTab) {
@@ -54,63 +68,19 @@ export default function Ops() {
       </div>
 
       <div className="ops-navigation">
-        <button 
-          className={activeTab === 'content' ? 'active' : ''} 
-          onClick={() => setActiveTab('content')}
-        >
-          <i className="fa-solid fa-file-lines"></i> Content
-        </button>
-        <button 
-          className={activeTab === 'pages' ? 'active' : ''} 
-          onClick={() => setActiveTab('pages')}
-        >
-          <i className="fa-solid fa-file-text"></i> Pages
-        </button>
-        <button 
-          className={activeTab === 'users' ? 'active' : ''} 
-          onClick={() => setActiveTab('users')}
-        >
-          <i className="fa-solid fa-users"></i> Users
-        </button>
-        <button 
-          className={activeTab === 'social' ? 'active' : ''} 
-          onClick={() => setActiveTab('social')}
-        >
-          <i className="fa-solid fa-share-nodes"></i> Social Media
-        </button>
-        <button 
-          className={activeTab === 'settings' ? 'active' : ''} 
-          onClick={() => setActiveTab('settings')}
-        >
-          <i className="fa-solid fa-gear"></i> Settings
-        </button>
-        <button 
-          className={activeTab === 'analytics' ? 'active' : ''} 
-          onClick={() => setActiveTab('analytics')}
-        >
-          <i className="fa-solid fa-chart-line"></i> Analytics
-        </button>
-        <button 
-          className={activeTab === 'media' ? 'active' : ''} 
-          onClick={() => setActiveTab('media')}
-        >
-          <i className="fa-solid fa-images"></i> Media
-        </button>
-        <button 
-          className={activeTab === 'auth' ? 'active' : ''} 
-          onClick={() => setActiveTab('auth')}
-        >
-          <i className="fa-solid fa-shield-halved"></i> Auth
-        </button>
-        <button 
-          className={activeTab === 'database' ? 'active' : ''} 
-          onClick={() => setActiveTab('database')}
-        >
-          <i className="fa-solid fa-database"></i> Database
-        </button>
+        {availablePanels.map(panel => (
+          <button 
+            key={panel.id}
+            className={activeTab === panel.id ? 'active' : ''} 
+            onClick={() => setActiveTab(panel.id)}
+          >
+            <i className={panel.icon}></i> {panel.name}
+          </button>
+        ))}
       </div>
 
       <div className="ops-content">
+        {!connected && !loading && <DatabaseConnectionAlert />}
         {renderContent()}
       </div>
     </div>

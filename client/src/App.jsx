@@ -23,6 +23,7 @@ import AdminLogin from "./pages/adminlogin/AdminLogin";
 import ProtectedRoute from "./components/ProtectedRoute/ProtectedRoute";
 import { AdminProvider } from "./contexts/AdminContext";
 import { UserProvider } from "./contexts/UserContext";
+import { DatabaseConnectionProvider } from "./contexts/DatabaseConnectionContext";
 import { HelmetProvider } from 'react-helmet-async';
 
 function App() {
@@ -91,12 +92,16 @@ function App() {
               } />
               <Route path="/ops" element={
                 <ProtectedRoute requireAdmin={true}>
-                  <Ops />
+                  <DatabaseConnectionProvider>
+                    <Ops />
+                  </DatabaseConnectionProvider>
                 </ProtectedRoute>
               } />
               <Route path="/ops/drafts" element={
                 <ProtectedRoute requireAdmin={true}>
-                  <DraftManagement />
+                  <DatabaseConnectionProvider>
+                    <DraftManagement />
+                  </DatabaseConnectionProvider>
                 </ProtectedRoute>
               } />
               <Route path="/settings" element={<Settings />} />
