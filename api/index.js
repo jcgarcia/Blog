@@ -79,8 +79,8 @@ app.use((req, res, next) => {
 app.use(express.json());
 app.use(cookieParser());
 
-// Load system configuration from database
-app.use(loadSystemConfig);
+// NOTE: System configuration loading moved to after CoreDB initialization
+// to prevent circular dependency issues
 
 // Serve uploaded files statically
 app.use("/uploads", express.static("uploads"));
@@ -229,6 +229,12 @@ const server = app.listen(PORT, async () => {
     
     // Initialize default database connections from environment variables
     await initializeDefaultDatabaseConnections(coreDB);
+    
+    // Now that CoreDB is initialized, we can safely load system configuration
+    console.log('🔧 Adding system configuration middleware...');
+    app.use(loadSystemConfig);
+    console.log('✅ System configuration middleware added');
+    
   } catch (error) {
     console.error('❌ Failed to initialize CoreDB:', error);
     console.error('🔄 Admin authentication may not work properly');
