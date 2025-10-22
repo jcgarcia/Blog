@@ -21,7 +21,8 @@ class CoreDB {
         
         this.dbPath = process.env.CORE_DB_PATH || path.join(__dirname, '../config/coredb.sqlite');
         this.db = null;
-        this.encryptionKey = process.env.CORE_DB_ENCRYPTION_KEY || this.generateEncryptionKey();
+            // Initialize encryption (using Jenkins credential - must match deployment env var name)
+    this.encryptionKey = process.env.COREDB_ENCRYPTION_KEY || this.generateEncryptionKey();
         this.schemaPath = path.join(__dirname, '../config/coredb-schema.sql');
         this.initialized = false;
         
