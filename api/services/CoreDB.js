@@ -127,7 +127,7 @@ class CoreDB {
                 name VARCHAR(255) NOT NULL,
                 type VARCHAR(50) NOT NULL,
                 config_encrypted TEXT NOT NULL,
-                active BOOLEAN DEFAULT false,
+                is_active BOOLEAN DEFAULT false,
                 created_at TIMESTAMP DEFAULT NOW(),
                 updated_at TIMESTAMP DEFAULT NOW()
             );
@@ -138,7 +138,7 @@ class CoreDB {
             CREATE INDEX IF NOT EXISTS idx_system_config_key ON system_config(key);
             CREATE INDEX IF NOT EXISTS idx_system_config_group ON system_config(group_name);
             CREATE INDEX IF NOT EXISTS idx_database_connections_active ON database_connections(is_active);
-            CREATE INDEX IF NOT EXISTS idx_storage_providers_active ON storage_providers(active);
+            CREATE INDEX IF NOT EXISTS idx_storage_providers_active ON storage_providers(is_active);
         `;
 
         await this.pool.query(schema);
@@ -234,7 +234,7 @@ class CoreDB {
         }));
 
         await this.pool.query(`
-            INSERT INTO storage_providers (name, type, config_encrypted, active, created_at, updated_at)
+            INSERT INTO storage_providers (name, type, config_encrypted, is_active, created_at, updated_at)
             VALUES ($1, $2, $3, $4, NOW(), NOW())
             ON CONFLICT DO NOTHING
         `, ['AWS S3 Production', 'aws-s3', awsConfig, true]);
