@@ -24,7 +24,7 @@ class CoreDB {
             host: process.env.COREDB_HOST || 'blog-postgres-service',
             port: process.env.COREDB_PORT || 5432,
             database: process.env.COREDB_DATABASE || 'coredb',  // CRITICAL: CoreDB connects to 'coredb' database
-            user: process.env.COREDB_USER || 'bloguser',  // Fixed: Use correct PostgreSQL user
+            user: process.env.COREDB_USER || 'blogadmin',  // Use existing PostgreSQL user
             password: process.env.POSTGRES_PASSWORD || process.env.COREDB_PASSWORD,
             ssl: false,
             max: 5, // Maximum pool connections
