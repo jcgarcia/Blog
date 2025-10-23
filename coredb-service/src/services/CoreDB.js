@@ -20,8 +20,8 @@ class CoreDB {
             host: process.env.COREDB_HOST || 'blog-postgres-service',
             port: process.env.COREDB_PORT || 5432,
             database: process.env.COREDB_DATABASE || 'coredb',  // CRITICAL: CoreDB connects to 'coredb' database
-            user: process.env.PGUSER || 'dbcore_usr_2025',  // Use correct PostgreSQL user
-            password: process.env.PGPASSWORD || 'DbSecure2025#XpL3vN7wE5xT6gH4uY1zC0',
+            user: process.env.PGUSER || 'blogadmin',  // Use consistent PostgreSQL user
+            password: process.env.PGPASSWORD,
             ssl: false,
             max: 10,
             idleTimeoutMillis: 30000,
