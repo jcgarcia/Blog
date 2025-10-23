@@ -44,7 +44,16 @@ class CoreDB {
 
     async initialize() {
         try {
-            this.pool = new Pool(this.connectionConfig);
+            this.pool = new Pool({
+            host: process.env.COREDB_HOST || 'blog-postgres-service',
+            port: process.env.COREDB_PORT || 5432,
+            database: process.env.COREDB_DATABASE || 'coredb',
+            user: process.env.PGUSER || 'dbcore_usr_2025',
+            password: process.env.PGPASSWORD || 'DbSecure2025#XpL3vN7wE5xT6gH4uY1zC0',
+            max: 20,
+            idleTimeoutMillis: 30000,
+            connectionTimeoutMillis: 2000,
+        });
             console.log(`🔧 CoreDB: PostgreSQL pool created for ${this.connectionConfig.host}:${this.connectionConfig.port}/${this.connectionConfig.database}`);
 
             // Test connection

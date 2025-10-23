@@ -20,8 +20,8 @@ class CoreDB {
             host: process.env.COREDB_HOST || 'blog-postgres-service',
             port: process.env.COREDB_PORT || 5432,
             database: process.env.COREDB_DATABASE || 'coredb',  // CRITICAL: CoreDB connects to 'coredb' database
-            user: process.env.COREDB_USER || 'blogadmin',  // Use existing PostgreSQL user
-            password: process.env.POSTGRES_PASSWORD || process.env.COREDB_PASSWORD,
+            user: process.env.PGUSER || 'dbcore_usr_2025',  // Use correct PostgreSQL user
+            password: process.env.PGPASSWORD || 'DbSecure2025#XpL3vN7wE5xT6gH4uY1zC0',
             ssl: false,
             max: 10,
             idleTimeoutMillis: 30000,
@@ -35,7 +35,7 @@ class CoreDB {
             throw new Error('COREDB_ENCRYPTION_KEY environment variable is required. Check Jenkins credentials.');
         }
         if (!this.connectionConfig.password) {
-            throw new Error('POSTGRES_PASSWORD environment variable is required. Check Jenkins credentials.');
+            throw new Error('PGPASSWORD environment variable is required. Check Jenkins credentials.');
         }
         this.encryptionKey = process.env.COREDB_ENCRYPTION_KEY;
         
