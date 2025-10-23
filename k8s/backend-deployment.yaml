@@ -92,6 +92,16 @@ spec:
             secretKeyRef:
               name: blog-secrets
               key: POSTGRES_PASSWORD
+        - name: PGUSER
+          valueFrom:
+            secretKeyRef:
+              name: blog-secrets
+              key: PGUSER
+        - name: PGPASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: blog-secrets
+              key: PGPASSWORD
         resources:
           requests:
             memory: "256Mi"
