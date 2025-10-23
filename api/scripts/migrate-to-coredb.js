@@ -115,8 +115,9 @@ async function migrateToCore() {
         
         // 7. Generate environment variables for container
         console.log('\n🌍 Environment variables for container deployment:');
-        console.log('CORE_DB_PATH=/app/config/coredb.sqlite');
-        console.log(`CORE_DB_ENCRYPTION_KEY=${coreDB.encryptionKey}`);
+        console.log('COREDB_HOST=blog-postgres-service');
+        console.log('COREDB_DATABASE=coredb');
+        console.log(`COREDB_ENCRYPTION_KEY=${coreDB.encryptionKey}`);
         console.log('NODE_ENV=production');
         
         console.log('\n✅ Migration to CoreDB completed successfully!');

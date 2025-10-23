@@ -45,7 +45,7 @@ async function testCoreDBWorkflow() {
       connectionId = await coreDB.createDatabaseConnection(connectionConfig);
       console.log(`✅ Database connection created with ID: ${connectionId}\n`);
     } catch (error) {
-      if (error.code === 'SQLITE_CONSTRAINT') {
+      if (error.code === '23505' || error.message.includes('duplicate key') || error.message.includes('already exists')) {
         // Connection already exists, find it
         const connections = await coreDB.getDatabaseConnections();
         const existingConnection = connections.find(conn => conn.name === connectionConfig.name || conn.host === connectionConfig.host);

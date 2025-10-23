@@ -1,7 +1,7 @@
 FROM node:20-alpine
 
 # Install curl for health checks, poppler-utils for PDF thumbnail generation, postgresql-client for database backups
-# Install build tools for native modules (sqlite3, argon2, etc.) and python for node-gyp
+# Install build tools for native modules (argon2, etc.) and python for node-gyp
 # Enable corepack for pnpm (official method, no npm needed)
 RUN apk add --no-cache \
     curl \
