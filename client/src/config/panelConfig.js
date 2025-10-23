@@ -4,7 +4,7 @@
  */
 
 export const PANEL_CONFIG = {
-  // CoreDB-only panels (always available - data stored in SQLite CoreDB)
+  // CoreDB-only panels (always available - data stored in PostgreSQL CoreDB)
   database: { 
     requiresDatabase: false, 
     icon: '💾', 
