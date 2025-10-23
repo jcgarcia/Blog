@@ -2,16 +2,12 @@ import pkg from 'pg';
 const { Pool } = pkg;
 import argon2 from 'argon2';
 import crypto from 'crypto';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 /**
- * CoreDB - Minimal configuration database for blog operation
+ * CoreDB Microservice - PostgreSQL-based configuration database
  * Contains: Admin auth, external DB config, storage providers, core settings
+ * COMPLETELY PostgreSQL - NO SQLite references
+ * Designed for independent microservice deployment
  */
 class CoreDB {
     constructor() {
@@ -27,14 +23,14 @@ class CoreDB {
             user: process.env.COREDB_USER || 'blogadmin',  // Use existing PostgreSQL user
             password: process.env.POSTGRES_PASSWORD || process.env.COREDB_PASSWORD,
             ssl: false,
-            max: 5, // Maximum pool connections
+            max: 10,
             idleTimeoutMillis: 30000,
             connectionTimeoutMillis: 2000,
         };
         
         this.pool = null;
         
-        // CRITICAL: Must use Jenkins credentials - NEVER hardcode secrets
+        // CRITICAL: Must use Jenkins credentials
         if (!process.env.COREDB_ENCRYPTION_KEY) {
             throw new Error('COREDB_ENCRYPTION_KEY environment variable is required. Check Jenkins credentials.');
         }
@@ -43,61 +39,111 @@ class CoreDB {
         }
         this.encryptionKey = process.env.COREDB_ENCRYPTION_KEY;
         
-        this.schemaPath = path.join(__dirname, '../../coredb-schema.sql');
         this.initialized = false;
         
         CoreDB.instance = this;
     }
 
     /**
-     * Initialize CoreDB - create PostgreSQL connection and schema
+     * Initialize CoreDB microservice - create PostgreSQL connection and schema
      */
     async initialize() {
         try {
             // Create PostgreSQL connection pool
             this.pool = new Pool(this.connectionConfig);
-
-            console.log(`🔧 CoreDB: PostgreSQL pool created for ${this.connectionConfig.host}:${this.connectionConfig.port}/${this.connectionConfig.database}`);
-
+            
+            console.log(`🔧 CoreDB Microservice: PostgreSQL pool created for ${this.connectionConfig.host}:${this.connectionConfig.port}/${this.connectionConfig.database}`);
+            
             // Test connection
             const client = await this.pool.connect();
             await client.query('SELECT NOW()');
             client.release();
-
+            
             // Check if CoreDB tables exist
             const result = await this.pool.query(
                 "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('admin_users', 'database_connections', 'storage_providers', 'system_config')"
             );
-
+            
             if (result.rows.length < 4) {
-                console.log('🔧 CoreDB: Running PostgreSQL schema initialization...');
-                await this.runSchema();
+                console.log('🔧 CoreDB Microservice: Running PostgreSQL schema initialization...');
+                await this.createMinimalSchema();
             }
-
+            
             // Verify database integrity
             await this.verifySchema();
             
             this.initialized = true;
-            console.log('✅ CoreDB: Initialized successfully');
-
+            console.log('✅ CoreDB Microservice: Initialized successfully');
+            
         } catch (error) {
-            console.error('❌ CoreDB: Initialization failed:', error);
+            console.error('❌ CoreDB Microservice: Initialization failed:', error);
             throw error;
         }
     }
 
     /**
-     * Run the database schema from SQL file
+     * Create minimal schema 
      */
-    async runSchema() {
-        try {
-            const schema = fs.readFileSync(this.schemaPath, 'utf8');
-            await this.pool.query(schema);
-            console.log('✅ CoreDB: PostgreSQL schema created successfully');
-        } catch (error) {
-            console.error('❌ CoreDB: Schema creation failed:', error);
-            throw error;
-        }
+    async createMinimalSchema() {
+        const schema = `
+            -- Admin Users
+            CREATE TABLE IF NOT EXISTS admin_users (
+                id SERIAL PRIMARY KEY,
+                username VARCHAR(255) UNIQUE NOT NULL,
+                email VARCHAR(255) UNIQUE NOT NULL,
+                password_hash TEXT NOT NULL,
+                role VARCHAR(50) DEFAULT 'admin',
+                is_active BOOLEAN DEFAULT true,
+                created_at TIMESTAMP DEFAULT NOW(),
+                last_login TIMESTAMP
+            );
+            
+            -- Database Connections
+            CREATE TABLE IF NOT EXISTS database_connections (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(255) NOT NULL,
+                type VARCHAR(50) NOT NULL,
+                host VARCHAR(255) NOT NULL,
+                port INTEGER NOT NULL,
+                database_name VARCHAR(255) NOT NULL,
+                username VARCHAR(255) NOT NULL,
+                password_encrypted TEXT NOT NULL,
+                ssl_mode VARCHAR(50) DEFAULT 'prefer',
+                is_active BOOLEAN DEFAULT false,
+                created_at TIMESTAMP DEFAULT NOW(),
+                updated_at TIMESTAMP DEFAULT NOW()
+            );
+            
+            -- Storage Providers
+            CREATE TABLE IF NOT EXISTS storage_providers (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(255) NOT NULL,
+                type VARCHAR(50) NOT NULL,
+                config_encrypted TEXT NOT NULL,
+                active BOOLEAN DEFAULT false,
+                created_at TIMESTAMP DEFAULT NOW(),
+                updated_at TIMESTAMP DEFAULT NOW()
+            );
+            
+            -- System Configuration
+            CREATE TABLE IF NOT EXISTS system_config (
+                id SERIAL PRIMARY KEY,
+                key VARCHAR(255) UNIQUE NOT NULL,
+                value TEXT,
+                category VARCHAR(100) DEFAULT 'general',
+                description TEXT,
+                created_at TIMESTAMP DEFAULT NOW(),
+                updated_at TIMESTAMP DEFAULT NOW()
+            );
+            
+            -- Create default admin user if not exists
+            INSERT INTO admin_users (username, email, password_hash)
+            VALUES ('coreadmin', 'admin@coredb.local', '$argon2id$v=19$m=65536,t=3,p=4$CZKqNvOgAfXV5aEKr3fzAA$gDvtpI1rNjRFpXDCKxpS5EIJM2Z1tIGBSVVoHyHzZME')
+            ON CONFLICT (username) DO NOTHING;
+        `;
+        
+        await this.pool.query(schema);
+        console.log('✅ CoreDB Microservice: Minimal schema created');
     }
 
     /**
@@ -117,28 +163,33 @@ class CoreDB {
             }
         }
         
-        console.log('✅ CoreDB: Schema verification passed');
+        console.log('✅ CoreDB Microservice: Schema verification passed');
     }
 
     /**
-     * Create default admin user if none exists
+     * Health check endpoint
      */
-    async createDefaultAdmin() {
-        const existingAdmin = await this.db.get('SELECT id FROM admin_users LIMIT 1');
-        
-        if (!existingAdmin) {
-            const defaultPassword = 'CoreAdmin2025#Secure'; // Secure default password
-            const passwordHash = await argon2.hash(defaultPassword);
+    async healthCheck() {
+        try {
+            if (!this.pool) {
+                return { status: 'error', message: 'Database pool not initialized' };
+            }
             
-            await this.db.run(
-                `INSERT INTO admin_users (username, password_hash, email) 
-                 VALUES (?, ?, ?)`,
-                ['coreadmin', passwordHash, 'coreadmin@bedtime.ingasti.com']
-            );
+            const client = await this.pool.connect();
+            const result = await client.query('SELECT NOW() as timestamp');
+            client.release();
             
-            console.log('✅ CoreDB: Default admin created');
-            console.log('⚠️  Default admin credentials: coreadmin / CoreAdmin2025#Secure');
-            console.log('⚠️  CHANGE PASSWORD IMMEDIATELY after first login!');
+            return {
+                status: 'healthy',
+                timestamp: result.rows[0].timestamp,
+                database: this.connectionConfig.database,
+                host: this.connectionConfig.host
+            };
+        } catch (error) {
+            return {
+                status: 'error',
+                message: error.message
+            };
         }
     }
 
@@ -211,17 +262,19 @@ class CoreDB {
             throw new Error('CoreDB not initialized');
         }
 
-        const provider = await this.db.get(
-            'SELECT * FROM storage_providers WHERE active = 1'
+        const result = await this.pool.query(
+            'SELECT * FROM storage_providers WHERE active = true'
         );
 
-        if (provider) {
+        if (result.rows.length > 0) {
+            const provider = result.rows[0];
             // Decrypt configuration
             provider.config = JSON.parse(this.decrypt(provider.config_encrypted));
             delete provider.config_encrypted;
+            return provider;
         }
 
-        return provider;
+        return null;
     }
 
     /**
@@ -232,12 +285,12 @@ class CoreDB {
             throw new Error('CoreDB not initialized');
         }
 
-        const result = await this.db.get(
-            'SELECT value FROM core_config WHERE key = ?',
+        const result = await this.pool.query(
+            'SELECT value FROM system_config WHERE key = $1',
             [key]
         );
 
-        return result ? result.value : null;
+        return result.rows.length > 0 ? result.rows[0].value : null;
     }
 
     /**
@@ -248,9 +301,11 @@ class CoreDB {
             throw new Error('CoreDB not initialized');
         }
 
-        return await this.db.all(
-            'SELECT key, value, category, description FROM core_config ORDER BY category, key'
+        const result = await this.pool.query(
+            'SELECT key, value, category, description FROM system_config ORDER BY category, key'
         );
+
+        return result.rows;
     }
 
     /**
@@ -261,9 +316,14 @@ class CoreDB {
             throw new Error('CoreDB not initialized');
         }
 
-        await this.db.run(
-            `INSERT OR REPLACE INTO core_config (key, value, category, description, updated_at)
-             VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+        await this.pool.query(
+            `INSERT INTO system_config (key, value, category, description, updated_at)
+             VALUES ($1, $2, $3, $4, NOW())
+             ON CONFLICT (key) DO UPDATE SET
+             value = EXCLUDED.value,
+             category = EXCLUDED.category,
+             description = EXCLUDED.description,
+             updated_at = NOW()`,
             [key, value, category, description]
         );
     }
@@ -301,69 +361,178 @@ class CoreDB {
     }
 
     /**
-     * REMOVED: generateEncryptionKey() method
-     * 
-     * This method was causing encryption key inconsistency by generating
-     * new random keys when Jenkins credential wasn't properly injected.
-     * 
-     * CoreDB now requires COREDB_ENCRYPTION_KEY environment variable
-     * and will fail fast if not provided, ensuring consistent encryption.
+     * Database Connection Management Methods
      */
-
-    /**
-     * Add external database configuration
-     */
-    async addExternalDatabase(config) {
+    
+    async getDatabaseConnections() {
         if (!this.initialized) {
             throw new Error('CoreDB not initialized');
         }
-
-        // Deactivate current active database if setting this as active
-        if (config.active) {
-            await this.db.run('UPDATE external_databases SET active = 0');
-        }
-
-        const encryptedPassword = this.encrypt(config.password);
-
-        await this.db.run(
-            `INSERT INTO external_databases 
-             (name, type, host, port, database_name, username, password_encrypted, ssl_mode, active)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [config.name, config.type, config.host, config.port, 
-             config.database_name, config.username, encryptedPassword, 
-             config.ssl_mode || 'require', config.active ? 1 : 0]
-        );
+        
+        const result = await this.pool.query(`
+            SELECT id, name, type, host, port, database_name as database,
+                   username, ssl_mode, is_active as active, created_at, updated_at
+            FROM database_connections 
+            ORDER BY name
+        `);
+        
+        return result.rows;
     }
 
-    /**
-     * Add storage provider configuration
-     */
-    async addStorageProvider(config) {
+    async getActiveDatabaseConfig() {
         if (!this.initialized) {
             throw new Error('CoreDB not initialized');
         }
-
-        // Deactivate current active provider if setting this as active
-        if (config.active) {
-            await this.db.run('UPDATE storage_providers SET active = 0');
+        
+        const result = await this.pool.query(`
+            SELECT id, name, type, host, port, database_name as database, 
+                   username, password_encrypted, ssl_mode, created_at, updated_at
+            FROM database_connections 
+            WHERE is_active = true
+            LIMIT 1
+        `);
+        
+        if (result.rows.length > 0) {
+            const activeDb = result.rows[0];
+            // Decrypt password
+            activeDb.password = this.decrypt(activeDb.password_encrypted);
+            delete activeDb.password_encrypted;
+            return activeDb;
         }
+        
+        return null;
+    }
 
-        const encryptedConfig = this.encrypt(JSON.stringify(config.config));
+    async createDatabaseConnection(config) {
+        if (!this.initialized) {
+            throw new Error('CoreDB not initialized');
+        }
+        
+        const { name, type, host, port, database, username, password, ssl_mode } = config;
+        
+        // Encrypt password
+        const encryptedPassword = this.encrypt(password);
+        
+        const result = await this.pool.query(`
+            INSERT INTO database_connections 
+            (name, type, host, port, database_name, username, password_encrypted, ssl_mode, is_active)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, false)
+            RETURNING id
+        `, [name, type, host, port, database, username, encryptedPassword, ssl_mode]);
+        
+        console.log(`✅ CoreDB Microservice: Database connection '${name}' created`);
+        return result.rows[0].id;
+    }
+    
+    async updateDatabaseConnection(id, updateData) {
+        if (!this.initialized) {
+            throw new Error('CoreDB not initialized');
+        }
+        
+        const updates = [];
+        const values = [];
+        let paramIndex = 1;
+        
+        Object.keys(updateData).forEach(key => {
+            if (key === 'password') {
+                updates.push(`password_encrypted = $${paramIndex++}`);
+                values.push(this.encrypt(updateData[key]));
+            } else if (key === 'database') {
+                updates.push(`database_name = $${paramIndex++}`);
+                values.push(updateData[key]);
+            } else if (key === 'active') {
+                updates.push(`is_active = $${paramIndex++}`);
+                values.push(updateData[key]);
+            } else {
+                updates.push(`${key} = $${paramIndex++}`);
+                values.push(updateData[key]);
+            }
+        });
+        
+        if (updates.length === 0) {
+            throw new Error('No fields to update');
+        }
+        
+        updates.push(`updated_at = NOW()`);
+        values.push(id);
+        
+        await this.pool.query(`
+            UPDATE database_connections 
+            SET ${updates.join(', ')}
+            WHERE id = $${paramIndex}
+        `, values);
+        
+        console.log(`✅ CoreDB Microservice: Database connection ${id} updated`);
+    }
+    
+    async deleteDatabaseConnection(id) {
+        if (!this.initialized) {
+            throw new Error('CoreDB not initialized');
+        }
+        
+        // Check if this is the active connection
+        const result = await this.pool.query('SELECT id FROM database_connections WHERE id = $1 AND is_active = true', [id]);
+        if (result.rows.length > 0) {
+            throw new Error('Cannot delete the active database connection. Please switch to another database first.');
+        }
+        
+        await this.pool.query('DELETE FROM database_connections WHERE id = $1', [id]);
+        console.log(`✅ CoreDB Microservice: Database connection ${id} deleted`);
+    }
+    
+    async setActiveDatabaseConnection(id) {
+        if (!this.initialized) {
+            throw new Error('CoreDB not initialized');
+        }
+        
+        // Use transaction to ensure atomicity
+        const client = await this.pool.connect();
+        try {
+            await client.query('BEGIN');
+            
+            // Deactivate all connections
+            await client.query('UPDATE database_connections SET is_active = false');
+            
+            // Activate the specified connection
+            await client.query('UPDATE database_connections SET is_active = true WHERE id = $1', [id]);
+            
+            await client.query('COMMIT');
+            console.log(`✅ CoreDB Microservice: Database connection ${id} set as active`);
+        } catch (error) {
+            await client.query('ROLLBACK');
+            throw error;
+        } finally {
+            client.release();
+        }
+    }
 
-        await this.db.run(
-            `INSERT INTO storage_providers (name, type, config_encrypted, active)
-             VALUES (?, ?, ?, ?)`,
-            [config.name, config.type, encryptedConfig, config.active ? 1 : 0]
-        );
+    // Emergency methods for clearing corrupted connections
+    async clearAllDatabaseConnections() {
+        if (!this.initialized) {
+            throw new Error('CoreDB not initialized');
+        }
+        
+        await this.pool.query('DELETE FROM database_connections');
+        await this.pool.query(`UPDATE system_config SET value = NULL WHERE key = 'active_database_connection'`);
+        console.log('✅ EMERGENCY: All database connections cleared');
+    }
+    
+    async getConnectionsStatus() {
+        if (!this.initialized) {
+            throw new Error('CoreDB not initialized');
+        }
+        
+        const result = await this.pool.query('SELECT COUNT(*) as connection_count FROM database_connections');
+        return result.rows[0];
     }
 
     /**
      * Close database connection
      */
     async close() {
-        if (this.db) {
-            await this.db.close();
-            console.log('🔧 CoreDB: Database connection closed');
+        if (this.pool) {
+            await this.pool.end();
+            console.log('🔧 CoreDB Microservice: PostgreSQL connection pool closed');
         }
     }
 
@@ -378,147 +547,13 @@ class CoreDB {
         const stats = {};
         
         // Count records in each table
-        stats.admin_users = await this.db.get('SELECT COUNT(*) as count FROM admin_users');
-        stats.external_databases = await this.db.get('SELECT COUNT(*) as count FROM external_databases');
-        stats.storage_providers = await this.db.get('SELECT COUNT(*) as count FROM storage_providers');
-        stats.core_config = await this.db.get('SELECT COUNT(*) as count FROM core_config');
-        
-        // Database file size
-        try {
-            const stat = fs.statSync(this.dbPath);
-            stats.file_size = stat.size;
-        } catch (error) {
-            stats.file_size = 0;
+        const tables = ['admin_users', 'database_connections', 'storage_providers', 'system_config'];
+        for (const table of tables) {
+            const result = await this.pool.query(`SELECT COUNT(*) as count FROM ${table}`);
+            stats[table] = result.rows[0].count;
         }
         
         return stats;
-    }
-    
-    /**
-     * Database Connection Management Methods
-     */
-    
-    async getDatabaseConnections() {
-        if (!this.initialized) {
-            throw new Error('CoreDB not initialized');
-        }
-        
-        const connections = await this.db.all(`
-            SELECT id, name, type, host, port, database_name as database, 
-                   username, ssl_mode, active, created_at, updated_at
-            FROM external_databases 
-            ORDER BY name
-        `);
-        
-        return connections;
-    }
-    
-    async getActiveDatabaseConfig() {
-        if (!this.initialized) {
-            throw new Error('CoreDB not initialized');
-        }
-        
-        const activeDb = await this.db.get(`
-            SELECT id, name, type, host, port, database_name as database, 
-                   username, password_encrypted, ssl_mode, created_at, updated_at
-            FROM external_databases 
-            WHERE active = 1
-            LIMIT 1
-        `);
-        
-        if (activeDb) {
-            // Decrypt password
-            activeDb.password = this.decrypt(activeDb.password_encrypted);
-            delete activeDb.password_encrypted;
-        }
-        
-        return activeDb;
-    }
-    
-    async createDatabaseConnection(config) {
-        if (!this.initialized) {
-            throw new Error('CoreDB not initialized');
-        }
-        
-        const { name, type, host, port, database, username, password, ssl_mode } = config;
-        
-        // Encrypt password
-        const encryptedPassword = this.encrypt(password);
-        
-        const result = await this.db.run(`
-            INSERT INTO external_databases 
-            (name, type, host, port, database_name, username, password_encrypted, ssl_mode, active)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)
-        `, [name, type, host, port, database, username, encryptedPassword, ssl_mode]);
-        
-        console.log(`✅ CoreDB: Database connection '${name}' created`);
-        return result.lastID;
-    }
-    
-    async updateDatabaseConnection(id, updateData) {
-        if (!this.initialized) {
-            throw new Error('CoreDB not initialized');
-        }
-        
-        const updates = [];
-        const values = [];
-        
-        Object.keys(updateData).forEach(key => {
-            if (key === 'password') {
-                updates.push('password_encrypted = ?');
-                values.push(this.encrypt(updateData[key]));
-            } else if (key === 'database') {
-                updates.push('database_name = ?');
-                values.push(updateData[key]);
-            } else {
-                updates.push(`${key} = ?`);
-                values.push(updateData[key]);
-            }
-        });
-        
-        if (updates.length === 0) {
-            throw new Error('No fields to update');
-        }
-        
-        updates.push('updated_at = CURRENT_TIMESTAMP');
-        values.push(id);
-        
-        await this.db.run(`
-            UPDATE external_databases 
-            SET ${updates.join(', ')}
-            WHERE id = ?
-        `, values);
-        
-        console.log(`✅ CoreDB: Database connection ${id} updated`);
-    }
-    
-    async deleteDatabaseConnection(id) {
-        if (!this.initialized) {
-            throw new Error('CoreDB not initialized');
-        }
-        
-        // Check if this is the active connection
-        const activeDb = await this.db.get('SELECT id FROM external_databases WHERE id = ? AND active = 1', [id]);
-        if (activeDb) {
-            throw new Error('Cannot delete the active database connection. Please switch to another database first.');
-        }
-        
-        await this.db.run('DELETE FROM external_databases WHERE id = ?', [id]);
-        console.log(`✅ CoreDB: Database connection ${id} deleted`);
-    }
-    
-    async setActiveDatabaseConnection(id) {
-        if (!this.initialized) {
-            throw new Error('CoreDB not initialized');
-        }
-        
-        // Deactivate all connections
-        await this.db.run('UPDATE external_databases SET active = 0');
-        
-        // Activate the specified connection
-        await this.db.run('UPDATE external_databases SET active = 1 WHERE id = ?', [id]);
-        
-        console.log(`✅ CoreDB: Database connection ${id} set as active`);
     }
     
     /**

@@ -76,18 +76,20 @@ async function migrateToCore() {
         console.log('\n👤 Setting up production admin user...');
         
         // Note: In production, you should set a secure password
-        const productionAdminExists = await coreDB.db.get(
-            'SELECT id FROM admin_users WHERE username = ?', 
+        // Check if production admin already exists (using PostgreSQL syntax)
+        const result = await coreDB.pool.query(
+            'SELECT id FROM admin_users WHERE username = $1', 
             ['sysop_3sdmzl']
         );
+        const productionAdminExists = result.rows[0];
         
         if (!productionAdminExists) {
             const bcrypt = await import('bcrypt');
             const productionPasswordHash = await bcrypt.default.hash('NewSecretPa55w0rd', 10);
             
-            await coreDB.db.run(
+            await coreDB.pool.query(
                 `INSERT INTO admin_users (username, password_hash, email, role) 
-                 VALUES (?, ?, ?, ?)`,
+                 VALUES ($1, $2, $3, $4)`,
                 ['sysop_3sdmzl', productionPasswordHash, 'sysop@bedtime.ingasti.com', 'admin']
             );
             
@@ -99,8 +101,8 @@ async function migrateToCore() {
         // 5. Display migration summary
         console.log('\n📋 Migration Summary:');
         const stats = await coreDB.getStats();
-        console.log(`Database file: ${coreDB.dbPath}`);
-        console.log(`Database size: ${(stats.file_size / 1024).toFixed(2)} KB`);
+        console.log(`Database: PostgreSQL (${coreDB.connectionConfig.host}:${coreDB.connectionConfig.port}/${coreDB.connectionConfig.database})`);
+        console.log(`Database size: ${stats.database_size || 'Not available'}`);
         console.log(`Admin users: ${stats.admin_users.count}`);
         console.log(`External databases: ${stats.external_databases.count}`);
         console.log(`Storage providers: ${stats.storage_providers.count}`);

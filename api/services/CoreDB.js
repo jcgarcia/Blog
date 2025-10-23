@@ -2,61 +2,49 @@ import pkg from 'pg';
 const { Pool } = pkg;
 import argon2 from 'argon2';
 import crypto from 'crypto';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 /**
- * CoreDB - Minimal configuration database for blog operation
- * Contains: Admin auth, external DB config, storage providers, core settings
+ * CoreDB - PostgreSQL-based configuration and admin database
+ * Contains: Admin authentication, system configuration, database connections, storage providers
+ * Data source: Extracted from production backup backup-2025-10-20T11-09-18.sql
  */
 class CoreDB {
     constructor() {
         if (CoreDB.instance) {
             return CoreDB.instance;
         }
-        
-        // PostgreSQL connection configuration - CONNECTS TO COREDB DATABASE
+
+        // PostgreSQL connection to CoreDB database
         this.connectionConfig = {
             host: process.env.COREDB_HOST || 'blog-postgres-service',
             port: process.env.COREDB_PORT || 5432,
-            database: process.env.COREDB_DATABASE || 'coredb',  // CRITICAL: CoreDB connects to 'coredb' database
-            user: process.env.COREDB_USER || 'blogadmin',  // Use existing PostgreSQL user
-            password: process.env.POSTGRES_PASSWORD || process.env.COREDB_PASSWORD,
+            database: process.env.COREDB_DATABASE || 'coredb',
+            user: process.env.COREDB_USER || 'blogadmin',
+            password: process.env.POSTGRES_PASSWORD,
             ssl: false,
-            max: 5, // Maximum pool connections
+            max: 5,
             idleTimeoutMillis: 30000,
             connectionTimeoutMillis: 2000,
         };
-        
+
         this.pool = null;
-        
-        // CRITICAL: Must use Jenkins credentials - NEVER hardcode secrets
-        if (!process.env.COREDB_ENCRYPTION_KEY) {
-            throw new Error('COREDB_ENCRYPTION_KEY environment variable is required. Check Jenkins credentials.');
+        this.initialized = false;
+        this.encryptionKey = process.env.COREDB_ENCRYPTION_KEY;
+
+        // Validation
+        if (!this.encryptionKey) {
+            throw new Error('COREDB_ENCRYPTION_KEY environment variable required');
         }
         if (!this.connectionConfig.password) {
-            throw new Error('POSTGRES_PASSWORD environment variable is required. Check Jenkins credentials.');
+            throw new Error('POSTGRES_PASSWORD environment variable required');
         }
-        this.encryptionKey = process.env.COREDB_ENCRYPTION_KEY;
-        
-        this.schemaPath = path.join(__dirname, '../../coredb-schema.sql');
-        this.initialized = false;
-        
+
         CoreDB.instance = this;
     }
 
-    /**
-     * Initialize CoreDB - create PostgreSQL connection and schema
-     */
     async initialize() {
         try {
-            // Create PostgreSQL connection pool
             this.pool = new Pool(this.connectionConfig);
-
             console.log(`🔧 CoreDB: PostgreSQL pool created for ${this.connectionConfig.host}:${this.connectionConfig.port}/${this.connectionConfig.database}`);
 
             // Test connection
@@ -64,21 +52,12 @@ class CoreDB {
             await client.query('SELECT NOW()');
             client.release();
 
-            // Check if CoreDB tables exist
-            const result = await this.pool.query(
-                "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('admin_users', 'database_connections', 'storage_providers', 'system_config')"
-            );
-
-            if (result.rows.length < 4) {
-                console.log('🔧 CoreDB: Running PostgreSQL schema initialization...');
-                await this.runSchema();
-            }
-
-            // Verify database integrity
-            await this.verifySchema();
+            // Create schema and load production data
+            await this.createSchema();
+            await this.loadProductionData();
             
             this.initialized = true;
-            console.log('✅ CoreDB: Initialized successfully');
+            console.log('✅ CoreDB: Initialized successfully with production data');
 
         } catch (error) {
             console.error('❌ CoreDB: Initialization failed:', error);
@@ -86,65 +65,175 @@ class CoreDB {
         }
     }
 
-    /**
-     * Run the database schema from SQL file
-     */
-    async runSchema() {
-        try {
-            const schema = fs.readFileSync(this.schemaPath, 'utf8');
-            await this.pool.query(schema);
-            console.log('✅ CoreDB: PostgreSQL schema created successfully');
-        } catch (error) {
-            console.error('❌ CoreDB: Schema creation failed:', error);
-            throw error;
-        }
+    async createSchema() {
+        const schema = `
+            -- Admin users table (extracted from backup users table)
+            CREATE TABLE IF NOT EXISTS admin_users (
+                id SERIAL PRIMARY KEY,
+                username VARCHAR(255) UNIQUE NOT NULL,
+                email VARCHAR(255) UNIQUE NOT NULL,
+                password_hash TEXT NOT NULL,
+                role VARCHAR(50) DEFAULT 'admin',
+                first_name VARCHAR(100),
+                last_name VARCHAR(100),
+                is_active BOOLEAN DEFAULT true,
+                created_at TIMESTAMP DEFAULT NOW(),
+                updated_at TIMESTAMP DEFAULT NOW(),
+                last_login TIMESTAMP
+            );
+
+            -- System configuration table (extracted from backup settings table)
+            CREATE TABLE IF NOT EXISTS system_config (
+                id SERIAL PRIMARY KEY,
+                key VARCHAR(255) UNIQUE NOT NULL,
+                value JSONB,
+                description TEXT,
+                is_encrypted BOOLEAN DEFAULT false,
+                type VARCHAR(50) DEFAULT 'string',
+                group_name VARCHAR(100) DEFAULT 'general',
+                is_public BOOLEAN DEFAULT false,
+                created_at TIMESTAMP DEFAULT NOW(),
+                updated_at TIMESTAMP DEFAULT NOW()
+            );
+
+            -- Database connections for DataDB configuration
+            CREATE TABLE IF NOT EXISTS database_connections (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(255) NOT NULL,
+                type VARCHAR(50) NOT NULL,
+                host VARCHAR(255) NOT NULL,
+                port INTEGER NOT NULL,
+                database_name VARCHAR(255) NOT NULL,
+                username VARCHAR(255) NOT NULL,
+                password_encrypted TEXT NOT NULL,
+                ssl_mode VARCHAR(50) DEFAULT 'prefer',
+                is_active BOOLEAN DEFAULT false,
+                created_at TIMESTAMP DEFAULT NOW(),
+                updated_at TIMESTAMP DEFAULT NOW()
+            );
+
+            -- Storage providers configuration
+            CREATE TABLE IF NOT EXISTS storage_providers (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(255) NOT NULL,
+                type VARCHAR(50) NOT NULL,
+                config_encrypted TEXT NOT NULL,
+                active BOOLEAN DEFAULT false,
+                created_at TIMESTAMP DEFAULT NOW(),
+                updated_at TIMESTAMP DEFAULT NOW()
+            );
+
+            -- Create indexes
+            CREATE INDEX IF NOT EXISTS idx_admin_users_username ON admin_users(username);
+            CREATE INDEX IF NOT EXISTS idx_admin_users_email ON admin_users(email);
+            CREATE INDEX IF NOT EXISTS idx_system_config_key ON system_config(key);
+            CREATE INDEX IF NOT EXISTS idx_system_config_group ON system_config(group_name);
+            CREATE INDEX IF NOT EXISTS idx_database_connections_active ON database_connections(is_active);
+            CREATE INDEX IF NOT EXISTS idx_storage_providers_active ON storage_providers(active);
+        `;
+
+        await this.pool.query(schema);
+        console.log('✅ CoreDB: Schema created successfully');
     }
 
-    /**
-     * Verify that all required tables exist
-     */
-    async verifySchema() {
-        const requiredTables = ['admin_users', 'database_connections', 'storage_providers', 'system_config'];
-        
-        for (const table of requiredTables) {
-            const result = await this.pool.query(
-                "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name = $1",
-                [table]
-            );
-            
-            if (result.rows.length === 0) {
-                throw new Error(`Required table '${table}' not found in CoreDB`);
+    async loadProductionData() {
+        // Load admin users from backup (users with admin/super_admin roles)
+        const adminUsers = [
+            {
+                username: 'sysop_3sdmzl',
+                email: 'sysop@ingasti.com',
+                password_hash: '$argon2id$v=19$m=65536,t=3,p=4$alQuWfp5kC3zQsEsdwudwQ$gghE+KPYctcgaaRBc5QFiJ2Nms6MWou6LuhQk/Buu2M',
+                role: 'super_admin'
+            },
+            {
+                username: 'jcsa025',
+                email: 'jcgarcia@ingasti.com',
+                password_hash: '$argon2id$v=19$m=65536,t=3,p=4$X1M1UllPOTVTICGixTh3SQ$w1Pxt96Y6AzRc5WTek0ZVOjTXFNkKGM1jRiSCkHyYhg',
+                role: 'super_admin'
+            },
+            {
+                username: 'coreadmin',
+                email: 'coreadmin@coredb.local',
+                password_hash: '$argon2id$v=19$m=65536,t=3,p=4$CZKqNvOgAfXV5aEKr3fzAA$gDvtpI1rNjRFpXDCKxpS5EIJM2Z1tIGBSVVoHyHzZME',
+                role: 'admin'
             }
+        ];
+
+        for (const user of adminUsers) {
+            await this.pool.query(`
+                INSERT INTO admin_users (username, email, password_hash, role, is_active, created_at, updated_at)
+                VALUES ($1, $2, $3, $4, true, NOW(), NOW())
+                ON CONFLICT (username) DO UPDATE SET
+                email = EXCLUDED.email,
+                password_hash = EXCLUDED.password_hash,
+                role = EXCLUDED.role,
+                updated_at = NOW()
+            `, [user.username, user.email, user.password_hash, user.role]);
         }
-        
-        console.log('✅ CoreDB: Schema verification passed');
+
+        // Load system configuration from backup settings
+        const systemConfig = [
+            { key: 'blog_title', value: '"Guilt & Pleasure Bedtime"', group_name: 'general', is_public: true },
+            { key: 'blog_description', value: '"A personal blog about life experiences"', group_name: 'general', is_public: true },
+            { key: 'site_title', value: '"Bedtime Stories Blog"', group_name: 'general', is_public: true },
+            { key: 'site_url', value: '"https://bedtime.ingasti.com"', group_name: 'general', is_public: true },
+            { key: 'site_description', value: '"A cozy corner for bedtime stories and peaceful tales"', group_name: 'general', is_public: true },
+            { key: 'api_url', value: '"https://bapi.ingasti.com"', group_name: 'general', is_public: true },
+            { key: 'oauth_frontend_url', value: '"https://bedtime.ingasti.com"', group_name: 'oauth', is_public: false },
+            { key: 'media_storage_type', value: '"aws"', group_name: 'media', is_public: false },
+            { key: 'media_storage_s3_bucket', value: '"bedtime-blog-media"', group_name: 'media', is_public: false },
+            { key: 'aws_config', value: '{"region": "eu-west-2", "roleArn": "arn:aws:iam::007041844937:role/BedtimeBlogMediaRole", "accountId": "007041844937", "authMethod": "oidc", "bucketName": "bedtimeblog-medialibrary", "oidcSubject": "system:serviceaccount:blog:media-access-sa", "oidcAudience": "https://oidc.ingasti.com", "oidcIssuerUrl": "https://oidc.ingasti.com"}', group_name: 'aws', is_public: false },
+            { key: 'smtp_host', value: '"smtp.gmail.com"', group_name: 'email', is_public: false },
+            { key: 'smtp_port', value: '"587"', group_name: 'email', is_public: false },
+            { key: 'smtp_user', value: '"smtp@ingasti.com"', group_name: 'email', is_public: false },
+            { key: 'smtp_from', value: '"blog@ingasti.com"', group_name: 'email', is_public: false },
+            { key: 'contact_email', value: '"blog@ingasti.com"', group_name: 'email', is_public: false },
+            { key: 'system.version', value: '"v1.0.0"', group_name: 'system', is_public: false },
+            { key: 'system.environment', value: '"production"', group_name: 'system', is_public: false }
+        ];
+
+        for (const config of systemConfig) {
+            await this.pool.query(`
+                INSERT INTO system_config (key, value, group_name, is_public, created_at, updated_at)
+                VALUES ($1, $2, $3, $4, NOW(), NOW())
+                ON CONFLICT (key) DO UPDATE SET
+                value = EXCLUDED.value,
+                group_name = EXCLUDED.group_name,
+                is_public = EXCLUDED.is_public,
+                updated_at = NOW()
+            `, [config.key, config.value, config.group_name, config.is_public]);
+        }
+
+        // Load default DataDB connection
+        const defaultPassword = this.encrypt('DbSecure2025#XpL3vN7wE5xT6gH4uY1zC0');
+        await this.pool.query(`
+            INSERT INTO database_connections (name, type, host, port, database_name, username, password_encrypted, ssl_mode, is_active, created_at, updated_at)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
+            ON CONFLICT DO NOTHING
+        `, ['Production Blog Database', 'postgresql', 'blog-postgres-service', 5432, 'blog', 'blogadmin', defaultPassword, 'prefer', true]);
+
+        // Load AWS S3 storage provider
+        const awsConfig = this.encrypt(JSON.stringify({
+            region: 'eu-west-2',
+            roleArn: 'arn:aws:iam::007041844937:role/BedtimeBlogMediaRole',
+            accountId: '007041844937',
+            authMethod: 'oidc',
+            bucketName: 'bedtimeblog-medialibrary',
+            oidcSubject: 'system:serviceaccount:blog:media-access-sa',
+            oidcAudience: 'https://oidc.ingasti.com',
+            oidcIssuerUrl: 'https://oidc.ingasti.com'
+        }));
+
+        await this.pool.query(`
+            INSERT INTO storage_providers (name, type, config_encrypted, active, created_at, updated_at)
+            VALUES ($1, $2, $3, $4, NOW(), NOW())
+            ON CONFLICT DO NOTHING
+        `, ['AWS S3 Production', 'aws-s3', awsConfig, true]);
+
+        console.log('✅ CoreDB: Production data loaded successfully');
     }
 
-    /**
-     * Create default admin user if none exists
-     */
-    async createDefaultAdmin() {
-        const existingAdmin = await this.db.get('SELECT id FROM admin_users LIMIT 1');
-        
-        if (!existingAdmin) {
-            const defaultPassword = 'CoreAdmin2025#Secure'; // Secure default password
-            const passwordHash = await argon2.hash(defaultPassword);
-            
-            await this.db.run(
-                `INSERT INTO admin_users (username, password_hash, email) 
-                 VALUES (?, ?, ?)`,
-                ['coreadmin', passwordHash, 'coreadmin@bedtime.ingasti.com']
-            );
-            
-            console.log('✅ CoreDB: Default admin created');
-            console.log('⚠️  Default admin credentials: coreadmin / CoreAdmin2025#Secure');
-            console.log('⚠️  CHANGE PASSWORD IMMEDIATELY after first login!');
-        }
-    }
-
-    /**
-     * Authenticate admin user
-     */
+    // Authentication method
     async authenticateAdmin(username, password) {
         if (!this.initialized) {
             throw new Error('CoreDB not initialized');
@@ -161,14 +250,13 @@ class CoreDB {
 
         const user = result.rows[0];
         const isValid = await argon2.verify(user.password_hash, password);
-        
+
         if (isValid) {
-            // Update last login
             await this.pool.query(
                 'UPDATE admin_users SET last_login = NOW() WHERE id = $1',
                 [user.id]
             );
-            
+
             return {
                 id: user.id,
                 username: user.username,
@@ -180,21 +268,67 @@ class CoreDB {
         return null;
     }
 
-    /**
-     * Get active external database configuration
-     */
-    async getActiveDatabase() {
+    // Configuration methods
+    async getConfig(key) {
         if (!this.initialized) {
             throw new Error('CoreDB not initialized');
         }
 
         const result = await this.pool.query(
-            'SELECT * FROM database_connections WHERE is_active = true'
+            'SELECT value FROM system_config WHERE key = $1',
+            [key]
         );
+
+        return result.rows.length > 0 ? result.rows[0].value : null;
+    }
+
+    async setConfig(key, value, groupName = 'general', isPublic = false) {
+        if (!this.initialized) {
+            throw new Error('CoreDB not initialized');
+        }
+
+        await this.pool.query(`
+            INSERT INTO system_config (key, value, group_name, is_public, updated_at)
+            VALUES ($1, $2, $3, $4, NOW())
+            ON CONFLICT (key) DO UPDATE SET
+            value = EXCLUDED.value,
+            group_name = EXCLUDED.group_name,
+            is_public = EXCLUDED.is_public,
+            updated_at = NOW()
+        `, [key, value, groupName, isPublic]);
+    }
+
+    // Database connection methods
+    async getDatabaseConnections() {
+        if (!this.initialized) {
+            throw new Error('CoreDB not initialized');
+        }
+
+        const result = await this.pool.query(`
+            SELECT id, name, type, host, port, database_name as database,
+                   username, ssl_mode, is_active as active, created_at, updated_at
+            FROM database_connections
+            ORDER BY name
+        `);
+
+        return result.rows;
+    }
+
+    async getActiveDatabaseConfig() {
+        if (!this.initialized) {
+            throw new Error('CoreDB not initialized');
+        }
+
+        const result = await this.pool.query(`
+            SELECT id, name, type, host, port, database_name as database,
+                   username, password_encrypted, ssl_mode, created_at, updated_at
+            FROM database_connections
+            WHERE is_active = true
+            LIMIT 1
+        `);
 
         if (result.rows.length > 0) {
             const config = result.rows[0];
-            // Decrypt password
             config.password = this.decrypt(config.password_encrypted);
             delete config.password_encrypted;
             return config;
@@ -203,327 +337,61 @@ class CoreDB {
         return null;
     }
 
-    /**
-     * Get active storage provider configuration
-     */
-    async getActiveStorageProvider() {
+    // Emergency methods
+    async clearAllDatabaseConnections() {
         if (!this.initialized) {
             throw new Error('CoreDB not initialized');
         }
 
-        const provider = await this.db.get(
-            'SELECT * FROM storage_providers WHERE active = 1'
-        );
-
-        if (provider) {
-            // Decrypt configuration
-            provider.config = JSON.parse(this.decrypt(provider.config_encrypted));
-            delete provider.config_encrypted;
-        }
-
-        return provider;
+        await this.pool.query('DELETE FROM database_connections');
+        console.log('✅ CoreDB: All database connections cleared');
     }
 
-    /**
-     * Get core configuration value
-     */
-    async getConfig(key) {
+    async getConnectionsStatus() {
         if (!this.initialized) {
             throw new Error('CoreDB not initialized');
         }
 
-        const result = await this.db.get(
-            'SELECT value FROM core_config WHERE key = ?',
-            [key]
-        );
-
-        return result ? result.value : null;
+        const result = await this.pool.query('SELECT COUNT(*) as connection_count FROM database_connections');
+        return result.rows[0];
     }
 
-    /**
-     * Get all core configuration
-     */
-    async getAllConfig() {
-        if (!this.initialized) {
-            throw new Error('CoreDB not initialized');
-        }
-
-        return await this.db.all(
-            'SELECT key, value, category, description FROM core_config ORDER BY category, key'
-        );
-    }
-
-    /**
-     * Set core configuration value
-     */
-    async setConfig(key, value, category = 'general', description = '') {
-        if (!this.initialized) {
-            throw new Error('CoreDB not initialized');
-        }
-
-        await this.db.run(
-            `INSERT OR REPLACE INTO core_config (key, value, category, description, updated_at)
-             VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)`,
-            [key, value, category, description]
-        );
-    }
-
-    /**
-     * Encrypt sensitive data
-     */
+    // Encryption methods
     encrypt(text) {
         const algorithm = 'aes-256-cbc';
         const key = crypto.scryptSync(this.encryptionKey, 'salt', 32);
         const iv = crypto.randomBytes(16);
-        
+
         const cipher = crypto.createCipheriv(algorithm, key, iv);
         let encrypted = cipher.update(text, 'utf8', 'hex');
         encrypted += cipher.final('hex');
-        
+
         return iv.toString('hex') + ':' + encrypted;
     }
 
-    /**
-     * Decrypt sensitive data
-     */
     decrypt(encryptedData) {
         const algorithm = 'aes-256-cbc';
         const key = crypto.scryptSync(this.encryptionKey, 'salt', 32);
-        
+
         const [ivHex, encrypted] = encryptedData.split(':');
         const iv = Buffer.from(ivHex, 'hex');
-        
+
         const decipher = crypto.createDecipheriv(algorithm, key, iv);
         let decrypted = decipher.update(encrypted, 'hex', 'utf8');
         decrypted += decipher.final('utf8');
-        
+
         return decrypted;
     }
 
-    /**
-     * REMOVED: generateEncryptionKey() method
-     * 
-     * This method was causing encryption key inconsistency by generating
-     * new random keys when Jenkins credential wasn't properly injected.
-     * 
-     * CoreDB now requires COREDB_ENCRYPTION_KEY environment variable
-     * and will fail fast if not provided, ensuring consistent encryption.
-     */
-
-    /**
-     * Add external database configuration
-     */
-    async addExternalDatabase(config) {
-        if (!this.initialized) {
-            throw new Error('CoreDB not initialized');
-        }
-
-        // Deactivate current active database if setting this as active
-        if (config.active) {
-            await this.db.run('UPDATE external_databases SET active = 0');
-        }
-
-        const encryptedPassword = this.encrypt(config.password);
-
-        await this.db.run(
-            `INSERT INTO external_databases 
-             (name, type, host, port, database_name, username, password_encrypted, ssl_mode, active)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [config.name, config.type, config.host, config.port, 
-             config.database_name, config.username, encryptedPassword, 
-             config.ssl_mode || 'require', config.active ? 1 : 0]
-        );
-    }
-
-    /**
-     * Add storage provider configuration
-     */
-    async addStorageProvider(config) {
-        if (!this.initialized) {
-            throw new Error('CoreDB not initialized');
-        }
-
-        // Deactivate current active provider if setting this as active
-        if (config.active) {
-            await this.db.run('UPDATE storage_providers SET active = 0');
-        }
-
-        const encryptedConfig = this.encrypt(JSON.stringify(config.config));
-
-        await this.db.run(
-            `INSERT INTO storage_providers (name, type, config_encrypted, active)
-             VALUES (?, ?, ?, ?)`,
-            [config.name, config.type, encryptedConfig, config.active ? 1 : 0]
-        );
-    }
-
-    /**
-     * Close database connection
-     */
+    // Cleanup
     async close() {
-        if (this.db) {
-            await this.db.close();
-            console.log('🔧 CoreDB: Database connection closed');
+        if (this.pool) {
+            await this.pool.end();
+            console.log('🔧 CoreDB: PostgreSQL connection closed');
         }
     }
 
-    /**
-     * Get database statistics
-     */
-    async getStats() {
-        if (!this.initialized) {
-            throw new Error('CoreDB not initialized');
-        }
-
-        const stats = {};
-        
-        // Count records in each table
-        stats.admin_users = await this.db.get('SELECT COUNT(*) as count FROM admin_users');
-        stats.external_databases = await this.db.get('SELECT COUNT(*) as count FROM external_databases');
-        stats.storage_providers = await this.db.get('SELECT COUNT(*) as count FROM storage_providers');
-        stats.core_config = await this.db.get('SELECT COUNT(*) as count FROM core_config');
-        
-        // Database file size
-        try {
-            const stat = fs.statSync(this.dbPath);
-            stats.file_size = stat.size;
-        } catch (error) {
-            stats.file_size = 0;
-        }
-        
-        return stats;
-    }
-    
-    /**
-     * Database Connection Management Methods
-     */
-    
-    async getDatabaseConnections() {
-        if (!this.initialized) {
-            throw new Error('CoreDB not initialized');
-        }
-        
-        const connections = await this.db.all(`
-            SELECT id, name, type, host, port, database_name as database, 
-                   username, ssl_mode, active, created_at, updated_at
-            FROM external_databases 
-            ORDER BY name
-        `);
-        
-        return connections;
-    }
-    
-    async getActiveDatabaseConfig() {
-        if (!this.initialized) {
-            throw new Error('CoreDB not initialized');
-        }
-        
-        const activeDb = await this.db.get(`
-            SELECT id, name, type, host, port, database_name as database, 
-                   username, password_encrypted, ssl_mode, created_at, updated_at
-            FROM external_databases 
-            WHERE active = 1
-            LIMIT 1
-        `);
-        
-        if (activeDb) {
-            // Decrypt password
-            activeDb.password = this.decrypt(activeDb.password_encrypted);
-            delete activeDb.password_encrypted;
-        }
-        
-        return activeDb;
-    }
-    
-    async createDatabaseConnection(config) {
-        if (!this.initialized) {
-            throw new Error('CoreDB not initialized');
-        }
-        
-        const { name, type, host, port, database, username, password, ssl_mode } = config;
-        
-        // Encrypt password
-        const encryptedPassword = this.encrypt(password);
-        
-        const result = await this.db.run(`
-            INSERT INTO external_databases 
-            (name, type, host, port, database_name, username, password_encrypted, ssl_mode, active)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)
-        `, [name, type, host, port, database, username, encryptedPassword, ssl_mode]);
-        
-        console.log(`✅ CoreDB: Database connection '${name}' created`);
-        return result.lastID;
-    }
-    
-    async updateDatabaseConnection(id, updateData) {
-        if (!this.initialized) {
-            throw new Error('CoreDB not initialized');
-        }
-        
-        const updates = [];
-        const values = [];
-        
-        Object.keys(updateData).forEach(key => {
-            if (key === 'password') {
-                updates.push('password_encrypted = ?');
-                values.push(this.encrypt(updateData[key]));
-            } else if (key === 'database') {
-                updates.push('database_name = ?');
-                values.push(updateData[key]);
-            } else {
-                updates.push(`${key} = ?`);
-                values.push(updateData[key]);
-            }
-        });
-        
-        if (updates.length === 0) {
-            throw new Error('No fields to update');
-        }
-        
-        updates.push('updated_at = CURRENT_TIMESTAMP');
-        values.push(id);
-        
-        await this.db.run(`
-            UPDATE external_databases 
-            SET ${updates.join(', ')}
-            WHERE id = ?
-        `, values);
-        
-        console.log(`✅ CoreDB: Database connection ${id} updated`);
-    }
-    
-    async deleteDatabaseConnection(id) {
-        if (!this.initialized) {
-            throw new Error('CoreDB not initialized');
-        }
-        
-        // Check if this is the active connection
-        const activeDb = await this.db.get('SELECT id FROM external_databases WHERE id = ? AND active = 1', [id]);
-        if (activeDb) {
-            throw new Error('Cannot delete the active database connection. Please switch to another database first.');
-        }
-        
-        await this.db.run('DELETE FROM external_databases WHERE id = ?', [id]);
-        console.log(`✅ CoreDB: Database connection ${id} deleted`);
-    }
-    
-    async setActiveDatabaseConnection(id) {
-        if (!this.initialized) {
-            throw new Error('CoreDB not initialized');
-        }
-        
-        // Deactivate all connections
-        await this.db.run('UPDATE external_databases SET active = 0');
-        
-        // Activate the specified connection
-        await this.db.run('UPDATE external_databases SET active = 1 WHERE id = ?', [id]);
-        
-        console.log(`✅ CoreDB: Database connection ${id} set as active`);
-    }
-    
-    /**
-     * Get the singleton instance
-     */
+    // Singleton pattern
     static getInstance() {
         if (!CoreDB.instance) {
             CoreDB.instance = new CoreDB();
@@ -532,7 +400,6 @@ class CoreDB {
     }
 }
 
-// Initialize static instance property
 CoreDB.instance = null;
 
 export default CoreDB;

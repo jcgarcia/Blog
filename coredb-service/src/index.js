@@ -76,16 +76,16 @@ app.use('*', (req, res) => {
 // Graceful shutdown
 process.on('SIGTERM', async () => {
     console.log('🔄 CoreDB Service: Received SIGTERM, shutting down gracefully...');
-    if (coreDB && coreDB.db) {
-        await coreDB.db.close();
+    if (coreDB) {
+        await coreDB.close();
     }
     process.exit(0);
 });
 
 process.on('SIGINT', async () => {
     console.log('🔄 CoreDB Service: Received SIGINT, shutting down gracefully...');
-    if (coreDB && coreDB.db) {
-        await coreDB.db.close();
+    if (coreDB) {
+        await coreDB.close();
     }
     process.exit(0);
 });

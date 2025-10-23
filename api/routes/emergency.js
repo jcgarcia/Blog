@@ -19,13 +19,8 @@ router.post('/clear-corrupted-connections', async (req, res) => {
     // Use the singleton instance
     const coreDB = CoreDB.getInstance();
     
-    // Direct SQL to clear all database connections
-    const clearConnectionsQuery = `DELETE FROM database_connections`;
-    await coreDB.db.run(clearConnectionsQuery);
-    
-    // Also clear any related metadata
-    const clearActiveQuery = `UPDATE system_config SET value = NULL WHERE key = 'active_database_connection'`;
-    await coreDB.db.run(clearActiveQuery);
+    // Clear all database connections using CoreDB method
+    await coreDB.clearAllDatabaseConnections();
     
     console.log('✅ EMERGENCY: Corrupted connections cleared successfully');
     
@@ -54,8 +49,7 @@ router.get('/coredb-status', async (req, res) => {
     const coreDB = CoreDB.getInstance();
     
     // Test basic CoreDB operations
-    const connectionsQuery = `SELECT COUNT(*) as count FROM database_connections`;
-    const result = await coreDB.db.get(connectionsQuery);
+    const result = await coreDB.getConnectionsStatus();
     
     // Test encryption key
     let encryptionStatus = 'working';
