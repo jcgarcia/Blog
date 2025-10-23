@@ -247,7 +247,8 @@ pipeline {
                         string(credentialsId: 'postgres-database', variable: 'PGDATABASE'),
                         string(credentialsId: 'postgres-user', variable: 'PGUSER'),
                         string(credentialsId: 'postgres-password', variable: 'PGPASSWORD'),
-                        string(credentialsId: 'postgres-root-password', variable: 'POSTGRES_PASSWORD'),
+                        string(credentialsId: 'postgres-root-password', variable: 'POSTGRES_ROOT_PASSWORD'),
+                        string(credentialsId: 'blog-db-password', variable: 'BLOG_DB_PASSWORD'),
                         string(credentialsId: 'coredb-admin-user', variable: 'COREDB_ADMIN_USER'),
                         string(credentialsId: 'coredb-admin-password', variable: 'COREDB_ADMIN_PASSWORD'),
                         string(credentialsId: 'coredb-encryption-key', variable: 'COREDB_ENCRYPTION_KEY'),
@@ -268,7 +269,7 @@ pipeline {
                                 --from-literal=PGDATABASE="${PGDATABASE}" \
                                 --from-literal=PGUSER="${PGUSER}" \
                                 --from-literal=PGPASSWORD="${PGPASSWORD}" \
-                                --from-literal=POSTGRES_PASSWORD="${POSTGRES_PASSWORD}" \
+                                --from-literal=POSTGRES_PASSWORD="${POSTGRES_ROOT_PASSWORD}" \
                                 --from-literal=COREDB_ADMIN_USER="${COREDB_ADMIN_USER}" \
                                 --from-literal=COREDB_ADMIN_PASSWORD="${COREDB_ADMIN_PASSWORD}" \
                                 --from-literal=COREDB_ENCRYPTION_KEY="${COREDB_ENCRYPTION_KEY}" \
@@ -278,8 +279,19 @@ pipeline {
                                 --from-literal=GOOGLE_CLIENT_ID="${GOOGLE_CLIENT_ID}" \
                                 --from-literal=GOOGLE_CLIENT_SECRET="${GOOGLE_CLIENT_SECRET}"
                             
-                            # Verify secret was created
+                            # Delete existing PostgreSQL secret if it exists (ignore errors)
+                            kubectl delete secret postgres-secrets -n blog || true
+                            
+                            # Create PostgreSQL secrets with proper password separation
+                            kubectl create secret generic postgres-secrets -n blog \
+                                --from-literal=POSTGRES_USER="${PGUSER}" \
+                                --from-literal=POSTGRES_PASSWORD="${POSTGRES_ROOT_PASSWORD}" \
+                                --from-literal=POSTGRES_DB="${PGDATABASE}" \
+                                --from-literal=BLOG_DB_PASSWORD="${BLOG_DB_PASSWORD}"
+                            
+                            # Verify secrets were created
                             kubectl get secret blog-secrets -n blog
+                            kubectl get secret postgres-secrets -n blog
                             echo "✅ Kubernetes secrets updated successfully"
                         """
                     }
@@ -310,7 +322,6 @@ pipeline {
                         # Apply PostgreSQL deployment
                         echo "🐘 Deploying PostgreSQL container..."
                         kubectl apply -f postgres/postgres-pvc.yaml
-                        kubectl apply -f postgres/postgres-secrets.yaml
                         kubectl apply -f postgres/postgres-service.yaml
                         kubectl apply -f postgres/postgres-deployment.yaml
                         
