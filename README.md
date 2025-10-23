@@ -223,3 +223,4 @@ How to configure social login for your Bedtime Blog:
 
 ---# Force Jenkins Build - Wed Oct 22 11:05:01 AM BST 2025
 # CoreDB Reset - Wed Oct 22 06:01:34 PM BST 2025
+# Updated postgres-root-password credential - Thu Oct 23 07:22:43 AM BST 2025
