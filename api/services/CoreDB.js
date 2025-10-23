@@ -95,10 +95,10 @@ class CoreDB {
             CREATE TABLE IF NOT EXISTS system_config (
                 id SERIAL PRIMARY KEY,
                 key VARCHAR(255) UNIQUE NOT NULL,
-                value JSONB,
+                config_value JSONB,
                 description TEXT,
                 is_encrypted BOOLEAN DEFAULT false,
-                type VARCHAR(50) DEFAULT 'string',
+                config_type VARCHAR(50) DEFAULT 'string',
                 group_name VARCHAR(100) DEFAULT 'general',
                 is_public BOOLEAN DEFAULT false,
                 created_at TIMESTAMP DEFAULT NOW(),
@@ -203,10 +203,10 @@ class CoreDB {
 
         for (const config of systemConfig) {
             await this.pool.query(`
-                INSERT INTO system_config (key, value, group_name, is_public, created_at, updated_at)
+                INSERT INTO system_config (key, config_value, group_name, is_public, created_at, updated_at)
                 VALUES ($1, $2, $3, $4, NOW(), NOW())
                 ON CONFLICT (key) DO UPDATE SET
-                value = EXCLUDED.value,
+                config_value = EXCLUDED.config_value,
                 group_name = EXCLUDED.group_name,
                 is_public = EXCLUDED.is_public,
                 updated_at = NOW()
@@ -284,11 +284,11 @@ class CoreDB {
         }
 
         const result = await this.pool.query(
-            'SELECT value FROM system_config WHERE key = $1',
+            'SELECT config_value FROM system_config WHERE key = $1',
             [key]
         );
 
-        return result.rows.length > 0 ? result.rows[0].value : null;
+        return result.rows.length > 0 ? result.rows[0].config_value : null;
     }
 
     async setConfig(key, value, groupName = 'general', isPublic = false) {
@@ -297,10 +297,10 @@ class CoreDB {
         }
 
         await this.pool.query(`
-            INSERT INTO system_config (key, value, group_name, is_public, updated_at)
+            INSERT INTO system_config (key, config_value, group_name, is_public, updated_at)
             VALUES ($1, $2, $3, $4, NOW())
             ON CONFLICT (key) DO UPDATE SET
-            value = EXCLUDED.value,
+            config_value = EXCLUDED.config_value,
             group_name = EXCLUDED.group_name,
             is_public = EXCLUDED.is_public,
             updated_at = NOW()
