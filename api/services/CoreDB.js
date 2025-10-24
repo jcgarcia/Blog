@@ -16,11 +16,11 @@ class CoreDB {
 
         // PostgreSQL connection to CoreDB database
         this.connectionConfig = {
-            host: process.env.COREDB_HOST || 'blog-postgres-service',
-            port: process.env.COREDB_PORT || 5432,
-            database: process.env.COREDB_DATABASE || 'coredb',
-            user: process.env.COREDB_USER || 'blogadmin',
-            password: process.env.POSTGRES_PASSWORD,
+            host: process.env.PGHOST || process.env.COREDB_HOST || 'blog-postgres-service',
+            port: process.env.PGPORT || process.env.COREDB_PORT || 5432,
+            database: process.env.PGDATABASE || process.env.COREDB_DATABASE || 'coredb',
+            user: process.env.PGUSER || process.env.COREDB_USER || 'blogadmin',
+            password: process.env.PGPASSWORD || process.env.POSTGRES_PASSWORD,
             ssl: false,
             max: 5,
             idleTimeoutMillis: 30000,
@@ -46,9 +46,9 @@ class CoreDB {
         try {
             // Use consistent configuration for the actual pool
             const poolConfig = {
-                host: process.env.COREDB_HOST || 'blog-postgres-service',
-                port: parseInt(process.env.COREDB_PORT || '5432'),
-                database: process.env.COREDB_DATABASE || 'coredb',
+                host: process.env.PGHOST || process.env.COREDB_HOST || 'blog-postgres-service',
+                port: parseInt(process.env.PGPORT || process.env.COREDB_PORT || '5432'),
+                database: process.env.PGDATABASE || process.env.COREDB_DATABASE || 'coredb',
                 user: process.env.PGUSER || 'blogadmin',
                 password: process.env.PGPASSWORD || process.env.POSTGRES_PASSWORD,
                 ssl: false,
