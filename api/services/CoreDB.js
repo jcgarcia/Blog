@@ -51,7 +51,7 @@ class CoreDB {
                 database: process.env.PGDATABASE || process.env.COREDB_DATABASE || 'coredb',
                 user: process.env.PGUSER || 'blogadmin',
                 password: process.env.PGPASSWORD || process.env.POSTGRES_PASSWORD,
-                ssl: process.env.PGSSL === 'true' ? { rejectUnauthorized: false } : false,
+                ssl: 'prefer',
                 max: 20,
                 idleTimeoutMillis: 30000,
                 connectionTimeoutMillis: 10000,
