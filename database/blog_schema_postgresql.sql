@@ -266,7 +266,7 @@ ON CONFLICT (key) DO NOTHING;
 -- Use the create-admin-user.js tool to create secure admin users
 -- Example:
 -- INSERT INTO users (username, email, password_hash, first_name, last_name, role, is_active, email_verified) VALUES
--- ('admin', 'admin@blog.local', '[BCRYPT_HASH_HERE]', 'Admin', 'User', 'admin', TRUE, TRUE)
+-- ('admin', 'admin@blog.local', '[ARGON2_HASH_HERE]', 'Admin', 'User', 'admin', TRUE, TRUE)
 -- ON CONFLICT (username) DO NOTHING;
 
 -- Display schema creation results

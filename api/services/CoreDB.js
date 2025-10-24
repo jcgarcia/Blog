@@ -418,3 +418,4 @@ class CoreDB {
 CoreDB.instance = null;
 
 export default CoreDB;
+// Jenkins credentials corrected: postgres-host=blog-postgres-service, postgres-database=coredb

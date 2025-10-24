@@ -22,7 +22,7 @@ This document covers the complete admin authentication system implemented for th
 ### Backend Components
 
 - **Database Layer**: PostgreSQL with users table and role-based permissions
-- **Authentication Controller**: JWT-based authentication with bcryptjs password hashing
+- **Authentication Controller**: JWT-based authentication with Argon2 password hashing
 - **Rate Limiting**: IP-based brute force protection
 - **Session Management**: Token-based sessions with expiration
 - **Security Middleware**: Request validation and authorization
@@ -59,7 +59,7 @@ CREATE TABLE users (
 
 ### 🛡️ Password Security
 
-- **Hashing**: bcryptjs with 12 salt rounds
+- **Hashing**: Argon2 with default secure parameters
 - **Minimum Length**: 12+ characters recommended
 - **Complexity**: Mixed case, numbers, symbols
 - **Generation**: 20-character secure passwords available
@@ -319,13 +319,13 @@ psql -h $PGHOST -p $PGPORT -U $PGUSER -d $PGDATABASE -f database/blog_schema_pos
 **Backend:**
 ```bash
 cd api
-npm install bcryptjs jsonwebtoken
+pnpm install argon2 jsonwebtoken
 ```
 
 **Tools:**
 ```bash
 cd tools
-pnpm install bcryptjs
+pnpm install argon2
 ```
 
 ### 3. Environment Variables
@@ -451,7 +451,7 @@ node create-admin-user.js list
 ```bash
 # Check import paths
 # Install missing dependencies
-pnpm install bcryptjs jsonwebtoken
+pnpm install argon2 jsonwebtoken
 ```
 
 ### Debug Commands
@@ -464,7 +464,7 @@ node -e "import('./api/db.js').then(db => db.query('SELECT 1'))"
 node create-admin-user.js list
 
 # Test password hashing
-node -e "import bcrypt from 'bcryptjs'; console.log(bcrypt.hashSync('test', 12))"
+node -e "import argon2 from 'argon2'; argon2.hash('test').then(console.log)"
 
 # Verify JWT secret
 echo $JWT_SECRET
@@ -494,7 +494,7 @@ Monitor these logs for security issues:
 
 The admin authentication system provides:
 
-- ✅ **Secure Authentication**: JWT-based with bcryptjs hashing
+- ✅ **Secure Authentication**: JWT-based with argon2 hashing
 - ✅ **Brute Force Protection**: Rate limiting and IP tracking
 - ✅ **Role-Based Access**: Multiple admin permission levels
 - ✅ **Security Logging**: Comprehensive audit trail

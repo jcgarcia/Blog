@@ -16,7 +16,7 @@ Stores user account information and authentication data.
 | `id` | SERIAL | PRIMARY KEY | Unique user identifier |
 | `username` | VARCHAR(50) | NOT NULL, UNIQUE | User's login name |
 | `email` | VARCHAR(255) | NOT NULL, UNIQUE | User's email address |
-| `password_hash` | VARCHAR(255) | NOT NULL | Bcrypt password hash |
+| `password_hash` | VARCHAR(255) | NOT NULL | Argon2 password hash |
 | `first_name` | VARCHAR(100) | | User's first name |
 | `last_name` | VARCHAR(100) | | User's last name |
 | `bio` | TEXT | | User biography |
@@ -354,7 +354,7 @@ Required for database connection:
 
 ## Security Considerations
 
-1. **Password Hashing**: User passwords are stored as bcrypt hashes
+1. **Password Hashing**: User passwords are stored as Argon2 hashes
 2. **SQL Injection Prevention**: All queries use parameterized statements
 3. **Session Management**: Secure session storage with expiration
 4. **Role-Based Access**: User roles control access to different features

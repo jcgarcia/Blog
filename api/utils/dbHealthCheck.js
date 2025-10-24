@@ -8,6 +8,22 @@ import { getDbPool } from '../db.js';
 export async function checkDatabaseHealth() {
   const pool = getDbPool();
   
+  // Check if this is the mock pool (DataDB not configured yet)
+  if (pool.totalCount === 0 && typeof pool.query === 'function') {
+    try {
+      await pool.query('SELECT 1');
+    } catch (error) {
+      if (error.message.includes('No database connection configured')) {
+        return {
+          status: 'pending_configuration',
+          message: 'DataDB not configured yet - this is expected on first startup',
+          note: 'Configure DataDB connection through the ops panel after admin login',
+          timestamp: new Date().toISOString()
+        };
+      }
+    }
+  }
+  
   try {
     const startTime = Date.now();
     
@@ -139,7 +155,14 @@ export function createHealthCheckEndpoint() {
   return async (req, res) => {
     try {
       const health = await checkDatabaseHealth();
-      const status = health.status === 'healthy' ? 200 : 503;
+      let status;
+      if (health.status === 'healthy') {
+        status = 200;
+      } else if (health.status === 'pending_configuration') {
+        status = 200; // DataDB not configured is OK - not an error
+      } else {
+        status = 503;
+      }
       res.status(status).json(health);
     } catch (error) {
       res.status(503).json({

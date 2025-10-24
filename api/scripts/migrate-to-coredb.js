@@ -84,8 +84,8 @@ async function migrateToCore() {
         const productionAdminExists = result.rows[0];
         
         if (!productionAdminExists) {
-            const bcrypt = await import('bcrypt');
-            const productionPasswordHash = await bcrypt.default.hash('NewSecretPa55w0rd', 10);
+            const argon2 = await import('argon2');
+            const productionPasswordHash = await argon2.default.hash('NewSecretPa55w0rd');
             
             await coreDB.pool.query(
                 `INSERT INTO admin_users (username, password_hash, email, role) 
