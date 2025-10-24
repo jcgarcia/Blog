@@ -75,7 +75,7 @@ function createFallbackPool() {
     user: process.env.PGUSER,
     password: process.env.PGPASSWORD,
     database: process.env.PGDATABASE,
-    ssl: process.env.PGSSLMODE === 'require' ? { rejectUnauthorized: false } : false,
+    ssl: (process.env.PGSSLMODE === 'require' || process.env.PGSSLMODE === 'prefer') ? { rejectUnauthorized: false } : false,
     max: 10,
     min: 1,
     idle: 5000,

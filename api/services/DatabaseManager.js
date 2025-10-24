@@ -96,7 +96,7 @@ class DatabaseManager {
         user: config.username,
         password: config.password,
         database: config.database,
-        ssl: config.ssl_mode === 'require' ? { rejectUnauthorized: false } : false,
+        ssl: (config.ssl_mode === 'require' || config.ssl_mode === 'prefer') ? { rejectUnauthorized: false } : false,
         max: 10,
         min: 1,
         idle: 5000,

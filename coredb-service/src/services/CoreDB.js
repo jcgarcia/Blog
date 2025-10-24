@@ -22,7 +22,9 @@ class CoreDB {
             database: process.env.COREDB_DATABASE || 'coredb',  // CRITICAL: CoreDB connects to 'coredb' database
             user: process.env.PGUSER || 'blogadmin',  // Use consistent PostgreSQL user
             password: process.env.PGPASSWORD,
-            ssl: false,
+            ssl: {
+                rejectUnauthorized: false // Accept self-signed certificates
+            },
             max: 10,
             idleTimeoutMillis: 30000,
             connectionTimeoutMillis: 2000,
