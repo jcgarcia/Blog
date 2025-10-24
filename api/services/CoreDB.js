@@ -402,6 +402,121 @@ class CoreDB {
         return null;
     }
 
+    async createDatabaseConnection(connectionData) {
+        if (!this.initialized) {
+            throw new Error('CoreDB not initialized');
+        }
+
+        const { name, type, host, port, database, username, password, ssl_mode } = connectionData;
+        const encrypted_password = this.encrypt(password);
+
+        const result = await this.pool.query(`
+            INSERT INTO database_connections (name, type, host, port, database_name, username, password_encrypted, ssl_mode, is_active, created_at, updated_at)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, false, NOW(), NOW())
+            RETURNING id, name, type, host, port, database_name as database, username, ssl_mode, is_active as active, created_at, updated_at
+        `, [name, type, host, port, database, username, encrypted_password, ssl_mode || 'prefer']);
+
+        return result.rows[0];
+    }
+
+    async updateDatabaseConnection(id, connectionData) {
+        if (!this.initialized) {
+            throw new Error('CoreDB not initialized');
+        }
+
+        const { name, type, host, port, database, username, password, ssl_mode } = connectionData;
+        let encrypted_password = null;
+        
+        if (password) {
+            encrypted_password = this.encrypt(password);
+        }
+
+        let query, params;
+        if (encrypted_password) {
+            query = `
+                UPDATE database_connections 
+                SET name = $2, type = $3, host = $4, port = $5, database_name = $6, 
+                    username = $7, password_encrypted = $8, ssl_mode = $9, updated_at = NOW()
+                WHERE id = $1
+                RETURNING id, name, type, host, port, database_name as database, username, ssl_mode, is_active as active, created_at, updated_at
+            `;
+            params = [id, name, type, host, port, database, username, encrypted_password, ssl_mode || 'prefer'];
+        } else {
+            query = `
+                UPDATE database_connections 
+                SET name = $2, type = $3, host = $4, port = $5, database_name = $6, 
+                    username = $7, ssl_mode = $8, updated_at = NOW()
+                WHERE id = $1
+                RETURNING id, name, type, host, port, database_name as database, username, ssl_mode, is_active as active, created_at, updated_at
+            `;
+            params = [id, name, type, host, port, database, username, ssl_mode || 'prefer'];
+        }
+
+        const result = await this.pool.query(query, params);
+        return result.rows.length > 0 ? result.rows[0] : null;
+    }
+
+    async deleteDatabaseConnection(id) {
+        if (!this.initialized) {
+            throw new Error('CoreDB not initialized');
+        }
+
+        const result = await this.pool.query(
+            'DELETE FROM database_connections WHERE id = $1 RETURNING id',
+            [id]
+        );
+
+        return result.rows.length > 0;
+    }
+
+    async activateDatabaseConnection(id) {
+        if (!this.initialized) {
+            throw new Error('CoreDB not initialized');
+        }
+
+        // First deactivate all connections
+        await this.pool.query('UPDATE database_connections SET is_active = false');
+        
+        // Then activate the specified one
+        const result = await this.pool.query(
+            'UPDATE database_connections SET is_active = true WHERE id = $1 RETURNING id',
+            [id]
+        );
+
+        return result.rows.length > 0;
+    }
+
+    async testDatabaseConnection(connectionData) {
+        const { type, host, port, database, username, password, ssl_mode } = connectionData;
+        
+        if (type !== 'postgresql') {
+            throw new Error('Only PostgreSQL connections are supported');
+        }
+
+        const testPool = new Pool({
+            host,
+            port: parseInt(port),
+            database,
+            user: username,
+            password,
+            ssl: ssl_mode === 'require' ? { rejectUnauthorized: false } : ssl_mode === 'prefer' ? { rejectUnauthorized: false } : false,
+            max: 1,
+            connectionTimeoutMillis: 5000,
+        });
+
+        try {
+            const client = await testPool.connect();
+            await client.query('SELECT NOW()');
+            client.release();
+            await testPool.end();
+            
+            return { success: true, message: 'Connection successful' };
+        } catch (error) {
+            await testPool.end().catch(() => {});
+            throw new Error(`Connection failed: ${error.message}`);
+        }
+    }
+
     // Emergency methods
     async clearAllDatabaseConnections() {
         if (!this.initialized) {
