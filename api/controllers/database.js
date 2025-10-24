@@ -590,8 +590,7 @@ export const testDatabaseConnection = async (req, res) => {
     console.log('Testing database connection with ID:', id);
     
     // Get the database connection with encrypted password
-    const connections = await coreDB.getDatabaseConnections();
-    const connection = connections.find(conn => conn.id === parseInt(id));
+    const connection = await coreDB.getDatabaseConnectionById(parseInt(id));
 
     if (!connection) {
       console.log('Connection not found for ID:', id);

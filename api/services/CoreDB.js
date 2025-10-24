@@ -379,6 +379,21 @@ class CoreDB {
         return result.rows;
     }
 
+    async getDatabaseConnectionById(id) {
+        if (!this.initialized) {
+            throw new Error('CoreDB not initialized');
+        }
+
+        const result = await this.pool.query(`
+            SELECT id, name, type, host, port, database_name as database,
+                   username, password_encrypted, ssl_mode, is_active as active, created_at, updated_at
+            FROM database_connections
+            WHERE id = $1
+        `, [id]);
+
+        return result.rows.length > 0 ? result.rows[0] : null;
+    }
+
     async getActiveDatabaseConfig() {
         if (!this.initialized) {
             throw new Error('CoreDB not initialized');
