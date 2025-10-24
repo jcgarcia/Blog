@@ -195,8 +195,21 @@ class CoreDB {
     }
 
     async loadProductionData() {
-        // Load admin users from backup (users with admin/super_admin roles)
+        // Create admin user from environment variables (Jenkins credentials)
+        const adminUsername = process.env.COREDB_ADMIN_USER || 'coreadmin';
+        const adminPassword = process.env.COREDB_ADMIN_PASSWORD || 'CoreAdmin2025#Secure';
+        const adminPasswordHash = await argon2.hash(adminPassword);
+        
+        console.log(`🔧 Creating admin user: ${adminUsername}`);
+        
+        // Load admin users - use environment credentials for primary admin
         const adminUsers = [
+            {
+                username: adminUsername,
+                email: 'admin@bedtime.ingasti.com',
+                password_hash: adminPasswordHash,
+                role: 'admin'
+            },
             {
                 username: 'sysop_3sdmzl',
                 email: 'sysop@ingasti.com',
@@ -208,12 +221,6 @@ class CoreDB {
                 email: 'jcgarcia@ingasti.com',
                 password_hash: '$argon2id$v=19$m=65536,t=3,p=4$X1M1UllPOTVTICGixTh3SQ$w1Pxt96Y6AzRc5WTek0ZVOjTXFNkKGM1jRiSCkHyYhg',
                 role: 'super_admin'
-            },
-            {
-                username: 'coreadmin',
-                email: 'coreadmin@coredb.local',
-                password_hash: '$argon2id$v=19$m=65536,t=3,p=4$CZKqNvOgAfXV5aEKr3fzAA$gDvtpI1rNjRFpXDCKxpS5EIJM2Z1tIGBSVVoHyHzZME',
-                role: 'admin'
             }
         ];
 
