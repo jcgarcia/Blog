@@ -74,6 +74,8 @@ export const adminLogin = async (req, res) => {
 
     try {
       // First try CoreDB authentication
+      console.log(`🔐 Attempting CoreDB authentication for: ${username}`);
+      console.log(`🔧 CoreDB initialized: ${coreDb.initialized}`);
       const coreDbUser = await coreDb.authenticateAdmin(username, password);
       if (coreDbUser) {
         user = {
@@ -85,10 +87,13 @@ export const adminLogin = async (req, res) => {
           role: 'admin'
         };
         authSource = 'CoreDB';
-        console.log(`CoreDB authentication successful for: ${username}`);
+        console.log(`✅ CoreDB authentication successful for: ${username}`);
+      } else {
+        console.log(`❌ CoreDB authentication failed: User not found or invalid password`);
       }
     } catch (error) {
-      console.log(`CoreDB authentication failed: ${error.message}`);
+      console.log(`❌ CoreDB authentication error: ${error.message}`);
+      console.log(`🔍 CoreDB connection config - Host: ${coreDb.connectionConfig?.host}, Database: ${coreDb.connectionConfig?.database}`);
     }
 
     // If CoreDB authentication failed, try legacy PostgreSQL database
