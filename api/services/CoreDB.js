@@ -43,41 +43,80 @@ class CoreDB {
     }
 
     async initialize() {
-        try {
-            // Use consistent configuration for the actual pool
-            const poolConfig = {
-                host: process.env.PGHOST || process.env.COREDB_HOST || 'blog-postgres-service',
-                port: parseInt(process.env.PGPORT || process.env.COREDB_PORT || '5432'),
-                database: process.env.PGDATABASE || process.env.COREDB_DATABASE || 'coredb',
-                user: process.env.PGUSER || 'blogadmin',
-                password: process.env.PGPASSWORD || process.env.POSTGRES_PASSWORD,
-                ssl: 'prefer',
-                max: 20,
-                idleTimeoutMillis: 30000,
-                connectionTimeoutMillis: 10000,
-            };
-            
-            console.log(`🔧 CoreDB: Creating PostgreSQL pool for ${poolConfig.host}:${poolConfig.port}/${poolConfig.database} with user ${poolConfig.user}`);
-            
-            this.pool = new Pool(poolConfig);
-            console.log(`🔧 CoreDB: PostgreSQL pool created for ${poolConfig.host}:${poolConfig.port}/${poolConfig.database}`);
+        const maxRetries = 10;
+        let retryCount = 0;
+        
+        while (retryCount < maxRetries) {
+            try {
+                // Use consistent configuration for the actual pool
+                const poolConfig = {
+                    host: process.env.PGHOST || process.env.COREDB_HOST || 'blog-postgres-service',
+                    port: parseInt(process.env.PGPORT || process.env.COREDB_PORT || '5432'),
+                    database: process.env.PGDATABASE || process.env.COREDB_DATABASE || 'coredb',
+                    user: process.env.PGUSER || 'blogadmin',
+                    password: process.env.PGPASSWORD || process.env.POSTGRES_PASSWORD,
+                    ssl: 'prefer',
+                    max: 20,
+                    idleTimeoutMillis: 30000,
+                    connectionTimeoutMillis: 5000,
+                };
+                
+                if (retryCount === 0) {
+                    console.log(`🔧 CoreDB: Creating PostgreSQL pool for ${poolConfig.host}:${poolConfig.port}/${poolConfig.database} with user ${poolConfig.user}`);
+                }
+                
+                this.pool = new Pool(poolConfig);
+                
+                if (retryCount === 0) {
+                    console.log(`🔧 CoreDB: PostgreSQL pool created for ${poolConfig.host}:${poolConfig.port}/${poolConfig.database}`);
+                }
 
-            // Test connection
-            const client = await this.pool.connect();
-            await client.query('SELECT NOW()');
-            client.release();
+                // Test connection with timeout
+                console.log(`🔧 CoreDB: Testing connection (attempt ${retryCount + 1}/${maxRetries})...`);
+                const client = await this.pool.connect();
+                await client.query('SELECT NOW()');
+                client.release();
+                console.log('✅ CoreDB: Database connection successful');
 
-            // Create schema and load production data
-            await this.createSchema();
-            await this.loadProductionData();
-            
-            this.initialized = true;
-            console.log('✅ CoreDB: Initialized successfully with production data');
+                // Create schema and load production data
+                await this.createSchema();
+                await this.loadProductionData();
+                
+                this.initialized = true;
+                console.log('✅ CoreDB: Initialized successfully with production data');
+                return; // Success - exit retry loop
 
-        } catch (error) {
-            console.error('❌ CoreDB: Initialization failed:', error);
-            throw error;
+            } catch (error) {
+                retryCount++;
+                const isConnectionError = error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND' || error.code === 'ETIMEDOUT';
+                
+                if (retryCount >= maxRetries) {
+                    console.error(`❌ CoreDB: Initialization failed after ${maxRetries} attempts:`, error);
+                    throw error;
+                }
+                
+                if (isConnectionError) {
+                    const delay = Math.min(1000 * Math.pow(2, retryCount - 1), 10000); // Exponential backoff, max 10s
+                    console.log(`⚠️ CoreDB: Connection failed (attempt ${retryCount}/${maxRetries}), retrying in ${delay}ms...`);
+                    console.log(`   Error: ${error.message}`);
+                    
+                    // Clean up failed pool
+                    if (this.pool) {
+                        await this.pool.end().catch(() => {});
+                        this.pool = null;
+                    }
+                    
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                } else {
+                    // Non-connection error, don't retry
+                    console.error('❌ CoreDB: Non-connection error, not retrying:', error);
+                    throw error;
+                }
+            }
         }
+        
+        // If we get here, all retries failed
+        throw new Error(`CoreDB initialization failed after ${maxRetries} connection attempts`);
     }
 
     async createSchema() {
