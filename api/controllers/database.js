@@ -481,7 +481,7 @@ export const activateDatabaseConnection = async (req, res) => {
     }
 
     // Set as active connection
-    await coreDB.setActiveDatabaseConnection(id);
+    await coreDB.activateDatabaseConnection(id);
     
     console.log(`📊 Database connection activated: ${connection.name} (ID: ${id})`);
     
