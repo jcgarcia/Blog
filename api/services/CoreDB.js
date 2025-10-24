@@ -52,7 +52,7 @@ class CoreDB {
             password: process.env.PGPASSWORD,
             max: 20,
             idleTimeoutMillis: 30000,
-            connectionTimeoutMillis: 2000,
+            connectionTimeoutMillis: 10000,
         });
             console.log(`🔧 CoreDB: PostgreSQL pool created for ${this.connectionConfig.host}:${this.connectionConfig.port}/${this.connectionConfig.database}`);
 
