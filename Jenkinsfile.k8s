@@ -269,7 +269,7 @@ pipeline {
                                 --from-literal=PGDATABASE="${PGDATABASE}" \
                                 --from-literal=PGUSER="${PGUSER}" \
                                 --from-literal=PGPASSWORD="${PGPASSWORD}" \
-                                --from-literal=POSTGRES_PASSWORD="${POSTGRES_ROOT_PASSWORD}" \
+                                --from-literal=POSTGRES_PASSWORD="${PGPASSWORD}" \
                                 --from-literal=COREDB_ADMIN_USER="${COREDB_ADMIN_USER}" \
                                 --from-literal=COREDB_ADMIN_PASSWORD="${COREDB_ADMIN_PASSWORD}" \
                                 --from-literal=COREDB_ENCRYPTION_KEY="${COREDB_ENCRYPTION_KEY}" \
