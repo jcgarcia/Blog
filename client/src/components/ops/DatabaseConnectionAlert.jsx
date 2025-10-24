@@ -1,12 +1,11 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
 import { useDatabaseConnection } from '../../contexts/DatabaseConnectionContext';
 
 /**
  * Database Connection Alert Component
  * Shows status and guidance about database connectivity in the ops panel
  */
-const DatabaseConnectionAlert = () => {
+const DatabaseConnectionAlert = ({ onConfigureDatabase }) => {
   const { 
     hasActiveConnection, 
     activeConnection, 
@@ -54,9 +53,12 @@ const DatabaseConnectionAlert = () => {
       </div>
       
       <div className="alert-actions">
-        <Link to="/ops/database" className="btn btn-primary btn-sm">
+        <button 
+          onClick={onConfigureDatabase}
+          className="btn btn-primary btn-sm"
+        >
           Configure Database
-        </Link>
+        </button>
         <button 
           onClick={refreshConnection}
           className="btn btn-secondary btn-sm"

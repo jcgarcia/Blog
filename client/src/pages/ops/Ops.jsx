@@ -80,7 +80,11 @@ export default function Ops() {
       </div>
 
       <div className="ops-content">
-        {!hasActiveConnection && !connectionLoading && <DatabaseConnectionAlert />}
+        {!hasActiveConnection && !connectionLoading && (
+          <DatabaseConnectionAlert 
+            onConfigureDatabase={() => setActiveTab('database')}
+          />
+        )}
         {renderContent()}
       </div>
     </div>
