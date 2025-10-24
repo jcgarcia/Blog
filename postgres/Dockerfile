@@ -14,15 +14,15 @@ RUN mkdir -p /var/lib/postgresql/backups /var/lib/postgresql/ssl && \
     chown -R postgres:postgres /var/lib/postgresql/backups /var/lib/postgresql/ssl
 
 # Copy initialization, backup, and SSL setup scripts
-COPY scripts/setup-ssl.sh /docker-entrypoint-initdb.d/00-setup-ssl.sh
 COPY scripts/init-database.sh /docker-entrypoint-initdb.d/01-init-database.sh
+COPY scripts/setup-ssl.sh /docker-entrypoint-initdb.d/99-setup-ssl.sh
 COPY scripts/restore-backup.sh /usr/local/bin/restore-backup.sh
 COPY scripts/create-backup.sh /usr/local/bin/create-backup.sh
 COPY scripts/health-check.sh /usr/local/bin/health-check.sh
 
 # Make scripts executable
-RUN chmod +x /docker-entrypoint-initdb.d/00-setup-ssl.sh && \
-    chmod +x /docker-entrypoint-initdb.d/01-init-database.sh && \
+RUN chmod +x /docker-entrypoint-initdb.d/01-init-database.sh && \
+    chmod +x /docker-entrypoint-initdb.d/99-setup-ssl.sh && \
     chmod +x /usr/local/bin/restore-backup.sh && \
     chmod +x /usr/local/bin/create-backup.sh && \
     chmod +x /usr/local/bin/health-check.sh
