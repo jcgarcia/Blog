@@ -223,11 +223,13 @@ const server = app.listen(PORT, async () => {
   console.log(`Connected! Server running on port ${PORT}`);
   
   // Initialize CoreDB first (essential for admin authentication)
+  let coreDBInitialized = false;
   try {
     console.log('🔧 Initializing CoreDB...');
     const coreDB = CoreDB.getInstance();
     await coreDB.initialize();
     console.log('✅ CoreDB initialized successfully');
+    coreDBInitialized = true;
     
     // Initialize default database connections from environment variables
     await initializeDefaultDatabaseConnections(coreDB);
@@ -239,28 +241,35 @@ const server = app.listen(PORT, async () => {
     
   } catch (error) {
     console.error('❌ Failed to initialize CoreDB:', error);
-    console.error('🔄 Admin authentication may not work properly');
+    console.error('🔄 Admin authentication will not work - ops panel inaccessible');
+    console.error('🚫 Skipping DataDB operations until CoreDB is fixed');
   }
   
-  try {
-    // Run essential database migrations first
-    await initializeDatabaseMigrations();
-    console.log('✅ Database migrations completed');
-  } catch (error) {
-    console.error('❌ Failed to initialize database migrations:', error);
-    console.error('🔄 Application will continue but some features may not work properly');
+  // Only try DataDB operations if CoreDB initialized successfully
+  if (coreDBInitialized) {
+    try {
+      // Run essential database migrations first
+      await initializeDatabaseMigrations();
+      console.log('✅ Database migrations completed');
+    } catch (error) {
+      console.error('❌ Failed to initialize database migrations:', error);
+      console.error('🔄 DataDB not configured yet - configure through ops panel');
+    }
+    
+    // Initialize DatabaseManager in background (non-blocking)
+    console.log('🔧 Initializing DatabaseManager in background...');
+    databaseManager.initialize()
+      .then(() => {
+        console.log('✅ DatabaseManager initialized successfully');
+      })
+      .catch((error) => {
+        console.error('⚠️ DatabaseManager initialization failed:', error.message);
+        console.error('🔄 DataDB not configured - use ops panel to configure');
+      });
+  } else {
+    console.log('⏸️ Skipping DataDB initialization - CoreDB required first');
+    console.log('🔧 Fix CoreDB connection to enable full functionality');
   }
-  
-  // Initialize DatabaseManager in background (non-blocking)
-  console.log('🔧 Initializing DatabaseManager in background...');
-  databaseManager.initialize()
-    .then(() => {
-      console.log('✅ DatabaseManager initialized successfully');
-    })
-    .catch((error) => {
-      console.error('⚠️ DatabaseManager initialization failed:', error.message);
-      console.error('🔄 Falling back to standard database connection');
-    });
   
   // OIDC authentication is handled automatically when needed
   // No manual initialization required for OIDC-based AWS access
