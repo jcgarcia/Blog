@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { API_ENDPOINTS } from '../../../config/api.js';
+import { useDatabaseConnection } from '../../../contexts/DatabaseConnectionContext';
 import './DatabaseManagement.css';
 
 const DatabaseManagement = () => {
+  const { refreshConnection } = useDatabaseConnection();
   const [databaseInfo, setDatabaseInfo] = useState(null);
   const [backups, setBackups] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -325,6 +327,7 @@ const DatabaseManagement = () => {
         setActiveConnection(connectionName);
         fetchDatabaseInfo(); // Refresh database info
         fetchDatabaseConnections(); // Refresh connections
+        refreshConnection(); // Refresh the global database connection context
       } else {
         setError(data.message || 'Failed to activate database connection');
       }
