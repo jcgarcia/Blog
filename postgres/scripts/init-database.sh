@@ -11,15 +11,34 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-E
     -- Ensure the blog database exists
     SELECT 'Database already exists' WHERE EXISTS (SELECT FROM pg_database WHERE datname = 'blog');
     
-    -- Create blog user if specified and different from POSTGRES_USER
+    -- Create dedicated database connection users
     DO \$\$
     BEGIN
+        -- Create CoreDBConnect user for CoreDB access
+        IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'CoreDBConnect') THEN
+            RAISE NOTICE 'User CoreDBConnect already exists';
+        ELSE
+            CREATE USER "CoreDBConnect" WITH PASSWORD '${POSTGRES_PASSWORD}';
+            GRANT ALL PRIVILEGES ON DATABASE coredb TO "CoreDBConnect";
+            RAISE NOTICE 'User CoreDBConnect created successfully';
+        END IF;
+        
+        -- Create DataDBConnect user for DataDB access
+        IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'DataDBConnect') THEN
+            RAISE NOTICE 'User DataDBConnect already exists';
+        ELSE
+            CREATE USER "DataDBConnect" WITH PASSWORD '${BLOG_DB_PASSWORD:-blogpassword}';
+            GRANT ALL PRIVILEGES ON DATABASE blog TO "DataDBConnect";
+            RAISE NOTICE 'User DataDBConnect created successfully';
+        END IF;
+        
+        -- Keep blogadmin for backward compatibility (legacy)
         IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'blogadmin') THEN
             RAISE NOTICE 'User blogadmin already exists';
         ELSE
             CREATE USER blogadmin WITH PASSWORD '${BLOG_DB_PASSWORD:-blogpassword}';
             GRANT ALL PRIVILEGES ON DATABASE blog TO blogadmin;
-            RAISE NOTICE 'User blogadmin created successfully';
+            RAISE NOTICE 'User blogadmin created successfully (legacy)';
         END IF;
     END
     \$\$;
