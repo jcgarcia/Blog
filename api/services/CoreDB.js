@@ -154,10 +154,10 @@ class CoreDB {
                 updated_at TIMESTAMP DEFAULT NOW()
             );
 
-            -- Database connections for DataDB configuration
+            -- Database connections configuration
             CREATE TABLE IF NOT EXISTS database_connections (
                 id SERIAL PRIMARY KEY,
-                name VARCHAR(255) NOT NULL,
+                name VARCHAR(255) NOT NULL UNIQUE,
                 type VARCHAR(50) NOT NULL,
                 host VARCHAR(255) NOT NULL,
                 port INTEGER NOT NULL,
@@ -188,6 +188,26 @@ class CoreDB {
             CREATE INDEX IF NOT EXISTS idx_system_config_group ON system_config(group_name);
             CREATE INDEX IF NOT EXISTS idx_database_connections_active ON database_connections(is_active);
             CREATE INDEX IF NOT EXISTS idx_storage_providers_active ON storage_providers(is_active);
+            
+            -- Add unique constraint to database_connections.name if it doesn't exist
+            DO $$ 
+            BEGIN 
+                IF NOT EXISTS (
+                    SELECT 1 FROM pg_constraint 
+                    WHERE conrelid = 'database_connections'::regclass 
+                    AND conname = 'database_connections_name_key'
+                ) THEN
+                    -- First remove any duplicate connections with the same name (keep the oldest)
+                    DELETE FROM database_connections 
+                    WHERE id NOT IN (
+                        SELECT MIN(id) FROM database_connections 
+                        GROUP BY name
+                    );
+                    
+                    -- Then add the unique constraint
+                    ALTER TABLE database_connections ADD CONSTRAINT database_connections_name_key UNIQUE (name);
+                END IF;
+            END $$;
         `;
 
         await this.pool.query(schema);
@@ -274,7 +294,7 @@ class CoreDB {
         await this.pool.query(`
             INSERT INTO database_connections (name, type, host, port, database_name, username, password_encrypted, ssl_mode, is_active, created_at, updated_at)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
-            ON CONFLICT DO NOTHING
+            ON CONFLICT (name) DO NOTHING
         `, ['Production Blog Database', 'postgresql', 'blog-postgres-service', 5432, 'blog', 'blogadmin', defaultPassword, 'prefer', true]);
 
         // Load AWS S3 storage provider
