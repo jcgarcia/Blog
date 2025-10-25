@@ -55,7 +55,7 @@ class CoreDB {
                     host: process.env.PGHOST || process.env.COREDB_HOST || 'blog-postgres-service',
                     port: parseInt(process.env.PGPORT || process.env.COREDB_PORT || '5432'),
                     database: process.env.PGDATABASE || process.env.COREDB_DATABASE || 'coredb',
-                    user: process.env.PGUSER || 'blogadmin',
+                    user: process.env.PGUSER || 'CoreDBConnect',
                     password: process.env.PGPASSWORD || process.env.POSTGRES_PASSWORD,
                     ssl: {
                         rejectUnauthorized: false // Accept self-signed certificates
