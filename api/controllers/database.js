@@ -54,12 +54,12 @@ export const getDatabaseInfo = async (req, res) => {
 // Get database connection status
 export const getDatabaseConnectionStatus = async (req, res) => {
   try {
-    // Check if we have an active database connection
-    const pool = getDbPool();
     const coreDB = CoreDB.getInstance();
+    
+    // Get active database connection from CoreDB
     const activeConnection = await coreDB.getActiveDatabaseConfig();
     
-    if (!pool || !activeConnection) {
+    if (!activeConnection) {
       return res.json({
         success: true,
         connected: false,
@@ -67,17 +67,43 @@ export const getDatabaseConnectionStatus = async (req, res) => {
       });
     }
     
-    // Test the connection with a simple query
-    const result = await pool.query('SELECT 1 as test');
-    
-    res.json({
-      success: true,
-      connected: true,
-      connectionName: activeConnection.name,
-      database: activeConnection.database,
+    // Test the active connection directly (CoreDB provides decrypted credentials)
+    const { Pool } = await import('pg');
+    const testPool = new Pool({
       host: activeConnection.host,
-      port: activeConnection.port
+      port: activeConnection.port,
+      database: activeConnection.database,
+      user: activeConnection.username,
+      password: activeConnection.password,
+      ssl: activeConnection.ssl_mode === 'disable' ? false : { rejectUnauthorized: false },
+      max: 1,
+      connectionTimeoutMillis: 5000,
     });
+
+    try {
+      // Test the connection with a simple query
+      const client = await testPool.connect();
+      await client.query('SELECT 1 as test');
+      client.release();
+      await testPool.end();
+      
+      res.json({
+        success: true,
+        connected: true,
+        connectionName: activeConnection.name,
+        database: activeConnection.database,
+        host: activeConnection.host,
+        port: activeConnection.port
+      });
+    } catch (testError) {
+      await testPool.end();
+      res.json({
+        success: true,
+        connected: false,
+        message: 'Database connection failed',
+        error: testError.message
+      });
+    }
   } catch (error) {
     console.error('Database connection status error:', error);
     res.json({
