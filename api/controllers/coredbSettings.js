@@ -6,7 +6,7 @@ const coreDB = new CoreDB();
 // Get social media links - reads from CoreDB
 export const getSocialMediaLinks = async (req, res) => {
   try {
-    if (!coreDB.isInitialized()) {
+    if (!coreDB.pool) {
       await coreDB.initialize();
     }
 
@@ -68,7 +68,7 @@ export const getSocialMediaLinks = async (req, res) => {
 // Get public settings - reads from CoreDB
 export const getSettings = async (req, res) => {
   try {
-    if (!coreDB.isInitialized()) {
+    if (!coreDB.pool) {
       await coreDB.initialize();
     }
 
@@ -123,7 +123,7 @@ export const getSettings = async (req, res) => {
 // Get all settings including admin-only ones (admin only)
 export const getAllSettings = async (req, res) => {
   try {
-    if (!coreDB.isInitialized()) {
+    if (!coreDB.pool) {
       await coreDB.initialize();
     }
 
@@ -179,7 +179,7 @@ export const getAllSettings = async (req, res) => {
 // Update social media links
 export const updateSocialMediaLinks = async (req, res) => {
   try {
-    if (!coreDB.isInitialized()) {
+    if (!coreDB.pool) {
       await coreDB.initialize();
     }
 
@@ -220,7 +220,7 @@ export const updateSocialMediaLinks = async (req, res) => {
 // Update settings (admin only)
 export const updateSettings = async (req, res) => {
   try {
-    if (!coreDB.isInitialized()) {
+    if (!coreDB.pool) {
       await coreDB.initialize();
     }
 
