@@ -1,10 +1,5 @@
 import express from "express";
 import {
-  getSettings,
-  getAllSettings,
-  updateSettings,
-  getSocialMediaLinks,
-  updateSocialMediaLinks,
   getOAuthSettings,
   updateOAuthSettings,
   getAwsExternalId,
@@ -13,6 +8,15 @@ import {
   updateAwsConfig,
   getMediaStorageConfig
 } from "../controllers/settings.js";
+
+// Import CoreDB-based settings controllers
+import {
+  getSettings,
+  getAllSettings,
+  updateSettings,
+  getSocialMediaLinks,
+  updateSocialMediaLinks
+} from "../controllers/coredbSettings.js";
 import { requireAdminAuth } from "../controllers/admin.js";
 
 const router = express.Router();

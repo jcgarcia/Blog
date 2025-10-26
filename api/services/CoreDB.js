@@ -258,21 +258,46 @@ class CoreDB {
 
         // Load system configuration from backup settings
         const systemConfig = [
+            // Social media links (from backup settings table)
+            { key: 'social_linkedin_url', value: '"https://www.linkedin.com/in/juliocesargarcia/"', group_name: 'social', is_public: true },
+            { key: 'social_twitter_url', value: '"https://x.com/yojulito"', group_name: 'social', is_public: true },
+            { key: 'social_instagram_url', value: '"https://instagram.com/yojulito"', group_name: 'social', is_public: true },
+            { key: 'social_threads_url', value: '"https://threads.net/@yojulito"', group_name: 'social', is_public: true },
+            
+            // General site configuration
             { key: 'blog_title', value: '"Guilt & Pleasure Bedtime"', group_name: 'general', is_public: true },
             { key: 'blog_description', value: '"A personal blog about life experiences"', group_name: 'general', is_public: true },
             { key: 'site_title', value: '"Bedtime Stories Blog"', group_name: 'general', is_public: true },
             { key: 'site_url', value: '"https://bedtime.ingasti.com"', group_name: 'general', is_public: true },
             { key: 'site_description', value: '"A cozy corner for bedtime stories and peaceful tales"', group_name: 'general', is_public: true },
             { key: 'api_url', value: '"https://bapi.ingasti.com"', group_name: 'general', is_public: true },
+            { key: 'posts_per_page', value: '10', group_name: 'content', is_public: true },
+            { key: 'allow_comments', value: 'true', group_name: 'content', is_public: true },
+            { key: 'comment_moderation', value: 'false', group_name: 'content', is_public: false },
+            { key: 'require_approval', value: '"true"', group_name: 'general', is_public: true },
+            { key: 'enable_moderation', value: '"true"', group_name: 'general', is_public: true },
+            { key: 'enable_auto_save', value: '"true"', group_name: 'general', is_public: true },
+            { key: 'auto_save_interval', value: '"30"', group_name: 'general', is_public: true },
+            
+            // OAuth configuration
             { key: 'oauth_frontend_url', value: '"https://bedtime.ingasti.com"', group_name: 'oauth', is_public: false },
+            
+            // Media storage configuration
             { key: 'media_storage_type', value: '"aws"', group_name: 'media', is_public: false },
             { key: 'media_storage_s3_bucket', value: '"bedtime-blog-media"', group_name: 'media', is_public: false },
             { key: 'aws_config', value: '{"region": "eu-west-2", "roleArn": "arn:aws:iam::007041844937:role/BedtimeBlogMediaRole", "accountId": "007041844937", "authMethod": "oidc", "bucketName": "bedtimeblog-medialibrary", "oidcSubject": "system:serviceaccount:blog:media-access-sa", "oidcAudience": "https://oidc.ingasti.com", "oidcIssuerUrl": "https://oidc.ingasti.com"}', group_name: 'aws', is_public: false },
+            { key: 'media.max_upload_size', value: '"10485760"', group_name: 'general', is_public: false },
+            
+            // Email configuration
             { key: 'smtp_host', value: '"smtp.gmail.com"', group_name: 'email', is_public: false },
             { key: 'smtp_port', value: '"587"', group_name: 'email', is_public: false },
             { key: 'smtp_user', value: '"smtp@ingasti.com"', group_name: 'email', is_public: false },
             { key: 'smtp_from', value: '"blog@ingasti.com"', group_name: 'email', is_public: false },
+            { key: 'smtp_secure', value: '"false"', group_name: 'email', is_public: false },
             { key: 'contact_email', value: '"blog@ingasti.com"', group_name: 'email', is_public: false },
+            { key: 'email_notifications', value: '"true"', group_name: 'email', is_public: false },
+            
+            // System configuration
             { key: 'system.version', value: '"v1.0.0"', group_name: 'system', is_public: false },
             { key: 'system.environment', value: '"production"', group_name: 'system', is_public: false }
         ];
@@ -289,13 +314,16 @@ class CoreDB {
             `, [config.key, config.value, config.group_name, config.is_public]);
         }
 
-        // Load default DataDB connection
-        const defaultPassword = this.encrypt('DbSecure2025#XpL3vN7wE5xT6gH4uY1zC0');
+        // Load default DataDB connection with correct credentials
+        const defaultPassword = this.encrypt('zpnTeYwhPiyTCs938hVpG4swN');
         await this.pool.query(`
             INSERT INTO database_connections (name, type, host, port, database_name, username, password_encrypted, ssl_mode, is_active, created_at, updated_at)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
-            ON CONFLICT (name) DO NOTHING
-        `, ['Production Blog Database', 'postgresql', 'blog-postgres-service', 5432, 'blog', 'blogadmin', defaultPassword, 'prefer', true]);
+            ON CONFLICT (name) DO UPDATE SET 
+                password_encrypted = EXCLUDED.password_encrypted,
+                username = EXCLUDED.username,
+                updated_at = NOW()
+        `, ['Production Blog Database', 'postgresql', 'blog-postgres-service', 5432, 'blog', 'DataDBConnect', defaultPassword, 'prefer', true]);
 
         // Load AWS S3 storage provider
         const awsConfig = this.encrypt(JSON.stringify({
