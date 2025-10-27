@@ -94,7 +94,8 @@ function createFallbackPool() {
 
 // Backwards compatible interface - can be used sync after initialization
 export function getDbPool() {
-  if (isInitialized) {
+  // Check if DatabaseManager is actually initialized (not just our local flag)
+  if (isInitialized || databaseManager.initialized) {
     try {
       return databaseManager.getCurrentPool();
     } catch (error) {
