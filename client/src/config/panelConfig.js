@@ -78,9 +78,14 @@ export const PANEL_CONFIG = {
  * @returns {Array} Array of available panel configurations
  */
 export const getAvailablePanels = (hasActiveConnection) => {
-  return Object.entries(PANEL_CONFIG).filter(([key, config]) => 
-    !config.requiresDatabase || hasActiveConnection
-  );
+  return Object.entries(PANEL_CONFIG)
+    .filter(([key, config]) => !config.requiresDatabase || hasActiveConnection)
+    .map(([key, config]) => ({
+      id: key,
+      name: config.title,
+      icon: config.icon,
+      ...config
+    }));
 };
 
 /**
