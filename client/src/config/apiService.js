@@ -34,13 +34,28 @@ apiClient.interceptors.response.use(
   (error) => {
     // Handle common errors
     if (error.response?.status === 401) {
-      // Only clear tokens if the specific request was for token verification
-      // This prevents clearing tokens when other admin operations fail due to permissions/database issues
       const url = error.config?.url;
-      if (url && (url.includes('/verify') || url.includes('/auth/'))) {
+      const errorData = error.response?.data;
+      
+      // Only clear tokens for genuine authentication failures, not infrastructure issues
+      const isAuthenticationFailure = (
+        // Token verification endpoints that explicitly failed authentication
+        (url && url.includes('/verify') && errorData?.message && 
+         (errorData.message.includes('Invalid token') || 
+          errorData.message.includes('Token expired') ||
+          errorData.message.includes('No token provided'))) ||
+        // Login endpoints that failed due to invalid credentials
+        (url && url.includes('/auth/') && errorData?.message &&
+         errorData.message.includes('Invalid credentials'))
+      );
+      
+      if (isAuthenticationFailure) {
+        console.log('Authentication failure detected, clearing tokens:', errorData?.message);
         localStorage.removeItem('authToken');
         localStorage.removeItem('adminToken');
         // Optionally redirect to login
+      } else {
+        console.log('401 error but not clearing tokens - likely infrastructure issue:', errorData?.message || 'Unknown error');
       }
     }
     return Promise.reject(error);
