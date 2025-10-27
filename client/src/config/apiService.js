@@ -34,10 +34,14 @@ apiClient.interceptors.response.use(
   (error) => {
     // Handle common errors
     if (error.response?.status === 401) {
-      // Clear auth tokens on unauthorized
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('adminToken');
-      // Optionally redirect to login
+      // Only clear tokens if the specific request was for token verification
+      // This prevents clearing tokens when other admin operations fail due to permissions/database issues
+      const url = error.config?.url;
+      if (url && (url.includes('/verify') || url.includes('/auth/'))) {
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('adminToken');
+        // Optionally redirect to login
+      }
     }
     return Promise.reject(error);
   }
