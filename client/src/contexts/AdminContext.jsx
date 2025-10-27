@@ -45,18 +45,49 @@ export const AdminProvider = ({ children }) => {
           setIsAdmin(true);
           setAdminUser(data.user);
         } else {
-          localStorage.removeItem('adminToken');
+          // Only remove token for genuine authentication failures
+          const isAuthFailure = data.message && (
+            data.message.includes('Invalid token') ||
+            data.message.includes('Token expired') ||
+            data.message.includes('No token provided')
+          );
+          if (isAuthFailure) {
+            console.log('Authentication failure detected, clearing token:', data.message);
+            localStorage.removeItem('adminToken');
+          } else {
+            console.log('Non-auth error, keeping token:', data.message);
+          }
           setIsAdmin(false);
         }
       } else {
-        localStorage.removeItem('adminToken');
+        // Check if this is a genuine authentication failure or infrastructure issue
+        let shouldClearToken = false;
+        try {
+          const errorData = await response.json();
+          shouldClearToken = response.status === 401 && errorData.message && (
+            errorData.message.includes('Invalid token') ||
+            errorData.message.includes('Token expired') ||
+            errorData.message.includes('No token provided') ||
+            errorData.message.includes('Authentication required')
+          );
+          if (shouldClearToken) {
+            console.log('Authentication failure (HTTP error), clearing token:', errorData.message);
+            localStorage.removeItem('adminToken');
+          } else {
+            console.log('Infrastructure error, keeping token. Status:', response.status, 'Message:', errorData.message);
+          }
+        } catch (jsonError) {
+          // If we can't parse the error response, it's likely a network/infrastructure issue
+          console.log('Network/infrastructure error, keeping token. Status:', response.status);
+        }
         setIsAdmin(false);
       }
       
       setIsLoading(false);
     } catch (error) {
-      console.error('Admin auth check failed:', error);
-      localStorage.removeItem('adminToken');
+      console.error('Admin auth check failed (network error):', error);
+      // Network errors should not clear tokens - could be temporary connectivity issues
+      console.log('Network error detected, keeping adminToken for retry later');
       setIsAdmin(false);
       setIsLoading(false);
     }
