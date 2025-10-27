@@ -419,12 +419,20 @@ class CoreDB {
 
         const result = await this.pool.query(`
             SELECT id, name, type, host, port, database_name as database,
-                   username, ssl_mode, is_active as active, created_at, updated_at
+                   username, password_encrypted, ssl_mode, is_active as active, created_at, updated_at
             FROM database_connections
             ORDER BY name
         `);
 
-        return result.rows;
+        // Decrypt passwords for each connection
+        const connections = result.rows.map(config => {
+            if (config.password_encrypted) {
+                config.password = this.decrypt(config.password_encrypted);
+            }
+            return config;
+        });
+
+        return connections;
     }
 
     async getDatabaseConnectionById(id) {
