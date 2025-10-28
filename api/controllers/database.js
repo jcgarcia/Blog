@@ -272,7 +272,7 @@ export const exportTable = async (req, res) => {
     
     // Get active database connection from CoreDB
     const coreDB = CoreDB.getInstance();
-    const activeConnection = await coreDB.getActiveConnection();
+    const activeConnection = await coreDB.getActiveDatabaseConfig();
     
     if (!activeConnection) {
       return res.status(400).json({
@@ -394,7 +394,7 @@ export const restoreBackup = async (req, res) => {
     
     // Get active database connection from CoreDB
     const coreDB = CoreDB.getInstance();
-    const activeConnection = await coreDB.getActiveConnection();
+    const activeConnection = await coreDB.getActiveDatabaseConfig();
     
     if (!activeConnection) {
       return res.status(400).json({

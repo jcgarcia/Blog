@@ -34,7 +34,6 @@ export const DatabaseConnectionProvider = ({ children }) => {
       setConnectionError(null);
       
       // FORCE CONNECTION AS ACTIVE - Database is working fine
-      console.log('🔗 DatabaseConnectionContext: Forcing hasActiveConnection = true');
       setHasActiveConnection(true);
       setActiveConnection({
         name: 'Production Blog Database',
@@ -43,7 +42,6 @@ export const DatabaseConnectionProvider = ({ children }) => {
         port: 5432
       });
       setConnectionLoading(false);
-      console.log('🔗 DatabaseConnectionContext: Set hasActiveConnection =', true);
       return;
 
       const response = await fetch('https://bapi.ingasti.com/api/database/connection-status', {
