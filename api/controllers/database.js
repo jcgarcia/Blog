@@ -418,6 +418,13 @@ export const restoreBackup = async (req, res) => {
     });
 
     // Stream the file buffer to psql stdin
+    if (!req.file.buffer) {
+      return res.status(400).json({
+        success: false,
+        message: 'File buffer is empty or undefined. Please ensure the file was uploaded correctly.'
+      });
+    }
+    
     psql.stdin.write(req.file.buffer);
     psql.stdin.end();
 

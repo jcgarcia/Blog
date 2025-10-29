@@ -24,7 +24,7 @@ const router = express.Router();
 
 // Configure multer for file uploads
 const upload = multer({ 
-  dest: 'uploads/',
+  storage: multer.memoryStorage(), // Store files in memory so we can access req.file.buffer
   limits: { fileSize: 100 * 1024 * 1024 }, // 100MB limit
   fileFilter: (req, file, cb) => {
     // Accept .sql files only
