@@ -10,12 +10,12 @@ export async function getComments(req, res) {
     // Get all comments for the post with user information
     const result = await pool.query(`
       SELECT 
-        c.id, c.post_id, c.parent_id, c.content, c.is_approved,
+        c.id, c.post_id, c.parent_id, c.content, c.status,
         c.created_at, c.updated_at, c.user_id,
         su.username, su.display_name
       FROM comments c
       LEFT JOIN social_users su ON c.user_id = su.id
-      WHERE c.post_id = $1 AND c.is_deleted = false AND c.is_approved = true
+      WHERE c.post_id = $1 AND c.status = 'approved'
       ORDER BY c.created_at ASC
     `, [postId]);
     
@@ -30,7 +30,7 @@ export async function getComments(req, res) {
         postId: row.post_id,
         parentId: row.parent_id,
         content: row.content,
-        isApproved: row.is_approved,
+        status: row.status,
         createdAt: row.created_at,
         updatedAt: row.updated_at,
         author: {
@@ -154,8 +154,8 @@ export async function addComment(req, res) {
     
     // Insert new comment with social user ID  
     const result = await pool.query(`
-      INSERT INTO comments (post_id, user_id, parent_id, content, is_approved)
-      VALUES ($1, $2, $3, $4, true)
+      INSERT INTO comments (post_id, user_id, parent_id, content, status)
+      VALUES ($1, $2, $3, $4, 'approved')
       RETURNING id, created_at
     `, [postId, socialUserId, parentId || null, content.trim()]);
     
@@ -163,7 +163,7 @@ export async function addComment(req, res) {
     const createdAt = result.rows[0].created_at;
     
     // Update comment count in posts table
-    const countResult = await pool.query('SELECT COUNT(*) AS count FROM comments WHERE post_id = $1 AND is_deleted = false', [postId]);
+    const countResult = await pool.query('SELECT COUNT(*) AS count FROM comments WHERE post_id = $1 AND status = $2', [postId, 'approved']);
     const newCommentCount = parseInt(countResult.rows[0].count);
     
     await pool.query('UPDATE posts SET comment_count = $1 WHERE id = $2', [newCommentCount, postId]);
@@ -183,7 +183,7 @@ export async function addComment(req, res) {
         postId: parseInt(postId),
         parentId: parentId ? parseInt(parentId) : null,
         content: content.trim(),
-        isApproved: true,
+        status: 'approved',
         createdAt: createdAt,
         author: {
           id: userInfo.id,
@@ -300,12 +300,12 @@ export async function deleteComment(req, res) {
     // Soft delete comment (preserve threading structure)
     await pool.query(`
       UPDATE comments 
-      SET is_deleted = true, content = '[deleted]', updated_at = CURRENT_TIMESTAMP
+      SET status = 'deleted', content = '[deleted]', updated_at = CURRENT_TIMESTAMP
       WHERE id = $1
     `, [commentId]);
     
     // Update comment count in posts table
-    const countResult = await pool.query('SELECT COUNT(*) AS count FROM comments WHERE post_id = $1 AND is_deleted = false', [postId]);
+    const countResult = await pool.query('SELECT COUNT(*) AS count FROM comments WHERE post_id = $1 AND status = $2', [postId, 'approved']);
     const newCommentCount = parseInt(countResult.rows[0].count);
     
     await pool.query('UPDATE posts SET comment_count = $1 WHERE id = $2', [newCommentCount, postId]);
