@@ -21,6 +21,7 @@ import CognitoCallback from "./pages/auth/CognitoCallback";
 import Terms from "./pages/terms/Terms";
 import AdminLogin from "./pages/adminlogin/AdminLogin";
 import ProtectedRoute from "./components/ProtectedRoute/ProtectedRoute";
+import ShareRedirect from "./components/ShareRedirect/ShareRedirect";
 import { AdminProvider } from "./contexts/AdminContext";
 import { UserProvider } from "./contexts/UserContext";
 import { DatabaseConnectionProvider } from "./contexts/DatabaseConnectionContext";
@@ -106,6 +107,7 @@ function App() {
               } />
               <Route path="/settings" element={<Settings />} />
               <Route path="/post/:postId" element={<Single />} />
+              <Route path="/share/post/:postId" element={<ShareRedirect />} />
               <Route path="/adminlogin" element={<AdminLogin />} />
               {/* Static pages route - should be last to avoid conflicts */}
               <Route path="/page/:slug" element={<DynamicPage />} />
