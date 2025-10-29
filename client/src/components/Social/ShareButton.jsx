@@ -10,7 +10,7 @@ const ShareButton = ({ postId, postTitle, postUrl, postDescription, onShareCount
 
   // Get URLs for sharing
   const regularPostUrl = postUrl || `${window.location.origin}/post/${postId}`;
-  const sharePostUrl = postId ? `${API_URL}/share/post/${postId}` : `${API_URL}/share`;
+  const sharePostUrl = postId ? `${window.location.origin}/share/post/${postId}` : `${window.location.origin}/share`;
   
   // Ensure we have valid strings for encoding
   const safeTitle = postTitle && postTitle !== 'null' && postTitle !== 'undefined' ? postTitle : 'Check out this interesting post';
@@ -18,7 +18,7 @@ const ShareButton = ({ postId, postTitle, postUrl, postDescription, onShareCount
   
   // Encode content for sharing
   const encodedTitle = encodeURIComponent(safeTitle);
-  const encodedShareUrl = encodeURIComponent(sharePostUrl); // Use share URL for social media
+  const encodedShareUrl = encodeURIComponent(sharePostUrl); // Use frontend share URL for social media
   const encodedRegularUrl = encodeURIComponent(regularPostUrl); // Use regular URL for copy/native
   const encodedDescription = encodeURIComponent(safeDescription);
 
