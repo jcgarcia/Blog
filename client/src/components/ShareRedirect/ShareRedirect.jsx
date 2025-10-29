@@ -23,10 +23,26 @@ const ShareRedirect = () => {
         value: 1
       });
     }
+
+    // Also perform immediate redirect for better UX
+    window.location.replace(`/post/${postId}`);
   }, [postId]);
 
-  // Redirect to the actual post page
-  return <Navigate to={`/post/${postId}`} replace />;
+  // Show loading while redirecting, then fallback to React Router Navigate
+  return (
+    <div style={{ 
+      display: 'flex', 
+      justifyContent: 'center', 
+      alignItems: 'center', 
+      height: '100vh',
+      flexDirection: 'column',
+      fontFamily: 'Poppins, sans-serif'
+    }}>
+      <div style={{ fontSize: '18px', marginBottom: '20px' }}>📱 Opening post...</div>
+      <div style={{ fontSize: '14px', color: '#666' }}>Redirecting to Bedtime Blog</div>
+      <Navigate to={`/post/${postId}`} replace />
+    </div>
+  );
 };
 
 export default ShareRedirect;
