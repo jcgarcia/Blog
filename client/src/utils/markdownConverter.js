@@ -1,56 +1,66 @@
 // Simple markdown to HTML converter for WYSIWYG editor
 export const markdownToHtml = (markdown) => {
   if (!markdown) return '';
-  
-  let html = markdown;
-  
-  // Convert headers
-  html = html.replace(/^### (.*$)/gim, '<h3>$1</h3>');
-  html = html.replace(/^## (.*$)/gim, '<h2>$1</h2>');
-  html = html.replace(/^# (.*$)/gim, '<h1>$1</h1>');
-  
-  // Convert bold and italic
-  html = html.replace(/\*\*\*(.*?)\*\*\*/g, '<strong><em>$1</em></strong>');
-  html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-  html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
-  
-  // Convert underline (not standard markdown but commonly used)
-  html = html.replace(/__(.*?)__/g, '<u>$1</u>');
-  
-  // Convert line breaks to paragraphs
-  html = html.replace(/\n\n/g, '</p><p>');
-  html = html.replace(/\n/g, '<br>');
-  
-  // Wrap in paragraph tags if not already wrapped
-  if (!html.startsWith('<') && html.trim()) {
-    html = '<p>' + html + '</p>';
-  }
-  
-  // Convert unordered lists
-  html = html.replace(/^\s*[\-\*\+]\s+(.*$)/gim, '<li>$1</li>');
-  html = html.replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
-  
-  // Convert ordered lists
-  html = html.replace(/^\s*\d+\.\s+(.*$)/gim, '<li>$1</li>');
-  
-  // Fix nested list issue by ensuring proper ul/ol wrapping
-  html = html.replace(/(<li>.*?<\/li>)/gs, (match) => {
-    if (!match.includes('<ul>') && !match.includes('<ol>')) {
-      return '<ul>' + match + '</ul>';
-    }
-    return match;
+
+  let text = markdown;
+
+  // Helper: escape HTML inside code blocks
+  const escapeHtml = (str) =>
+    str.replace(/&/g, '&amp;')
+       .replace(/</g, '&lt;')
+       .replace(/>/g, '&gt;');
+
+  // 1) Handle fenced code blocks first: ```lang\ncode\n```
+  text = text.replace(/```(\w+)?\n([\s\S]*?)```/g, (match, lang, code) => {
+    const languageClass = lang ? ` class="language-${lang}"` : '';
+    return `<pre><code${languageClass}>${escapeHtml(code)}</code></pre>`;
   });
-  
+
+  // 2) Inline code `code`
+  text = text.replace(/`([^`]+)`/g, (m, code) => `<code>${escapeHtml(code)}</code>`);
+
+  // Convert headers
+  text = text.replace(/^### (.*$)/gim, '<h3>$1</h3>');
+  text = text.replace(/^## (.*$)/gim, '<h2>$1</h2>');
+  text = text.replace(/^# (.*$)/gim, '<h1>$1</h1>');
+
+  // Convert bold and italic
+  text = text.replace(/\*\*\*(.*?)\*\*\*/g, '<strong><em>$1</em></strong>');
+  text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  text = text.replace(/\*(.*?)\*/g, '<em>$1</em>');
+
+  // Convert underline (not standard markdown but commonly used)
+  text = text.replace(/__(.*?)__/g, '<u>$1</u>');
+
   // Convert images ![alt](src)
-  html = html.replace(/!\[(.*?)\]\((.*?)\)/g, '<img src="$2" alt="$1" style="max-width: 100%; height: auto; margin: 10px 0;" />');
-  
+  text = text.replace(/!\[(.*?)\]\((.*?)\)/g, '<img src="$2" alt="$1" style="max-width: 100%; height: auto; margin: 10px 0;" />');
+
   // Convert links [text](url)
-  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
-  
+  text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
+
+  // Convert unordered lists
+  text = text.replace(/^\s*[\-\*\+]\s+(.*$)/gim, '<li>$1</li>');
+  text = text.replace(/(<li>.*<\/li>)/gs, '<ul>$1</ul>');
+
+  // Convert ordered lists
+  text = text.replace(/^\s*\d+\.\s+(.*$)/gim, '<li>$1</li>');
+
+  // Convert line breaks to paragraphs (avoid breaking code blocks)
+  // First, split by double newlines to paragraphs
+  const paragraphs = text.split(/\n\n+/g);
+  const processed = paragraphs.map(p => {
+    // If paragraph already contains block-level tags, keep it
+    if (/^\s*<(h[1-6]|ul|ol|pre|blockquote|table|img|p|div)/i.test(p.trim())) {
+      return p;
+    }
+    // Otherwise replace single newlines with <br> and wrap in <p>
+    const withBreaks = p.replace(/\n/g, '<br>');
+    return `<p>${withBreaks}</p>`;
+  }).join('');
+
   // Clean up empty paragraphs
-  html = html.replace(/<p><\/p>/g, '');
-  html = html.replace(/<p>\s*<\/p>/g, '');
-  
+  const html = processed.replace(/<p>\s*<\/p>/g, '');
+
   return html;
 };
 
@@ -92,6 +102,15 @@ export const htmlToMarkdown = (html) => {
     
     return `![${alt}](${src})`;
   });
+
+  // Convert code blocks
+  markdown = markdown.replace(/<pre>\s*<code(?: class="language-([^"]+)")?>([\s\S]*?)<\/code>\s*<\/pre>/gi, (m, lang, code) => {
+    const decoded = code.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+    return lang ? `\n\n\`\`\`${lang}\n${decoded}\n\`\`\`\n\n` : `\n\n\`\`\`\n${decoded}\n\`\`\`\n\n`;
+  });
+
+  // Convert inline code
+  markdown = markdown.replace(/<code>(.*?)<\/code>/gi, (m, c) => `\\`${c.replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&')}\\``);
   
   // Convert links
   markdown = markdown.replace(/<a[^>]*href="([^"]*)"[^>]*>(.*?)<\/a>/gi, '[$2]($1)');
