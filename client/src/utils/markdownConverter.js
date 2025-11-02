@@ -110,7 +110,7 @@ export const htmlToMarkdown = (html) => {
   });
 
   // Convert inline code
-  markdown = markdown.replace(/<code>(.*?)<\/code>/gi, (m, c) => `\\`${c.replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&')}\\``);
+  markdown = markdown.replace(/<code>(.*?)<\/code>/gi, (m, c) => '`' + c.replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&') + '`');
   
   // Convert links
   markdown = markdown.replace(/<a[^>]*href="([^"]*)"[^>]*>(.*?)<\/a>/gi, '[$2]($1)');
