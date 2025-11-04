@@ -279,13 +279,13 @@ class CoreDB {
             { key: 'enable_auto_save', value: '"true"', group_name: 'general', is_public: true },
             { key: 'auto_save_interval', value: '"30"', group_name: 'general', is_public: true },
             
-            // OAuth configuration - Loaded from environment variables (secure)
+            // OAuth configuration - Configure through admin panel/ops interface
             { key: 'oauth_frontend_url', value: '"https://bedtime.ingasti.com"', group_name: 'oauth', is_public: false },
-            { key: 'oauth_cognito_user_pool_id', value: process.env.COGNITO_USER_POOL_ID ? `"${process.env.COGNITO_USER_POOL_ID}"` : '""', group_name: 'oauth', is_public: false },
-            { key: 'oauth_cognito_client_id', value: process.env.COGNITO_CLIENT_ID ? `"${process.env.COGNITO_CLIENT_ID}"` : '""', group_name: 'oauth', is_public: false },
-            { key: 'oauth_cognito_client_secret', value: process.env.COGNITO_CLIENT_SECRET ? `"${process.env.COGNITO_CLIENT_SECRET}"` : '""', group_name: 'oauth', is_public: false },
-            { key: 'oauth_cognito_region', value: process.env.COGNITO_REGION || '"eu-west-2"', group_name: 'oauth', is_public: false },
-            { key: 'oauth_cognito_domain', value: process.env.COGNITO_DOMAIN ? `"${process.env.COGNITO_DOMAIN}"` : '""', group_name: 'oauth', is_public: false },
+            { key: 'oauth_cognito_user_pool_id', value: '""', group_name: 'oauth', is_public: false },
+            { key: 'oauth_cognito_client_id', value: '""', group_name: 'oauth', is_public: false },
+            { key: 'oauth_cognito_client_secret', value: '""', group_name: 'oauth', is_public: false },
+            { key: 'oauth_cognito_region', value: '"eu-west-2"', group_name: 'oauth', is_public: false },
+            { key: 'oauth_cognito_domain', value: '""', group_name: 'oauth', is_public: false },
             
             // Media storage configuration
             { key: 'media_storage_type', value: '"aws"', group_name: 'media', is_public: false },
