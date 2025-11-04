@@ -341,21 +341,26 @@ export const updateSocialMediaLinks = async (req, res) => {
 // Get OAuth configuration (admin only)
 export const getOAuthSettings = async (req, res) => {
   try {
-    // Check if group_name column exists
-    const hasGroupColumn = await pool.query(
-      "SELECT column_name FROM information_schema.columns WHERE table_name = 'settings' AND column_name = 'group_name'"
-    );
+    // Read OAuth settings from CoreDB
+    const { default: CoreDB } = await import('../services/CoreDB.js');
+    const coreDB = CoreDB.getInstance();
     
-    let query = "SELECT key, value FROM settings";
-    if (hasGroupColumn.rows.length > 0) {
-      query += " WHERE group_name = 'oauth'";
-    } else {
-      // Fallback: filter by oauth-related keys
-      query += " WHERE key LIKE 'oauth_%'";
+    const oauthKeys = [
+      'oauth_frontend_url',
+      'oauth_cognito_user_pool_id',
+      'oauth_cognito_client_id',
+      'oauth_cognito_client_secret',
+      'oauth_cognito_region',
+      'oauth_cognito_domain'
+    ];
+    
+    const result = { rows: [] };
+    for (const key of oauthKeys) {
+      const value = await coreDB.getConfig(key);
+      if (value !== null) {
+        result.rows.push({ key, value: typeof value === 'string' ? value : JSON.stringify(value) });
+      }
     }
-    query += " ORDER BY key";
-    
-    const result = await pool.query(query);
     
     const oauthConfig = {
       google: {
@@ -498,38 +503,13 @@ export const updateOAuthSettings = async (req, res) => {
       );
     }
     
-    // Check available columns
-    const hasGroupColumn = await pool.query(
-      "SELECT column_name FROM information_schema.columns WHERE table_name = 'settings' AND column_name = 'group_name'"
-    );
-    const hasUpdatedAtColumn = await pool.query(
-      "SELECT column_name FROM information_schema.columns WHERE table_name = 'settings' AND column_name = 'updated_at'"
-    );
+    // Update CoreDB with OAuth settings
+    const { default: CoreDB } = await import('../services/CoreDB.js');
+    const coreDB = CoreDB.getInstance();
     
     // Update database
     for (const update of updates) {
-      let insertQuery = 'INSERT INTO settings (key, value';
-      let insertValues = '($1, $2';
-      let updateQuery = 'DO UPDATE SET value = $2';
-      let params = [update.key, update.value];
-      let paramIndex = 2;
-      
-      if (hasGroupColumn.rows.length > 0) {
-        insertQuery += ', group_name';
-        insertValues += ', $' + (++paramIndex);
-        updateQuery += ', group_name = $' + paramIndex;
-        params.push('oauth');
-      }
-      
-      if (hasUpdatedAtColumn.rows.length > 0) {
-        insertQuery += ', updated_at';
-        insertValues += ', CURRENT_TIMESTAMP';
-        updateQuery += ', updated_at = CURRENT_TIMESTAMP';
-      }
-      
-      insertQuery += ') VALUES ' + insertValues + ') ON CONFLICT (key) ' + updateQuery;
-      
-      await pool.query(insertQuery, params);
+      await coreDB.setConfig(update.key, JSON.stringify(update.value), 'oauth', false);
     }
     
     res.status(200).json({
