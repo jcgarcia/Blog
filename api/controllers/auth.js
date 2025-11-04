@@ -233,25 +233,65 @@ export const cognitoLogin = async (req, res) => {
       });
     }
 
-    // Get Cognito configuration from settings
-    const settingsQuery = `
-      SELECT key, value FROM settings 
-      WHERE key IN ('oauth_cognito_user_pool_id', 'oauth_cognito_client_id', 'oauth_cognito_client_secret', 
-                    'oauth_cognito_region', 'oauth_cognito_domain') 
-      AND group_name = 'oauth'
-    `;
-    const settingsResult = await pool.query(settingsQuery);
+    // Get Cognito configuration from CoreDB
+    const getCognitoSettings = async () => {
+      try {
+        // Import CoreDB to access system configuration
+        const { default: CoreDB } = await import('../services/CoreDB.js');
+        const coreDB = CoreDB.getInstance();
+        
+        // Get Cognito settings from CoreDB system_config table
+        const settingsKeys = [
+          'oauth_cognito_user_pool_id',
+          'oauth_cognito_client_id', 
+          'oauth_cognito_client_secret',
+          'oauth_cognito_region',
+          'oauth_cognito_domain'
+        ];
+        
+        const settings = [];
+        for (const key of settingsKeys) {
+          const value = await coreDB.getConfig(key);
+          if (value) {
+            settings.push({ key, value: typeof value === 'string' ? value : JSON.stringify(value) });
+          }
+        }
+        
+        if (settings.length === 0) {
+          console.log('🔄 No Cognito settings found in CoreDB, trying DataDB fallback...');
+          // Fallback to DataDB for backwards compatibility
+          const fallbackResult = await pool.query(
+            "SELECT key, value FROM settings WHERE key LIKE 'oauth_cognito_%'"
+          );
+          return fallbackResult.rows;
+        }
+        
+        return settings;
+      } catch (error) {
+        console.error('Error fetching Cognito settings from CoreDB:', error);
+        // Fallback to DataDB
+        console.log('🔄 Falling back to DataDB settings table...');
+        const fallbackResult = await pool.query(
+          "SELECT key, value FROM settings WHERE key LIKE 'oauth_cognito_%'"
+        );
+        return fallbackResult.rows;
+      }
+    };
+
+    const settingsRows = await getCognitoSettings();
     
-    if (settingsResult.rows.length === 0) {
+    if (settingsRows.length === 0) {
+      console.error('❌ No Cognito configuration found in database');
+      console.error('💡 Please check if OAuth settings are configured in admin panel');
       return res.status(500).json({
         success: false,
-        message: 'Cognito configuration not found'
+        message: 'Cognito configuration not found. Please configure AWS Cognito in the admin panel.'
       });
     }
 
     // Build config object from individual settings
     const cognitoConfig = {};
-    settingsResult.rows.forEach(row => {
+    settingsRows.forEach(row => {
       switch (row.key) {
         case 'oauth_cognito_user_pool_id':
           cognitoConfig.userPoolId = row.value;
@@ -271,14 +311,26 @@ export const cognitoLogin = async (req, res) => {
       }
     });
 
-    // Validate required config values
+    // Validate required config values with detailed error reporting
     const { domain, clientId, clientSecret, userPoolId, region } = cognitoConfig;
-    if (!domain || !clientId || !clientSecret || !userPoolId || !region) {
+    const missingFields = [];
+    if (!domain) missingFields.push('domain');
+    if (!clientId) missingFields.push('clientId');
+    if (!clientSecret) missingFields.push('clientSecret');
+    if (!userPoolId) missingFields.push('userPoolId');
+    if (!region) missingFields.push('region');
+    
+    if (missingFields.length > 0) {
+      console.error('❌ Incomplete Cognito configuration. Missing:', missingFields);
+      console.error('📋 Available settings:', Object.keys(cognitoConfig));
+      console.error('🔍 Found settings count:', settingsRows.length);
       return res.status(500).json({
         success: false,
-        message: 'Incomplete Cognito configuration'
+        message: `Incomplete Cognito configuration. Missing: ${missingFields.join(', ')}. Please configure these values in the admin panel.`
       });
     }
+
+    console.log('✅ Cognito configuration loaded successfully');
 
     // Exchange authorization code for tokens
     const tokenUrl = `https://${domain}/oauth2/token`;

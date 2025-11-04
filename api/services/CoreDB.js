@@ -281,6 +281,11 @@ class CoreDB {
             
             // OAuth configuration
             { key: 'oauth_frontend_url', value: '"https://bedtime.ingasti.com"', group_name: 'oauth', is_public: false },
+            { key: 'oauth_cognito_user_pool_id', value: '"eu-west-2_iCiMQwyNs"', group_name: 'oauth', is_public: false },
+            { key: 'oauth_cognito_client_id', value: '"50bvr2ect5ja74rc3qtdb3jn1a"', group_name: 'oauth', is_public: false },
+            { key: 'oauth_cognito_client_secret', value: '"your-cognito-client-secret"', group_name: 'oauth', is_public: false },
+            { key: 'oauth_cognito_region', value: '"eu-west-2"', group_name: 'oauth', is_public: false },
+            { key: 'oauth_cognito_domain', value: '"blog-auth-1756980364.auth.eu-west-2.amazoncognito.com"', group_name: 'oauth', is_public: false },
             
             // Media storage configuration
             { key: 'media_storage_type', value: '"aws"', group_name: 'media', is_public: false },
