@@ -1,5 +1,6 @@
 import { getDbPool } from "../db.js";
 import credentialManager from "../services/awsCredentialManager.js";
+import SystemConfigManager from '../utils/systemConfigPostgreSQL.js';
 
 const pool = getDbPool();
 
@@ -916,35 +917,27 @@ export const updateAwsConfig = async (req, res) => {
 // Get Media Storage Configuration
 export const getMediaStorageConfig = async (req, res) => {
   try {
-    const pool = getDbPool();
-    const result = await pool.query(
-      "SELECT key, value, type FROM settings WHERE key IN ('media_storage_type', 'aws_config', 'oci_config')"
-    );
+    const configManager = new SystemConfigManager();
+    
+    // Get storage type and configurations from CoreDB system_config table
+    const storageType = await configManager.getConfig('media.storage_type') || 
+                       await configManager.getConfig('media_storage_type') || 'internal';
+    
+    const awsConfig = await configManager.getConfig('aws.config') || 
+                     await configManager.getConfig('aws_config') || {};
+    
+    const ociConfig = await configManager.getConfig('oci_config') || {};
     
     const config = {
-      storageType: 'internal', // default
-      awsConfig: {},
-      ociConfig: {}
+      storageType: storageType,
+      awsConfig: typeof awsConfig === 'string' ? JSON.parse(awsConfig) : awsConfig,
+      ociConfig: typeof ociConfig === 'string' ? JSON.parse(ociConfig) : ociConfig
     };
     
-    result.rows.forEach(row => {
-      if (row.key === 'media_storage_type') {
-        config.storageType = row.value || 'internal';
-      } else if (row.key === 'aws_config') {
-        try {
-          config.awsConfig = JSON.parse(row.value || '{}');
-        } catch (e) {
-          console.error('Error parsing aws_config JSON:', e);
-          config.awsConfig = {};
-        }
-      } else if (row.key === 'oci_config') {
-        try {
-          config.ociConfig = JSON.parse(row.value || '{}');
-        } catch (e) {
-          console.error('Error parsing oci_config JSON:', e);
-          config.ociConfig = {};
-        }
-      }
+    console.log('🔧 Media Storage Config Retrieved:', {
+      storageType: config.storageType,
+      hasAwsConfig: !!config.awsConfig && Object.keys(config.awsConfig).length > 0,
+      hasOciConfig: !!config.ociConfig && Object.keys(config.ociConfig).length > 0
     });
     
     res.status(200).json({
