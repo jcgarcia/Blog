@@ -1,32 +1,26 @@
-# api/Dockerfile - Ultra-optimized production build
-# Build stage - compile native dependencies
+# api/Dockerfile.optimized - Ultra-lightweight production build
+# Build stage - install dependencies and prepare app
 FROM node:20-alpine AS builder
 WORKDIR /app
 
-# Install build dependencies for native modules (argon2, sharp, etc.)
-RUN apk add --no-cache \
-    python3 \
-    make \
-    g++ \
-    && corepack enable \
-    && corepack prepare pnpm@latest --activate
-
-# Copy package files
+# Install pnpm and production dependencies only
 COPY package.json pnpm-lock.yaml ./
-
-# Install all dependencies (including devDependencies for building)
-RUN pnpm install --frozen-lockfile
+RUN npm install -g pnpm@latest && \
+    pnpm install --frozen-lockfile --prod --ignore-scripts && \
+    pnpm store prune
 
 # Copy source code
 COPY . .
 
-# Remove development files
+# Remove development files and unnecessary items
 RUN rm -rf \
-    .git* \
+    node_modules/.cache \
+    node_modules/.pnpm \
     *.md \
+    .git* \
     .env.example \
-    docs/ \
     tests/ \
+    docs/ \
     *.log
 
 # Production stage - minimal runtime
@@ -36,15 +30,14 @@ WORKDIR /app
 # Install only essential runtime packages
 RUN apk add --no-cache \
     curl \
-    dumb-init \
-    && corepack enable \
-    && rm -rf /var/cache/apk/*
+    dumb-init && \
+    rm -rf /var/cache/apk/*
 
 # Create non-root user for security
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S appuser -u 1001 -G nodejs
 
-# Copy built application from builder stage
+# Copy only necessary files from builder
 COPY --from=builder --chown=appuser:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=appuser:nodejs /app/package.json ./
 COPY --from=builder --chown=appuser:nodejs /app/*.js ./
@@ -53,20 +46,16 @@ COPY --from=builder --chown=appuser:nodejs /app/middleware ./middleware
 COPY --from=builder --chown=appuser:nodejs /app/routes ./routes
 COPY --from=builder --chown=appuser:nodejs /app/config ./config
 COPY --from=builder --chown=appuser:nodejs /app/utils ./utils
-COPY --from=builder --chown=appuser:nodejs /app/services ./services
-
-# Create necessary directories
-RUN mkdir -p uploads && chown appuser:nodejs uploads
 
 # Switch to non-root user
 USER appuser
-
-EXPOSE 5000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD curl -f http://localhost:5000/health || exit 1
 
-# Use dumb-init for proper signal handling
+EXPOSE 5000
+
+# Use dumb-init to handle signals properly
 ENTRYPOINT ["dumb-init", "--"]
-CMD ["pnpm", "start"]
+CMD ["node", "index.js"]
