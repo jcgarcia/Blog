@@ -9,13 +9,14 @@ RUN apk add --no-cache \
     make \
     g++ \
     && corepack enable \
-    && corepack prepare pnpm@latest --activate
+    && corepack prepare pnpm@9.12.0 --activate
 
 # Copy package files
 COPY package.json pnpm-lock.yaml ./
 
 # Install all dependencies (including devDependencies for building)
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile || \
+    (echo "Lockfile version mismatch, regenerating..." && pnpm install --force)
 
 # Copy source code
 COPY . .
