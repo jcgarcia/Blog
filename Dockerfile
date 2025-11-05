@@ -21,8 +21,10 @@ WORKDIR /app
 COPY --from=backend-build /app/api ./api
 # Copy frontend build
 COPY --from=frontend-build /app/client/dist ./client/dist
-# Install pm2 for process management
-RUN npm install -g pm2
+# Install pm2 for process management and postgresql-client for database backups
+RUN npm install -g pm2 && \
+    apk update && \
+    apk add --no-cache postgresql-client
 
 # Set environment variables (override in production)
 ENV NODE_ENV=production
