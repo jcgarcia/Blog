@@ -19,6 +19,7 @@ import awsRoutes from "./routes/aws.js";
 import metaRoutes from "./routes/meta.js";
 import coredbRoutes from "./routes/coredb.js";
 import emergencyRoutes from "./routes/emergency.js";
+import backupRoutes from "./controllers/backup.js";
 import cookieParser from "cookie-parser";
 import multer from "multer";
 import passport from "passport";
@@ -30,6 +31,8 @@ import { closeDbPool, databaseManager } from "./db.js";
 import { createHealthCheckEndpoint, createConnectionInfoEndpoint } from "./utils/dbHealthCheck.js";
 import { initializeDatabaseMigrations } from "./migrations.js";
 import CoreDB from "./services/CoreDB.js";
+import backupStorageService from "./services/backupStorageService.js";
+import backupSchedulerService from "./services/backupSchedulerService.js";
 
 // Load environment variables
 dotenv.config({ path: '.env.local' });
@@ -227,6 +230,7 @@ app.use("/api/aws", awsRoutes);
 app.use("/api/coredb", coredbRoutes);
 app.use("/api/meta", metaRoutes);
 app.use("/api/emergency", emergencyRoutes);
+app.use("/api/backup", backupRoutes);
 
 // Social media sharing routes (for crawlers)
 import { socialCrawlerMiddleware } from './middleware/socialCrawler.js';
@@ -309,7 +313,18 @@ const server = app.listen(PORT, async () => {
       .then(async () => {
         console.log('✅ DatabaseManager initialized successfully');
         
-        console.log('✅ Database backup functionality available via existing database endpoints');
+        // Initialize backup services after database is ready
+        try {
+          await backupStorageService.initialize();
+          console.log('✅ BackupStorageService initialized successfully');
+          
+          await backupSchedulerService.initialize();
+          console.log('✅ BackupSchedulerService initialized successfully');
+          console.log('📅 S3-based scheduled backup system is ready');
+        } catch (error) {
+          console.error('⚠️ Backup services initialization failed:', error.message);
+          console.error('🔄 S3 backup functionality may be limited');
+        }
       })
       .catch((error) => {
         console.error('⚠️ DatabaseManager initialization failed:', error.message);

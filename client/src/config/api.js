@@ -117,6 +117,24 @@ export const API_ENDPOINTS = {
     EXPORT_TABLE: (table) => `${API_URL}/api/database/export/${table}`,
     RESTORE: `${API_URL}/api/database/restore`,
   },
+
+  // S3 Backup management (separate from database backups)
+  BACKUP: {
+    STATUS: `${API_URL}/api/backup/status`,
+    LIST: `${API_URL}/api/backup/list`,
+    CREATE: `${API_URL}/api/backup/create`,
+    DOWNLOAD: (filename) => `${API_URL}/api/backup/download/${filename}`,
+    DELETE: (filename) => `${API_URL}/api/backup/${filename}`,
+    SCHEDULES: `${API_URL}/api/backup/schedules`,
+    CREATE_SCHEDULE: `${API_URL}/api/backup/schedules`,
+    UPDATE_SCHEDULE: (id) => `${API_URL}/api/backup/schedules/${id}`,
+    DELETE_SCHEDULE: (id) => `${API_URL}/api/backup/schedules/${id}`,
+    START_SCHEDULE: (id) => `${API_URL}/api/backup/schedules/${id}/start`,
+    STOP_SCHEDULE: (id) => `${API_URL}/api/backup/schedules/${id}/stop`,
+    TRIGGER_SCHEDULE: (id) => `${API_URL}/api/backup/schedules/${id}/trigger`,
+    CLEANUP: `${API_URL}/api/backup/cleanup`,
+    INITIALIZE: `${API_URL}/api/backup/initialize`,
+  },
 };
 
 // Export the base URL for media management

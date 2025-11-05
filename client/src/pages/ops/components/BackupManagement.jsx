@@ -75,27 +75,9 @@ const BackupManagement = () => {
   const loadBackupStatus = async () => {
     try {
       setLoading(true);
-      // Use the existing database endpoints properly
-      const connectionStatus = await apiRequest(API_ENDPOINTS.DATABASE.CONNECTIONS);
-      const healthStatus = await apiRequest(API_ENDPOINTS.DATABASE.HEALTH);
-      
-      setBackupStatus({
-        storage: {
-          totalBackups: backups.length,
-          totalSize: backups.reduce((sum, backup) => sum + (backup.size || 0), 0),
-          latestBackup: backups.length > 0 ? backups[0] : null,
-          withinRetentionPolicy: true,
-          retentionPolicy: {
-            currentCount: backups.length,
-            maxBackups: 10
-          }
-        },
-        scheduler: {
-          totalSchedules: 0, // Scheduling feature not implemented yet
-          activeSchedules: 0,
-          inactiveSchedules: 0
-        }
-      });
+      // Use the S3 backup status endpoint
+      const data = await apiRequest(API_ENDPOINTS.BACKUP.STATUS);
+      setBackupStatus(data.data);
     } catch (err) {
       setError(`Failed to load backup status: ${err.message}`);
     } finally {
@@ -105,9 +87,9 @@ const BackupManagement = () => {
 
   const loadBackups = async () => {
     try {
-      // Use the existing database backups endpoint
-      const data = await apiRequest(API_ENDPOINTS.DATABASE.BACKUPS);
-      setBackups(data.backups || []);
+      // Use the S3 backup list endpoint
+      const data = await apiRequest(API_ENDPOINTS.BACKUP.LIST);
+      setBackups(data.data.backups || []);
     } catch (err) {
       setError(`Failed to load backups: ${err.message}`);
     }
@@ -115,9 +97,10 @@ const BackupManagement = () => {
 
   const loadSchedules = async () => {
     try {
-      // Scheduling feature not implemented yet - use empty arrays
-      setSchedules([]);
-      setScheduleTemplates({});
+      // Use the S3 backup schedules endpoint
+      const data = await apiRequest(API_ENDPOINTS.BACKUP.SCHEDULES);
+      setSchedules(data.data.schedules || []);
+      setScheduleTemplates(data.data.templates || {});
     } catch (err) {
       setError(`Failed to load schedules: ${err.message}`);
     }
@@ -129,37 +112,12 @@ const BackupManagement = () => {
       setError(null);
       setSuccess(null);
       
-      // Use the existing database backup endpoint (streams backup directly)
-      const response = await fetch(API_ENDPOINTS.DATABASE.BACKUP, {
-        method: 'GET', // The existing endpoint uses GET to stream the backup
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
-        }
+      // Use the S3 backup creation endpoint
+      const data = await apiRequest(API_ENDPOINTS.BACKUP.CREATE, { 
+        method: 'POST' 
       });
       
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `HTTP ${response.status}`);
-      }
-      
-      // Get filename from Content-Disposition header
-      const contentDisposition = response.headers.get('Content-Disposition');
-      const filename = contentDisposition 
-        ? contentDisposition.split('filename=')[1]?.replace(/"/g, '') 
-        : `backup-${new Date().toISOString().split('T')[0]}.sql`;
-      
-      // Create blob and download
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-      
-      setSuccess(`Manual backup downloaded successfully: ${filename}`);
+      setSuccess(`Manual backup created and stored in S3: ${data.data.filename}`);
       await loadBackups();
       await loadBackupStatus();
     } catch (err) {
@@ -171,18 +129,27 @@ const BackupManagement = () => {
 
   const downloadBackup = async (filename) => {
     try {
-      // Note: The existing system streams backups directly, doesn't store them
-      // This function is kept for UI compatibility but won't work with stored backups
-      setError('Download not available - backups are generated on-demand. Use "Create Manual Backup" instead.');
+      // Get signed download URL from S3
+      const data = await apiRequest(API_ENDPOINTS.BACKUP.DOWNLOAD(filename));
+      window.open(data.data.downloadUrl, '_blank');
     } catch (err) {
       setError(`Failed to download backup: ${err.message}`);
     }
   };
 
   const deleteBackup = async (filename) => {
+    if (!confirm(`Are you sure you want to delete backup: ${filename}?`)) {
+      return;
+    }
+
     try {
-      // Note: The existing system doesn't store backups, so delete is not applicable
-      setError('Delete not available - backups are generated on-demand and not stored on server.');
+      await apiRequest(API_ENDPOINTS.BACKUP.DELETE(filename), { 
+        method: 'DELETE' 
+      });
+      
+      setSuccess(`Backup deleted: ${filename}`);
+      await loadBackups();
+      await loadBackupStatus();
     } catch (err) {
       setError(`Failed to delete backup: ${err.message}`);
     }
@@ -198,7 +165,7 @@ const BackupManagement = () => {
         return;
       }
 
-      await apiRequest('/api/backup/schedules', {
+      await apiRequest(API_ENDPOINTS.BACKUP.CREATE_SCHEDULE, {
         method: 'POST',
         body: JSON.stringify(newScheduleForm)
       });
@@ -220,7 +187,11 @@ const BackupManagement = () => {
   const toggleSchedule = async (scheduleId, currentStatus) => {
     try {
       const action = currentStatus === 'running' ? 'stop' : 'start';
-      await apiRequest(`/api/backup/schedules/${scheduleId}/${action}`, {
+      const endpoint = action === 'start' 
+        ? API_ENDPOINTS.BACKUP.START_SCHEDULE(scheduleId)
+        : API_ENDPOINTS.BACKUP.STOP_SCHEDULE(scheduleId);
+      
+      await apiRequest(endpoint, {
         method: 'POST'
       });
       
@@ -234,7 +205,7 @@ const BackupManagement = () => {
   const triggerSchedule = async (scheduleId) => {
     try {
       setLoading(true);
-      await apiRequest(`/api/backup/schedules/${scheduleId}/trigger`, {
+      await apiRequest(API_ENDPOINTS.BACKUP.TRIGGER_SCHEDULE(scheduleId), {
         method: 'POST'
       });
       
@@ -254,7 +225,7 @@ const BackupManagement = () => {
     }
 
     try {
-      await apiRequest(`/api/backup/schedules/${scheduleId}`, {
+      await apiRequest(API_ENDPOINTS.BACKUP.DELETE_SCHEDULE(scheduleId), {
         method: 'DELETE'
       });
       
@@ -361,37 +332,53 @@ const BackupManagement = () => {
 
   const renderBackupsTab = () => (
           <div className="backup-list">
-        <div className="feature-notice">
-          <h3>📄 On-Demand Backup System</h3>
-          <p>
-            This system generates database backups on-demand and streams them directly to your browser for download. 
-            Backups are not stored on the server for security and storage efficiency.
-          </p>
-          <p>
-            <strong>To create a backup:</strong> Use the "Create Manual Backup" button in the Status tab or visit the 
-            <strong> Database</strong> panel where this functionality was originally implemented.
-          </p>
-        </div>
-        
-        <div className="backup-actions-info">
-          <h4>Available Backup Operations:</h4>
-          <ul>
-            <li><strong>Manual Backup:</strong> Generate and download a complete database backup</li>
-            <li><strong>Table Export:</strong> Export specific tables (available in Database panel)</li>
-            <li><strong>Database Restore:</strong> Upload and restore from backup files (available in Database panel)</li>
-          </ul>
-        </div>
+        <h3>Stored S3 Backups ({backups.length})</h3>
+        {backups.length === 0 ? (
+          <div className="no-data">No backups found. Create your first backup!</div>
+        ) : (
+          <div className="backup-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>Filename</th>
+                  <th>Size</th>
+                  <th>Created</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {backups.map((backup) => (
+                  <tr key={backup.s3Key}>
+                    <td className="backup-filename">{backup.filename}</td>
+                    <td>{formatBytes(backup.size)}</td>
+                    <td>{formatDate(backup.lastModified)}</td>
+                    <td className="backup-actions">
+                      <button 
+                        className="btn btn-small btn-secondary"
+                        onClick={() => downloadBackup(backup.filename)}
+                      >
+                        Download
+                      </button>
+                      <button 
+                        className="btn btn-small btn-danger"
+                        onClick={() => deleteBackup(backup.filename)}
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
   );
 
   const renderSchedulesTab = () => (
     <div className="backup-schedules">
-      <div className="feature-notice">
-        <h3>🚧 Scheduled Backups - Coming Soon</h3>
-        <p>Automated backup scheduling is planned for a future release. Currently, you can create manual backups using the existing functionality in the <strong>Database</strong> panel or by clicking "Create Manual Backup" in the Status tab.</p>
-      </div>
-      <div className="create-schedule" style={{opacity: 0.5, pointerEvents: 'none'}}>
-        <h3>Create New Schedule (Not Available Yet)</h3>
+      <div className="create-schedule">
+        <h3>Create New Schedule</h3>
         <div className="schedule-form">
           <div className="form-row">
             <div className="form-group">
