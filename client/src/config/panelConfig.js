@@ -33,6 +33,13 @@ export const PANEL_CONFIG = {
     description: 'Authentication settings',
     path: '/ops/auth'
   },
+  backups: { 
+    requiresDatabase: false, 
+    icon: '💿', 
+    title: 'Backups',
+    description: 'Database backup scheduling and management',
+    path: '/ops/backups'
+  },
   
   // DataDB-dependent panels (require PostgreSQL connection)
   content: { 

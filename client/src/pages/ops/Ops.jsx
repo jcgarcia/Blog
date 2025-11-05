@@ -13,6 +13,7 @@ import Analytics from './components/Analytics';
 import MediaManagement from './components/MediaManagement';
 import PageManagement from './components/PageManagement';
 import DatabaseManagement from './components/DatabaseManagement';
+import BackupManagement from './components/BackupManagement';
 
 export default function Ops() {
   const [activeTab, setActiveTab] = useState('content');
@@ -49,6 +50,8 @@ export default function Ops() {
         return <CognitoAdminPanel />;
       case 'database':
         return <DatabaseManagement />;
+      case 'backups':
+        return <BackupManagement />;
       default:
         return <ContentManagement />;
     }
