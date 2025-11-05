@@ -11,18 +11,38 @@ export default function Login() {
   const { userLogin } = useUser();
   const navigate = useNavigate();
 
-  // Load Cognito configuration
+  // Load Cognito configuration from API
   useEffect(() => {
     const loadCognitoConfig = async () => {
       try {
-        // You can load this from your settings API or use the saved config
+        const apiUrl = process.env.REACT_APP_API_URL || 'https://bapi.ingasti.com';
+        const response = await fetch(`${apiUrl}/api/settings`);
+        const settings = await response.json();
+        
+        if (settings['oauth.cognito_client_id'] && settings['oauth.cognito_domain']) {
+          setCognitoConfig({
+            domain: settings['oauth.cognito_domain'],
+            clientId: settings['oauth.cognito_client_id'],
+            redirectUri: (settings['oauth.frontend_url'] || window.location.origin) + '/auth/callback'
+          });
+          console.log('✅ Cognito configuration loaded from API');
+        } else {
+          console.warn('⚠️ Cognito configuration not found in API settings');
+          // Fallback to hardcoded values if API fails
+          setCognitoConfig({
+            domain: 'blog-auth-1756980364.auth.eu-west-2.amazoncognito.com',
+            clientId: '50bvr2ect5ja74rc3qtdb3jn1a',
+            redirectUri: window.location.origin + '/auth/callback'
+          });
+        }
+      } catch (error) {
+        console.error('Failed to load Cognito config from API:', error);
+        // Fallback to hardcoded values if API fails
         setCognitoConfig({
           domain: 'blog-auth-1756980364.auth.eu-west-2.amazoncognito.com',
           clientId: '50bvr2ect5ja74rc3qtdb3jn1a',
           redirectUri: window.location.origin + '/auth/callback'
         });
-      } catch (error) {
-        console.error('Failed to load Cognito config:', error);
       }
     };
     

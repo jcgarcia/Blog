@@ -1,21 +1,62 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './CognitoLogin.css';
 
 export default function CognitoLogin() {
   const [isLoading, setIsLoading] = useState(false);
+  const [cognitoConfig, setCognitoConfig] = useState(null);
+
+  // Load Cognito configuration from API
+  useEffect(() => {
+    const loadCognitoConfig = async () => {
+      try {
+        const apiUrl = process.env.REACT_APP_API_URL || 'https://bapi.ingasti.com';
+        const response = await fetch(`${apiUrl}/api/settings`);
+        const settings = await response.json();
+        
+        if (settings['oauth.cognito_client_id'] && settings['oauth.cognito_domain']) {
+          setCognitoConfig({
+            domain: settings['oauth.cognito_domain'],
+            clientId: settings['oauth.cognito_client_id'],
+            redirectUri: (settings['oauth.frontend_url'] || window.location.origin) + '/ops/cognito-callback'
+          });
+          console.log('✅ Cognito configuration loaded from API for CognitoLogin');
+        } else {
+          console.warn('⚠️ Cognito configuration not found in API settings');
+          // Fallback to hardcoded values if API fails
+          setCognitoConfig({
+            domain: 'blog-auth-1756980364.auth.eu-west-2.amazoncognito.com',
+            clientId: '50bvr2ect5ja74rc3qtdb3jn1a',
+            redirectUri: window.location.origin + '/ops/cognito-callback'
+          });
+        }
+      } catch (error) {
+        console.error('Failed to load Cognito config from API:', error);
+        // Fallback to hardcoded values if API fails
+        setCognitoConfig({
+          domain: 'blog-auth-1756980364.auth.eu-west-2.amazoncognito.com',
+          clientId: '50bvr2ect5ja74rc3qtdb3jn1a',
+          redirectUri: window.location.origin + '/ops/cognito-callback'
+        });
+      }
+    };
+    
+    loadCognitoConfig();
+  }, []);
 
   const handleCognitoLogin = () => {
+    if (!cognitoConfig) {
+      console.error('Cognito configuration not loaded');
+      return;
+    }
+    
     setIsLoading(true);
     
-    // Cognito Hosted UI URL
-    const cognitoDomain = 'blog-auth-1756980364.auth.eu-west-2.amazoncognito.com';
-    const clientId = '50bvr2ect5ja74rc3qtdb3jn1a';
-    const redirectUri = encodeURIComponent(window.location.origin + '/ops/cognito-callback');
+    const redirectUri = encodeURIComponent(cognitoConfig.redirectUri);
     const responseType = 'code';
     const scope = 'email+openid+profile';
     
-    const cognitoUrl = `https://${cognitoDomain}/oauth2/authorize?` +
-      `client_id=${clientId}&` +
+    const cognitoUrl = `https://${cognitoConfig.domain}/oauth2/authorize?` +
+      `client_id=${cognitoConfig.clientId}&` +
       `response_type=${responseType}&` +
       `scope=${scope}&` +
       `redirect_uri=${redirectUri}`;
@@ -25,12 +66,15 @@ export default function CognitoLogin() {
   };
 
   const handleSignUp = () => {
-    const cognitoDomain = 'blog-auth-1756980364.auth.eu-west-2.amazoncognito.com';
-    const clientId = '50bvr2ect5ja74rc3qtdb3jn1a';
-    const redirectUri = encodeURIComponent(window.location.origin + '/ops/cognito-callback');
+    if (!cognitoConfig) {
+      console.error('Cognito configuration not loaded');
+      return;
+    }
     
-    const signUpUrl = `https://${cognitoDomain}/signup?` +
-      `client_id=${clientId}&` +
+    const redirectUri = encodeURIComponent(cognitoConfig.redirectUri);
+    
+    const signUpUrl = `https://${cognitoConfig.domain}/signup?` +
+      `client_id=${cognitoConfig.clientId}&` +
       `response_type=code&` +
       `scope=email+openid+profile&` +
       `redirect_uri=${redirectUri}`;
@@ -54,11 +98,15 @@ export default function CognitoLogin() {
             <button 
               className="btn-cognito-login"
               onClick={handleCognitoLogin}
-              disabled={isLoading}
+              disabled={isLoading || !cognitoConfig}
             >
               {isLoading ? (
                 <>
                   <i className="fa-solid fa-spinner fa-spin"></i> Redirecting...
+                </>
+              ) : !cognitoConfig ? (
+                <>
+                  <i className="fa-solid fa-spinner fa-spin"></i> Loading Configuration...
                 </>
               ) : (
                 <>
@@ -70,6 +118,7 @@ export default function CognitoLogin() {
             <button 
               className="btn-cognito-signup"
               onClick={handleSignUp}
+              disabled={!cognitoConfig}
             >
               <i className="fa-solid fa-user-plus"></i> Sign Up
             </button>
@@ -84,16 +133,16 @@ export default function CognitoLogin() {
               <span>OAuth 2.0 Authorization Code Flow</span>
             </div>
             <div className="detail-item">
-              <strong>User Pool ID:</strong>
-              <span>eu-west-2_iCiMQwyNs</span>
-            </div>
-            <div className="detail-item">
-              <strong>Region:</strong>
-              <span>eu-west-2 (Europe - London)</span>
+              <strong>Client ID:</strong>
+              <span>{cognitoConfig?.clientId || 'Loading...'}</span>
             </div>
             <div className="detail-item">
               <strong>Domain:</strong>
-              <span>blog-auth-1756980364.auth.eu-west-2.amazoncognito.com</span>
+              <span>{cognitoConfig?.domain || 'Loading...'}</span>
+            </div>
+            <div className="detail-item">
+              <strong>Configuration Source:</strong>
+              <span>API-driven from CoreDB</span>
             </div>
           </div>
         </div>
