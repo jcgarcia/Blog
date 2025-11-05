@@ -308,6 +308,15 @@ class DatabaseManager {
         throw new Error('No active database configuration found');
       }
 
+      console.log('🔍 Active database config retrieved:', {
+        name: activeConfig.name,
+        host: activeConfig.host,
+        port: activeConfig.port,
+        database: activeConfig.database,
+        username: activeConfig.username,
+        hasPassword: !!activeConfig.password
+      });
+
       // Return connection details needed for pg_dump
       return {
         host: activeConfig.host,
