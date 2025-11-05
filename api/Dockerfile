@@ -38,6 +38,7 @@ WORKDIR /app
 RUN apk add --no-cache \
     curl \
     dumb-init \
+    postgresql-client \
     && corepack enable \
     && rm -rf /var/cache/apk/*
 
