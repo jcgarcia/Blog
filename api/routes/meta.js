@@ -35,11 +35,11 @@ function isCrawler(userAgent) {
  */
 router.get('/home', async (req, res) => {
   try {
-    const metaTags = generateMetaTags('home', {});
+    const metaTags = await generateMetaTags('home', {});
     
     // If it's a crawler, return full HTML page
     if (isCrawler(req.get('User-Agent'))) {
-      const htmlPage = generateSocialPreviewPage(metaTags, 'home');
+      const htmlPage = await generateSocialPreviewPage(metaTags, 'home');
       return res.send(htmlPage);
     }
     
@@ -84,11 +84,11 @@ router.get('/post/:id', async (req, res) => {
     }
     
     // Generate meta tags
-    const metaTags = generateMetaTags('post', post);
+    const metaTags = await generateMetaTags('post', post);
     
     // If it's a crawler, return full HTML page
     if (isCrawler(req.get('User-Agent'))) {
-      const htmlPage = generateSocialPreviewPage(metaTags, 'post', post);
+      const htmlPage = await generateSocialPreviewPage(metaTags, 'post', post);
       return res.send(htmlPage);
     }
     

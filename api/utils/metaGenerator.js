@@ -1,13 +1,23 @@
 import * as db from '../db.js';
+import { CoreDB } from '../services/CoreDB.js';
 
 /**
  * Generate HTML meta tags for social media sharing
  * @param {string} type - Type of meta tags (post, home, category)
  * @param {Object} data - Data for generating meta tags
- * @param {string} baseUrl - Base URL of the site
+ * @param {string} baseUrl - Base URL of the site (optional, will fetch from CoreDB if not provided)
  * @returns {string} HTML meta tags
  */
-export function generateMetaTags(type, data, baseUrl = 'https://bedtime.ingasti.com') {
+export async function generateMetaTags(type, data, baseUrl = null) {
+  // Get baseUrl from CoreDB if not provided
+  if (!baseUrl) {
+    try {
+      baseUrl = await CoreDB.getConfig('meta.base_url') || 'https://bedtime.ingasti.com';
+    } catch (error) {
+      console.error('Error fetching baseUrl from CoreDB:', error);
+      baseUrl = 'https://bedtime.ingasti.com'; // fallback
+    }
+  }
   let title, description, image, url, structuredData;
   
   switch (type) {
@@ -150,10 +160,19 @@ export async function getPostForMeta(postId) {
  * @param {string} metaTags - Generated meta tags HTML
  * @param {string} type - Page type (post, home)
  * @param {Object} data - Page data
+ * @param {string} baseUrl - Base URL of the site (optional, will fetch from CoreDB if not provided)
  * @returns {string} Complete HTML page
  */
-export function generateSocialPreviewPage(metaTags, type, data) {
-  const baseUrl = 'https://bedtime.ingasti.com';
+export async function generateSocialPreviewPage(metaTags, type, data, baseUrl = null) {
+  // Get baseUrl from CoreDB if not provided
+  if (!baseUrl) {
+    try {
+      baseUrl = await CoreDB.getConfig('meta.base_url') || 'https://bedtime.ingasti.com';
+    } catch (error) {
+      console.error('Error fetching baseUrl from CoreDB:', error);
+      baseUrl = 'https://bedtime.ingasti.com'; // fallback
+    }
+  }
   
   return `<!DOCTYPE html>
 <html lang="en">
