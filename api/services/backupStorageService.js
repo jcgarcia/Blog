@@ -31,13 +31,21 @@ class BackupStorageService {
       
       // Get AWS configuration from CoreDB (same as media library)
       const coreDb = CoreDB.getInstance();
-      const awsConfigStr = await coreDb.getConfig('aws_config');
+      const awsConfigValue = await coreDb.getConfig('aws_config');
       
-      if (!awsConfigStr) {
+      if (!awsConfigValue) {
         throw new Error('AWS configuration not found in CoreDB. Please configure AWS settings in Operations Panel.');
       }
       
-      const awsConfig = JSON.parse(awsConfigStr);
+      // Handle both object and string formats (same pattern as awsCredentialManager)
+      let awsConfig;
+      if (typeof awsConfigValue === 'object' && awsConfigValue !== null) {
+        awsConfig = awsConfigValue;
+      } else if (typeof awsConfigValue === 'string') {
+        awsConfig = JSON.parse(awsConfigValue);
+      } else {
+        throw new Error(`Unexpected AWS config type: ${typeof awsConfigValue}`);
+      }
       if (!awsConfig.bucketName) {
         throw new Error('S3 bucket name not found in configuration.');
       }
