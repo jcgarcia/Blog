@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAdmin } from '../../../contexts/AdminContext';
+import { API_ENDPOINTS } from '../../../config/api.js';
 import './BackupManagement.css';
 
 const BackupManagement = () => {
@@ -74,9 +75,9 @@ const BackupManagement = () => {
   const loadBackupStatus = async () => {
     try {
       setLoading(true);
-      // Use the existing database endpoint for status
-      const connectionStatus = await apiRequest('/api/database/connection-status');
-      const healthStatus = await apiRequest('/api/database/health');
+      // Use the existing database endpoints properly
+      const connectionStatus = await apiRequest(API_ENDPOINTS.DATABASE.CONNECTIONS);
+      const healthStatus = await apiRequest(API_ENDPOINTS.DATABASE.HEALTH);
       
       setBackupStatus({
         storage: {
@@ -105,7 +106,7 @@ const BackupManagement = () => {
   const loadBackups = async () => {
     try {
       // Use the existing database backups endpoint
-      const data = await apiRequest('/api/database/backups');
+      const data = await apiRequest(API_ENDPOINTS.DATABASE.BACKUPS);
       setBackups(data.backups || []);
     } catch (err) {
       setError(`Failed to load backups: ${err.message}`);
@@ -129,7 +130,7 @@ const BackupManagement = () => {
       setSuccess(null);
       
       // Use the existing database backup endpoint (streams backup directly)
-      const response = await fetch('/api/database/backup', {
+      const response = await fetch(API_ENDPOINTS.DATABASE.BACKUP, {
         method: 'GET', // The existing endpoint uses GET to stream the backup
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
