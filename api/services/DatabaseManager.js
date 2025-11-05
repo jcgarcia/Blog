@@ -289,6 +289,40 @@ class DatabaseManager {
   }
 
   /**
+   * Get the active database connection details (for backup purposes)
+   * @returns {Object} Connection details with host, port, username, password, database
+   */
+  async getActiveConnection() {
+    if (!this.initialized) {
+      throw new Error('DatabaseManager not initialized. Call initialize() first.');
+    }
+
+    try {
+      // Import CoreDB dynamically to avoid circular dependencies
+      const { default: CoreDB } = await import('./CoreDB.js');
+      const coreDB = CoreDB.getInstance();
+      
+      // Get the active database configuration
+      const activeConfig = await coreDB.getActiveDatabaseConfig();
+      if (!activeConfig) {
+        throw new Error('No active database configuration found');
+      }
+
+      // Return connection details needed for pg_dump
+      return {
+        host: activeConfig.host,
+        port: activeConfig.port,
+        username: activeConfig.username,
+        password: activeConfig.password,
+        database: activeConfig.database
+      };
+    } catch (error) {
+      console.error('❌ Failed to get active connection details:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Graceful shutdown - close all connections
    */
   async shutdown() {
