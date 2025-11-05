@@ -44,6 +44,7 @@ WORKDIR /app
 RUN apk add --no-cache \
     curl \
     poppler-utils \
+    postgresql-client \
     dumb-init \
     && corepack enable \
     && rm -rf /var/cache/apk/*
