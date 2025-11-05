@@ -1,7 +1,7 @@
 import express from 'express';
 import { requireAdminAuth } from './admin.js';
-import { backupStorageService } from '../services/backupStorageService.js';
-import { backupSchedulerService } from '../services/backupSchedulerService.js';
+import backupStorageService from '../services/backupStorageService.js';
+import backupSchedulerService from '../services/backupSchedulerService.js';
 
 const router = express.Router();
 
