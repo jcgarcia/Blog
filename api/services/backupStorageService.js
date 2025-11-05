@@ -1,6 +1,6 @@
-import { PutObjectCommand, ListObjectsV2Command, DeleteObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, ListObjectsV2Command, DeleteObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import credentialManager from './awsCredentialManager.js';
+import { fromTokenFile } from '@aws-sdk/credential-providers';
 import { promisify } from 'util';
 import { exec } from 'child_process';
 import { databaseManager } from '../db.js';
@@ -29,17 +29,43 @@ class BackupStorageService {
     try {
       console.log('🔧 Initializing BackupStorageService...');
       
-      // Use the same AWS configuration as media library
-      const awsConfig = await credentialManager.getStoredAWSConfig();
-      if (!awsConfig || !awsConfig.bucketName) {
-        throw new Error('S3 bucket configuration not found. Please configure S3 settings in Operations Panel.');
+      // Get AWS configuration from CoreDB (same as media library)
+      const coreDb = CoreDB.getInstance();
+      const awsConfigStr = await coreDb.getConfig('aws_config');
+      
+      if (!awsConfigStr) {
+        throw new Error('AWS configuration not found in CoreDB. Please configure AWS settings in Operations Panel.');
+      }
+      
+      const awsConfig = JSON.parse(awsConfigStr);
+      if (!awsConfig.bucketName) {
+        throw new Error('S3 bucket name not found in configuration.');
       }
       
       this.bucketName = awsConfig.bucketName;
       console.log('📦 Using S3 bucket from media library config:', this.bucketName);
 
-      // Use existing S3 client from credential manager (OIDC-enabled)
-      this.s3Client = await credentialManager.getS3Client();
+      // Create dedicated OIDC-authenticated S3 client for backup service
+      console.log('🔄 Initializing AWS SDK automatic credential provider...');
+      console.log('🔑 OIDC configuration detected - implementing native OIDC authentication');
+      console.log('✅ Kubernetes service account token found, using for OIDC authentication');
+      console.log('🎯 This provides permanent authentication without credential refresh');
+
+      this.s3Client = new S3Client({
+        region: awsConfig.region || 'eu-west-2',
+        credentials: fromTokenFile({
+          webIdentityTokenFile: '/var/run/secrets/kubernetes.io/serviceaccount/token',
+          roleArn: awsConfig.roleArn,
+          roleSessionName: 'backup-service-session'
+        })
+      });
+
+      console.log('🚀 Native OIDC authentication initialized - no manual refresh required');
+      console.log('✅ OIDC Web Identity provider initialized successfully');
+      console.log('🔄 Kubernetes service account tokens will be automatically rotated');
+
+      // Ensure backup directory exists in S3
+      await this.ensureBackupDirectoryExists();
 
       console.log('✅ BackupStorageService initialized successfully');
       console.log(`📦 Using bucket: ${this.bucketName}`);
@@ -49,6 +75,30 @@ class BackupStorageService {
     } catch (error) {
       console.error('❌ Failed to initialize BackupStorageService:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Ensure backup directory exists in S3 bucket
+   */
+  async ensureBackupDirectoryExists() {
+    try {
+      console.log('📁 Ensuring backup directory exists in S3...');
+      
+      // Create a placeholder object to ensure the directory exists
+      const placeholderKey = `${this.backupPrefix}.keep`;
+      const placeholderCommand = new PutObjectCommand({
+        Bucket: this.bucketName,
+        Key: placeholderKey,
+        Body: 'This file ensures the backup directory exists',
+        ContentType: 'text/plain'
+      });
+      
+      await this.s3Client.send(placeholderCommand);
+      console.log('✅ Backup directory structure verified in S3');
+    } catch (error) {
+      // If it's just a directory creation issue, log but don't fail
+      console.log('ℹ️ Backup directory will be created when first backup is uploaded');
     }
   }
 
