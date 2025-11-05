@@ -29,14 +29,14 @@ class BackupStorageService {
     try {
       console.log('🔧 Initializing BackupStorageService...');
       
-      // Get S3 configuration from CoreDB
-      const coreDB = CoreDB.getInstance();
-      const s3Config = await coreDB.getConfig('aws.s3') || {};
-      
-      this.bucketName = s3Config.bucket_name;
-      if (!this.bucketName) {
-        throw new Error('S3 bucket name not configured in CoreDB');
+      // Use the same AWS configuration as media library
+      const awsConfig = await credentialManager.getStoredAWSConfig();
+      if (!awsConfig || !awsConfig.bucketName) {
+        throw new Error('S3 bucket configuration not found. Please configure S3 settings in Operations Panel.');
       }
+      
+      this.bucketName = awsConfig.bucketName;
+      console.log('📦 Using S3 bucket from media library config:', this.bucketName);
 
       // Use existing S3 client from credential manager (OIDC-enabled)
       this.s3Client = await credentialManager.getS3Client();

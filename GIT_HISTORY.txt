@@ -1,0 +1,20 @@
+5d6b65b Fix: Add postgresql-client to api/Dockerfile.k8s for database backup functionality
+cb300b6 Trigger rebuild: Ensure postgresql-client is available for database backup
+7c946df Fix: Add postgresql-client to main Dockerfile and cleanup env files
+9a29bfd Fix: Add postgresql-client to Docker container for database backup functionality
+0f7b7a0 📋 Complete Project Documentation - Hardcoded Values Elimination
+aea1f00 Fix Database Backup Functionality - Variable Name Case Issue
+b749b6b Phase 5: CRITICAL Security Cleanup - Remove All Secrets from Public Repository
+41f49ba Phase 5: Environment Files Cleanup - CoreDB-Centric Configuration
+05b2598 Phase 4: Frontend Components CoreDB Integration
+1615cde Phase 3: API Index.js CoreDB Integration
+9445a89 Phase 2: Implement Social Crawler CoreDB Integration
+62f293c Fix CoreDB import - use default export instead of named export
+323aa44 Phase 1: Implement Meta Generator CoreDB Integration
+f162cbb Fix OAuth settings to use CoreDB instead of DataDB
+a2206b6 Fix CoreDB configuration approach - use admin panel
+155e97d SECURITY FIX: Use environment variables for Cognito config
+151b1a7 Fix Cognito authentication - read settings from CoreDB
+6624587 fix: resolve PNPM lockfile compatibility issue in Docker builds
+d445176 feat: major Docker image optimization - reduce backend from 1.79GB to ~500MB
+b247e2f fix: update media storage config to use SystemConfigManager instead of old settings table
