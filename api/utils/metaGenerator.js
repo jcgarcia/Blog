@@ -1,5 +1,5 @@
 import * as db from '../db.js';
-import { CoreDB } from '../services/CoreDB.js';
+import CoreDB from '../services/CoreDB.js';
 
 /**
  * Generate HTML meta tags for social media sharing
