@@ -1,6 +1,6 @@
 import backupStorageService from '../services/backupStorageService.js';
 import backupSchedulerService from '../services/backupSchedulerService.js';
-import { requireAdminPermission } from '../middleware/authMiddleware.js';
+import { cognitoAuth } from '../middleware/cognitoAuth.js';
 import { Router } from 'express';
 
 const router = Router();
@@ -15,7 +15,7 @@ const router = Router();
  * Get backup system status and statistics
  * GET /api/backup/status
  */
-router.get('/status', requireAdminPermission, async (req, res) => {
+router.get('/status', cognitoAuth('Admins'), async (req, res) => {
   try {
     console.log('📊 Getting backup system status...');
     
@@ -72,7 +72,7 @@ router.get('/status', requireAdminPermission, async (req, res) => {
  * List all stored backups
  * GET /api/backup/list
  */
-router.get('/list', requireAdminPermission, async (req, res) => {
+router.get('/list', cognitoAuth('Admins'), async (req, res) => {
   try {
     console.log('📋 Listing stored backups...');
     
@@ -100,7 +100,7 @@ router.get('/list', requireAdminPermission, async (req, res) => {
  * Create a manual backup
  * POST /api/backup/create
  */
-router.post('/create', requireAdminPermission, async (req, res) => {
+router.post('/create', cognitoAuth('Admins'), async (req, res) => {
   try {
     console.log('🔄 Creating manual backup...');
     
@@ -126,7 +126,7 @@ router.post('/create', requireAdminPermission, async (req, res) => {
  * Download a specific backup
  * GET /api/backup/download/:filename
  */
-router.get('/download/:filename', requireAdminPermission, async (req, res) => {
+router.get('/download/:filename', cognitoAuth('Admins'), async (req, res) => {
   try {
     const { filename } = req.params;
     const { expires = 3600 } = req.query; // Default 1 hour expiration
@@ -163,7 +163,7 @@ router.get('/download/:filename', requireAdminPermission, async (req, res) => {
  * Delete a specific backup
  * DELETE /api/backup/:filename
  */
-router.delete('/:filename', requireAdminPermission, async (req, res) => {
+router.delete('/:filename', cognitoAuth('Admins'), async (req, res) => {
   try {
     const { filename } = req.params;
     
@@ -194,7 +194,7 @@ router.delete('/:filename', requireAdminPermission, async (req, res) => {
  * Get all backup schedules
  * GET /api/backup/schedules
  */
-router.get('/schedules', requireAdminPermission, async (req, res) => {
+router.get('/schedules', cognitoAuth('Admins'), async (req, res) => {
   try {
     console.log('📋 Getting backup schedules...');
     
@@ -224,7 +224,7 @@ router.get('/schedules', requireAdminPermission, async (req, res) => {
  * Create a new backup schedule
  * POST /api/backup/schedules
  */
-router.post('/schedules', requireAdminPermission, async (req, res) => {
+router.post('/schedules', cognitoAuth('Admins'), async (req, res) => {
   try {
     const {
       id,
@@ -280,7 +280,7 @@ router.post('/schedules', requireAdminPermission, async (req, res) => {
  * Update a backup schedule
  * PUT /api/backup/schedules/:id
  */
-router.put('/schedules/:id', requireAdminPermission, async (req, res) => {
+router.put('/schedules/:id', cognitoAuth('Admins'), async (req, res) => {
   try {
     const { id } = req.params;
     const {
@@ -341,7 +341,7 @@ router.put('/schedules/:id', requireAdminPermission, async (req, res) => {
  * Delete a backup schedule
  * DELETE /api/backup/schedules/:id
  */
-router.delete('/schedules/:id', requireAdminPermission, async (req, res) => {
+router.delete('/schedules/:id', cognitoAuth('Admins'), async (req, res) => {
   try {
     const { id } = req.params;
     
@@ -369,7 +369,7 @@ router.delete('/schedules/:id', requireAdminPermission, async (req, res) => {
  * Start a backup schedule
  * POST /api/backup/schedules/:id/start
  */
-router.post('/schedules/:id/start', requireAdminPermission, async (req, res) => {
+router.post('/schedules/:id/start', cognitoAuth('Admins'), async (req, res) => {
   try {
     const { id } = req.params;
     
@@ -404,7 +404,7 @@ router.post('/schedules/:id/start', requireAdminPermission, async (req, res) => 
  * Stop a backup schedule
  * POST /api/backup/schedules/:id/stop
  */
-router.post('/schedules/:id/stop', requireAdminPermission, async (req, res) => {
+router.post('/schedules/:id/stop', cognitoAuth('Admins'), async (req, res) => {
   try {
     const { id } = req.params;
     
@@ -432,7 +432,7 @@ router.post('/schedules/:id/stop', requireAdminPermission, async (req, res) => {
  * Trigger a backup for a specific schedule
  * POST /api/backup/schedules/:id/trigger
  */
-router.post('/schedules/:id/trigger', requireAdminPermission, async (req, res) => {
+router.post('/schedules/:id/trigger', cognitoAuth('Admins'), async (req, res) => {
   try {
     const { id } = req.params;
     
@@ -460,7 +460,7 @@ router.post('/schedules/:id/trigger', requireAdminPermission, async (req, res) =
  * Get execution logs for a backup schedule
  * GET /api/backup/schedules/:id/logs
  */
-router.get('/schedules/:id/logs', requireAdminPermission, async (req, res) => {
+router.get('/schedules/:id/logs', cognitoAuth('Admins'), async (req, res) => {
   try {
     const { id } = req.params;
     const { limit = 20 } = req.query;
@@ -492,7 +492,7 @@ router.get('/schedules/:id/logs', requireAdminPermission, async (req, res) => {
  * Run backup cleanup manually
  * POST /api/backup/cleanup
  */
-router.post('/cleanup', requireAdminPermission, async (req, res) => {
+router.post('/cleanup', cognitoAuth('Admins'), async (req, res) => {
   try {
     console.log('🧹 Running manual backup cleanup...');
     
@@ -525,7 +525,7 @@ router.post('/cleanup', requireAdminPermission, async (req, res) => {
  * Initialize backup services (mainly for troubleshooting)
  * POST /api/backup/initialize
  */
-router.post('/initialize', requireAdminPermission, async (req, res) => {
+router.post('/initialize', cognitoAuth('Admins'), async (req, res) => {
   try {
     console.log('🔧 Reinitializing backup services...');
     
