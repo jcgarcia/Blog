@@ -3,7 +3,7 @@ import { useAdmin } from '../../../contexts/AdminContext';
 import './BackupManagement.css';
 
 const BackupManagement = () => {
-  const { isAuthenticated } = useAdmin();
+  const { isAdmin } = useAdmin();
   const [loading, setLoading] = useState(false);
   const [backupStatus, setBackupStatus] = useState(null);
   const [backups, setBackups] = useState([]);
@@ -46,12 +46,12 @@ const BackupManagement = () => {
   };
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAdmin) {
       loadBackupStatus();
       loadBackups();
       loadSchedules();
     }
-  }, [isAuthenticated]);
+  }, [isAdmin]);
 
   const apiRequest = async (url, options = {}) => {
     const token = localStorage.getItem('adminToken');
@@ -487,7 +487,7 @@ const BackupManagement = () => {
     </div>
   );
 
-  if (!isAuthenticated) {
+  if (!isAdmin) {
     return <div className="backup-management">Please log in to access backup management.</div>;
   }
 
