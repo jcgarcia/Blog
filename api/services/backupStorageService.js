@@ -124,7 +124,7 @@ class BackupStorageService {
       console.log(`🔄 Creating ${backupType} database backup...`);
       
       // Get active database connection from DatabaseManager
-      const activeConnection = databaseManager.getActiveConnection();
+      const activeConnection = await databaseManager.getActiveConnection();
       if (!activeConnection) {
         throw new Error('No active database connection configured');
       }
