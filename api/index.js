@@ -1,6 +1,6 @@
 import express from "express";
 import authRoutes from "./routes/auth.js";
-import adminRoutes from "./routes/admin.js";
+import adminRoutes from "./routes/admin.js"; // Fixed database backup pg_dump issue
 import userRoutes from "./routes/users.js";
 import postRoutes from "./routes/posts.js";
 import publishRoutes from "./routes/publish.js";
