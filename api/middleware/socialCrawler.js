@@ -1,4 +1,5 @@
 import { generateMetaTags, getPostForMeta, generateSocialPreviewPage } from '../utils/metaGenerator.js';
+import CoreDB from '../services/CoreDB.js';
 
 /**
  * Check if request is from a social media crawler
@@ -57,11 +58,20 @@ export const socialCrawlerMiddleware = async (req, res, next) => {
       console.log('Post found:', post ? post.title : 'null');
       
       if (post) {
-        metaTags = generateMetaTags('post', post);
-        htmlPage = generateSocialPreviewPage(metaTags, 'post', post);
+        metaTags = await generateMetaTags('post', post);
+        htmlPage = await generateSocialPreviewPage(metaTags, 'post', post);
         console.log('Generated post-specific HTML for crawler');
       } else {
         console.log('Post not found, returning 404');
+        // Get base URL from CoreDB for 404 page
+        let baseUrl;
+        try {
+          baseUrl = await CoreDB.getConfig('social.crawler_base_url') || 'https://bedtime.ingasti.com';
+        } catch (error) {
+          console.error('Error fetching crawler base URL from CoreDB:', error);
+          baseUrl = 'https://bedtime.ingasti.com'; // fallback
+        }
+        
         // Post not found, serve 404
         return res.status(404).send(`
           <!DOCTYPE html>
@@ -74,7 +84,7 @@ export const socialCrawlerMiddleware = async (req, res, next) => {
             <body>
               <h1>Post Not Found</h1>
               <p>The requested post could not be found.</p>
-              <a href="https://bedtime.ingasti.com">← Back to Bedtime Blog</a>
+              <a href="${baseUrl}">← Back to Bedtime Blog</a>
             </body>
           </html>
         `);
@@ -82,8 +92,8 @@ export const socialCrawlerMiddleware = async (req, res, next) => {
     } else {
       console.log('No post match, serving homepage content');
       // Handle homepage and other routes
-      metaTags = generateMetaTags('home', {});
-      htmlPage = generateSocialPreviewPage(metaTags, 'home');
+      metaTags = await generateMetaTags('home', {});
+      htmlPage = await generateSocialPreviewPage(metaTags, 'home');
     }
     
     // Set proper content type and send HTML
