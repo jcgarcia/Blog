@@ -51,19 +51,38 @@ console.log('🔧 CoreDB-centric architecture - database connections configured 
 
 const app = express();
 
-// CORS middleware with support for HTTPS domains
-app.use((req, res, next) => {
-  const allowedOrigins = [
-    process.env.CORS_ORIGIN || "http://localhost:3000",
-    "https://bedtime.ingasti.com",
-    "http://localhost:3000",
-    "http://localhost:3001",
-    "http://localhost:5173"  // Vite dev server
-  ];
-  
-  const origin = req.headers.origin;
-  if (allowedOrigins.includes(origin)) {
-    res.header("Access-Control-Allow-Origin", origin);
+// CORS middleware with CoreDB-driven configuration
+app.use(async (req, res, next) => {
+  try {
+    const coreDB = CoreDB.getInstance();
+    const corsOrigins = await coreDB.getConfig('api.cors_origins');
+    const allowedOrigins = corsOrigins || [
+      process.env.CORS_ORIGIN || "http://localhost:3000",
+      "https://bedtime.ingasti.com",
+      "http://localhost:3000",
+      "http://localhost:3001",
+      "http://localhost:5173"  // Vite dev server fallback
+    ];
+    
+    const origin = req.headers.origin;
+    if (allowedOrigins.includes(origin)) {
+      res.header("Access-Control-Allow-Origin", origin);
+    }
+  } catch (error) {
+    console.warn('⚠️ Failed to load CORS config from CoreDB, using fallback:', error.message);
+    // Fallback to default origins if CoreDB fails
+    const fallbackOrigins = [
+      process.env.CORS_ORIGIN || "http://localhost:3000",
+      "https://bedtime.ingasti.com",
+      "http://localhost:3000",
+      "http://localhost:3001",
+      "http://localhost:5173"
+    ];
+    
+    const origin = req.headers.origin;
+    if (fallbackOrigins.includes(origin)) {
+      res.header("Access-Control-Allow-Origin", origin);
+    }
   }
   
   res.header("Access-Control-Allow-Credentials", "true");
@@ -103,17 +122,42 @@ app.post("/api/upload", upload.single("file"), function (req, res) {
   res.status(200).json(file.filename);
 });
 
-// Configure Passport.js with Google OAuth strategy
-passport.use(new GoogleStrategy({
-  clientID: process.env.GOOGLE_CLIENT_ID || "YOUR_GOOGLE_CLIENT_ID",
-  clientSecret: process.env.GOOGLE_CLIENT_SECRET || "YOUR_GOOGLE_CLIENT_SECRET",
-  callbackURL: process.env.NODE_ENV === 'production' 
-    ? "https://bapi.ingasti.com/api/auth/google/callback"
-    : "/api/auth/google/callback"
-}, (accessToken, refreshToken, profile, done) => {
-  // Pass the user profile to the next middleware
-  done(null, profile);
-}));
+// Configure Passport.js with Google OAuth strategy using CoreDB
+async function initializeGoogleOAuth() {
+  try {
+    const coreDB = CoreDB.getInstance();
+    const googleClientId = await coreDB.getConfig('oauth.google_client_id') || process.env.GOOGLE_CLIENT_ID || "YOUR_GOOGLE_CLIENT_ID";
+    const googleClientSecret = await coreDB.getConfig('oauth.google_client_secret') || process.env.GOOGLE_CLIENT_SECRET || "YOUR_GOOGLE_CLIENT_SECRET";
+    const apiUrl = await coreDB.getConfig('api.url') || "https://bapi.ingasti.com";
+    
+    const callbackURL = process.env.NODE_ENV === 'production' 
+      ? `${apiUrl}/api/auth/google/callback`
+      : "/api/auth/google/callback";
+    
+    passport.use(new GoogleStrategy({
+      clientID: googleClientId,
+      clientSecret: googleClientSecret,
+      callbackURL: callbackURL
+    }, (accessToken, refreshToken, profile, done) => {
+      // Pass the user profile to the next middleware
+      done(null, profile);
+    }));
+    
+    console.log('✅ Google OAuth configured with CoreDB settings');
+  } catch (error) {
+    console.warn('⚠️ Failed to configure Google OAuth from CoreDB, using environment variables:', error.message);
+    // Fallback to environment variables
+    passport.use(new GoogleStrategy({
+      clientID: process.env.GOOGLE_CLIENT_ID || "YOUR_GOOGLE_CLIENT_ID",
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET || "YOUR_GOOGLE_CLIENT_SECRET",
+      callbackURL: process.env.NODE_ENV === 'production' 
+        ? "https://bapi.ingasti.com/api/auth/google/callback"
+        : "/api/auth/google/callback"
+    }, (accessToken, refreshToken, profile, done) => {
+      done(null, profile);
+    }));
+  }
+}
 
 // Serialize user (minimal data)
 passport.serializeUser((user, done) => {
@@ -238,6 +282,9 @@ const server = app.listen(PORT, async () => {
     console.log('🔧 Adding system configuration middleware...');
     app.use(loadSystemConfig);
     console.log('✅ System configuration middleware added');
+    
+    // Initialize Google OAuth with CoreDB configuration
+    await initializeGoogleOAuth();
     
   } catch (error) {
     console.error('❌ Failed to initialize CoreDB:', error);
