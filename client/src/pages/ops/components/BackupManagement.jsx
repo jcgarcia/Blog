@@ -106,18 +106,27 @@ const BackupManagement = () => {
     }
   };
 
-  const createManualBackup = async () => {
+  const createManualBackup = async (backupType = 'comprehensive') => {
     try {
       setLoading(true);
       setError(null);
       setSuccess(null);
       
-      // Use the S3 backup creation endpoint
-      const data = await apiRequest(API_ENDPOINTS.BACKUP.CREATE, { 
+      // Use comprehensive backup by default (DataDB + CoreDB)
+      const endpoint = backupType === 'comprehensive' 
+        ? `${API_ENDPOINTS.BACKUP.CREATE}?type=comprehensive`
+        : `${API_ENDPOINTS.BACKUP.CREATE}?type=${backupType}`;
+      
+      const data = await apiRequest(endpoint, { 
         method: 'POST' 
       });
       
-      setSuccess(`Manual backup created and stored in S3: ${data.data.filename}`);
+      if (backupType === 'comprehensive') {
+        setSuccess(`Comprehensive backup completed: ${data.data.successfulBackups}/${data.data.totalBackups} databases backed up successfully (${(data.data.totalSize / 1024 / 1024).toFixed(2)} MB)`);
+      } else {
+        setSuccess(`${backupType.toUpperCase()} backup created and stored in S3: ${data.data.filename || 'backup completed'}`);
+      }
+      
       await loadBackups();
       await loadBackupStatus();
     } catch (err) {
@@ -321,11 +330,31 @@ const BackupManagement = () => {
       <div className="action-buttons">
         <button 
           className="btn btn-primary" 
-          onClick={createManualBackup}
+          onClick={() => createManualBackup('comprehensive')}
           disabled={loading}
+          title="Backup both DataDB (blog content) and CoreDB (admin settings)"
         >
-          {loading ? 'Creating...' : 'Create Manual Backup'}
+          {loading ? 'Creating...' : 'Create Comprehensive Backup'}
         </button>
+        
+        <div className="backup-options">
+          <button 
+            className="btn btn-secondary" 
+            onClick={() => createManualBackup('datadb')}
+            disabled={loading}
+            title="Backup only DataDB (blog content)"
+          >
+            DataDB Only
+          </button>
+          <button 
+            className="btn btn-secondary" 
+            onClick={() => createManualBackup('coredb')}
+            disabled={loading}
+            title="Backup only CoreDB (admin settings)"
+          >
+            CoreDB Only
+          </button>
+        </div>
       </div>
     </div>
   );

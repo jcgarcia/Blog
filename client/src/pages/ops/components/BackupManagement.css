@@ -153,8 +153,21 @@
 
 .action-buttons {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
   gap: 15px;
+}
+
+.backup-options {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.backup-options .btn {
+  font-size: 0.85rem;
+  padding: 8px 16px;
 }
 
 /* Button Styles */
