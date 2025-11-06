@@ -228,6 +228,26 @@ const BackupManagement = () => {
     }
   };
 
+  const restoreDefaultSchedules = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      setSuccess(null);
+      
+      const data = await apiRequest('/api/backup/restore-defaults', {
+        method: 'POST'
+      });
+      
+      setSuccess(`Default schedules restored: ${data.data.schedulesCreated} schedules created`);
+      await loadSchedules();
+      await loadBackupStatus();
+    } catch (err) {
+      setError(`Failed to restore default schedules: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const deleteSchedule = async (scheduleId) => {
     if (!confirm(`Are you sure you want to delete schedule: ${scheduleId}?`)) {
       return;
@@ -461,9 +481,24 @@ const BackupManagement = () => {
       </div>
 
       <div className="existing-schedules">
-        <h3>Existing Schedules ({schedules.length})</h3>
+        <div className="schedules-header">
+          <h3>Existing Schedules ({schedules.length})</h3>
+          {schedules.length === 0 && (
+            <button 
+              className="btn btn-success" 
+              onClick={restoreDefaultSchedules}
+              disabled={loading}
+              title="Restore default comprehensive backup schedules (daily at 2AM, weekly on Sunday at 3AM)"
+            >
+              {loading ? 'Restoring...' : 'Restore Default Schedules'}
+            </button>
+          )}
+        </div>
         {schedules.length === 0 ? (
-          <div className="no-data">No schedules configured.</div>
+          <div className="no-data">
+            <p>No schedules configured.</p>
+            <p>Click "Restore Default Schedules" to add daily and weekly comprehensive backups.</p>
+          </div>
         ) : (
           <div className="schedules-grid">
             {schedules.map((schedule) => (

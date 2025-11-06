@@ -352,6 +352,18 @@
 }
 
 /* Schedules Grid */
+.schedules-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.schedules-header h3 {
+  margin: 0;
+  color: #1a202c;
+}
+
 .existing-schedules h3 {
   margin-bottom: 20px;
   color: #1a202c;
