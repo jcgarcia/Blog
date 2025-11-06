@@ -323,10 +323,46 @@ class DatabaseManager {
         port: activeConfig.port,
         username: activeConfig.username,
         password: activeConfig.password,
-        database: activeConfig.database
+        database: activeConfig.database,
+        name: activeConfig.name
       };
     } catch (error) {
       console.error('❌ Failed to get active connection details:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get CoreDB connection details for backup operations
+   */
+  async getCoreDBConnection() {
+    try {
+      // Import CoreDB dynamically to avoid circular dependencies
+      const { default: CoreDB } = await import('./CoreDB.js');
+      const coreDB = CoreDB.getInstance();
+      
+      // Get CoreDB connection config directly from the CoreDB instance
+      const coreDBConfig = coreDB.connectionConfig;
+      
+      console.log('🔍 CoreDB connection config retrieved:', {
+        host: coreDBConfig.host,
+        port: coreDBConfig.port,
+        database: coreDBConfig.database,
+        username: coreDBConfig.user,
+        hasPassword: !!coreDBConfig.password
+      });
+
+      // Return connection details needed for pg_dump
+      return {
+        host: coreDBConfig.host,
+        port: coreDBConfig.port,
+        username: coreDBConfig.user,
+        password: coreDBConfig.password,
+        database: coreDBConfig.database,
+        name: 'CoreDB (Admin & Configuration)'
+      };
+    } catch (error) {
+      console.error('❌ Failed to get CoreDB connection details:', error);
       throw error;
     }
   }

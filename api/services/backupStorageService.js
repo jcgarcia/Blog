@@ -210,6 +210,155 @@ class BackupStorageService {
   }
 
   /**
+   * Create a comprehensive backup of both DataDB and CoreDB
+   * @param {string} backupType - Type of backup (scheduled, manual, etc.)
+   * @returns {Promise<Object>} Combined backup information
+   */
+  async createComprehensiveBackup(backupType = 'manual') {
+    try {
+      if (!this.s3Client) {
+        await this.initialize();
+      }
+
+      console.log(`🔄 Creating comprehensive ${backupType} backup (DataDB + CoreDB)...`);
+      
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const backupResults = [];
+
+      // 1. Backup DataDB (blog database)
+      try {
+        console.log('📊 Backing up DataDB (Blog Database)...');
+        const dataDBConnection = await databaseManager.getActiveConnection();
+        const dataDBBackup = await this.createSingleDatabaseBackup(dataDBConnection, backupType, timestamp, 'datadb');
+        backupResults.push(dataDBBackup);
+        console.log('✅ DataDB backup completed successfully');
+      } catch (error) {
+        console.error('❌ DataDB backup failed:', error);
+        backupResults.push({ database: 'DataDB', error: error.message });
+      }
+
+      // 2. Backup CoreDB (admin/config database)
+      try {
+        console.log('📊 Backing up CoreDB (Admin & Configuration Database)...');
+        const coreDBConnection = await databaseManager.getCoreDBConnection();
+        const coreDBBackup = await this.createSingleDatabaseBackup(coreDBConnection, backupType, timestamp, 'coredb');
+        backupResults.push(coreDBBackup);
+        console.log('✅ CoreDB backup completed successfully');
+      } catch (error) {
+        console.error('❌ CoreDB backup failed:', error);
+        backupResults.push({ database: 'CoreDB', error: error.message });
+      }
+
+      // Calculate summary
+      const successfulBackups = backupResults.filter(result => !result.error);
+      const failedBackups = backupResults.filter(result => result.error);
+      const totalSize = successfulBackups.reduce((sum, backup) => sum + (backup.size || 0), 0);
+
+      const summary = {
+        timestamp,
+        backupType,
+        totalBackups: backupResults.length,
+        successfulBackups: successfulBackups.length,
+        failedBackups: failedBackups.length,
+        totalSize,
+        backups: backupResults
+      };
+
+      if (successfulBackups.length > 0) {
+        console.log(`✅ Comprehensive backup completed: ${successfulBackups.length}/${backupResults.length} databases backed up successfully`);
+        console.log(`📦 Total backup size: ${(totalSize / 1024 / 1024).toFixed(2)} MB`);
+        
+        // Clean up old backups after successful upload
+        await this.cleanupOldBackups();
+      } else {
+        console.error('❌ Comprehensive backup failed: No databases were backed up successfully');
+      }
+
+      return summary;
+      
+    } catch (error) {
+      console.error('❌ Failed to create comprehensive backup:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create backup for a single database
+   * @param {Object} connection - Database connection details
+   * @param {string} backupType - Type of backup (manual, scheduled, etc.)
+   * @param {string} timestamp - Timestamp for backup file naming
+   * @param {string} dbType - Database type identifier (datadb, coredb)
+   * @returns {Promise<Object>} Backup information
+   */
+  async createSingleDatabaseBackup(connection, backupType, timestamp, dbType) {
+    const filename = `backup-${dbType}-${connection.database}-${timestamp}.sql`;
+    const s3Key = `${this.backupPrefix}${filename}`;
+
+    // Create pg_dump command
+    const dumpCommand = [
+      'pg_dump',
+      `--host=${connection.host}`,
+      `--port=${connection.port}`,
+      `--username=${connection.username}`,
+      `--dbname=${connection.database}`,
+      '--verbose',
+      '--clean',
+      '--no-owner',
+      '--no-privileges',
+      '--format=plain'
+    ].join(' ');
+
+    console.log(`📊 Executing backup command for ${connection.name || connection.database}...`);
+    
+    // Set password environment variable
+    const env = {
+      ...process.env,
+      PGPASSWORD: connection.password
+    };
+
+    // Execute pg_dump and capture output
+    const { stdout, stderr } = await execAsync(dumpCommand, { 
+      env,
+      maxBuffer: 50 * 1024 * 1024 // 50MB buffer for large databases
+    });
+
+    if (stderr && !stderr.includes('NOTICE:')) {
+      console.warn(`⚠️ pg_dump warnings for ${connection.database}:`, stderr);
+    }
+
+    // Upload to S3
+    console.log(`📤 Uploading ${dbType} backup to S3: ${s3Key}`);
+    
+    const uploadCommand = new PutObjectCommand({
+      Bucket: this.bucketName,
+      Key: s3Key,
+      Body: stdout,
+      ContentType: 'application/sql',
+      Metadata: {
+        'backup-type': backupType,
+        'database-type': dbType,
+        'database-name': connection.database,
+        'created-at': new Date().toISOString(),
+        'backup-size': Buffer.byteLength(stdout, 'utf8').toString()
+      },
+      ServerSideEncryption: 'AES256' // Encrypt at rest
+    });
+
+    const uploadResult = await this.s3Client.send(uploadCommand);
+    
+    return {
+      database: connection.name || connection.database,
+      dbType,
+      filename,
+      s3Key,
+      size: Buffer.byteLength(stdout, 'utf8'),
+      createdAt: new Date().toISOString(),
+      backupType,
+      etag: uploadResult.ETag
+    };
+  }
+
+  /**
    * List all backups stored in S3
    * @returns {Promise<Array>} List of backup information
    */

@@ -2,6 +2,7 @@ import express from 'express';
 import { requireAdminAuth } from './admin.js';
 import backupStorageService from '../services/backupStorageService.js';
 import backupSchedulerService from '../services/backupSchedulerService.js';
+import databaseManager from '../services/DatabaseManager.js';
 
 const router = express.Router();
 
@@ -99,24 +100,79 @@ router.get('/list', requireAdminAuth, async (req, res) => {
 /**
  * Create a manual backup
  * POST /api/backup/create
+ * Query params:
+ *   - type: 'datadb' | 'coredb' | 'comprehensive' (default: 'datadb' for backward compatibility)
  */
 router.post('/create', requireAdminAuth, async (req, res) => {
   try {
-    console.log('🔄 Creating manual backup...');
+    const { type = 'datadb' } = req.query;
     
-    const backupInfo = await backupStorageService.createAndUploadBackup('manual');
+    let backupInfo;
     
-    res.json({
-      success: true,
-      message: 'Backup created successfully',
-      data: backupInfo
-    });
+    if (type === 'comprehensive') {
+      console.log('🔄 Creating comprehensive manual backup (DataDB + CoreDB)...');
+      backupInfo = await backupStorageService.createComprehensiveBackup('manual');
+      
+      res.json({
+        success: true,
+        message: `Comprehensive backup completed: ${backupInfo.successfulBackups}/${backupInfo.totalBackups} databases backed up successfully`,
+        data: backupInfo
+      });
+      
+    } else if (type === 'coredb') {
+      console.log('🔄 Creating CoreDB manual backup...');
+      const coreDBConnection = await databaseManager.getCoreDBConnection();
+      backupInfo = await backupStorageService.createSingleDatabaseBackup(coreDBConnection, 'manual', new Date().toISOString().replace(/[:.]/g, '-'), 'coredb');
+      
+      res.json({
+        success: true,
+        message: 'CoreDB backup created successfully',
+        data: backupInfo
+      });
+      
+    } else {
+      // Default: DataDB backup (backward compatibility)
+      console.log('🔄 Creating DataDB manual backup...');
+      backupInfo = await backupStorageService.createAndUploadBackup('manual');
+      
+      res.json({
+        success: true,
+        message: 'DataDB backup created successfully',
+        data: backupInfo
+      });
+    }
     
   } catch (error) {
     console.error('❌ Failed to create backup:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to create backup',
+      details: error.message
+    });
+  }
+});
+
+/**
+ * Create a comprehensive backup (DataDB + CoreDB)
+ * POST /api/backup/create-comprehensive
+ */
+router.post('/create-comprehensive', requireAdminAuth, async (req, res) => {
+  try {
+    console.log('🔄 Creating comprehensive manual backup (DataDB + CoreDB)...');
+    
+    const backupInfo = await backupStorageService.createComprehensiveBackup('manual');
+    
+    res.json({
+      success: true,
+      message: `Comprehensive backup completed: ${backupInfo.successfulBackups}/${backupInfo.totalBackups} databases backed up successfully`,
+      data: backupInfo
+    });
+    
+  } catch (error) {
+    console.error('❌ Failed to create comprehensive backup:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to create comprehensive backup',
       details: error.message
     });
   }
