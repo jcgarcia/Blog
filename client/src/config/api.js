@@ -134,6 +134,8 @@ export const API_ENDPOINTS = {
     TRIGGER_SCHEDULE: (id) => `${API_URL}/api/backup/schedules/${id}/trigger`,
     CLEANUP: `${API_URL}/api/backup/cleanup`,
     INITIALIZE: `${API_URL}/api/backup/initialize`,
+    RESTORE_DEFAULTS: `${API_URL}/api/backup/restore-defaults`,
+    SCHEDULE_CONFIG: `${API_URL}/api/backup/schedule-config`,
   },
 };
 

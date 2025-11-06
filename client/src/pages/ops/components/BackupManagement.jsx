@@ -234,9 +234,9 @@ const BackupManagement = () => {
       setError(null);
       setSuccess(null);
       
-      console.log('🔄 Calling restore-defaults endpoint...');
+      console.log('🔄 Calling restore-defaults endpoint:', API_ENDPOINTS.BACKUP.RESTORE_DEFAULTS);
       
-      const data = await apiRequest('/api/backup/restore-defaults', {
+      const data = await apiRequest(API_ENDPOINTS.BACKUP.RESTORE_DEFAULTS, {
         method: 'POST'
       });
       
