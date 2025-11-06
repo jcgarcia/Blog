@@ -609,4 +609,98 @@ router.post('/initialize', requireAdminAuth, async (req, res) => {
   }
 });
 
+/**
+ * Check backup schedule configuration in CoreDB
+ * GET /api/backup/schedule-config
+ */
+router.get('/schedule-config', requireAdminAuth, async (req, res) => {
+  try {
+    console.log('🔍 Checking backup schedule configuration...');
+    
+    // Import CoreDB dynamically
+    const { default: CoreDB } = await import('../services/CoreDB.js');
+    const coreDB = CoreDB.getInstance();
+    
+    // Get backup schedule configuration
+    const scheduleConfig = await coreDB.getConfig('backup.schedules') || {};
+    
+    res.json({
+      success: true,
+      data: {
+        hasSchedules: Object.keys(scheduleConfig).length > 0,
+        scheduleCount: Object.keys(scheduleConfig).length,
+        schedules: scheduleConfig,
+        configKey: 'backup.schedules'
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Failed to check schedule configuration:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to check schedule configuration',
+      details: error.message
+    });
+  }
+});
+
+/**
+ * Restore default backup schedules
+ * POST /api/backup/restore-defaults
+ */
+router.post('/restore-defaults', requireAdminAuth, async (req, res) => {
+  try {
+    console.log('🔄 Restoring default backup schedules...');
+    
+    // Import CoreDB dynamically
+    const { default: CoreDB } = await import('../services/CoreDB.js');
+    const coreDB = CoreDB.getInstance();
+    
+    // Define default comprehensive backup schedules
+    const defaultSchedules = {
+      'daily-comprehensive': {
+        enabled: true,
+        cronExpression: '0 2 * * *', // 2:00 AM every day
+        description: 'Daily comprehensive backup (DataDB + CoreDB) at 2:00 AM',
+        backupType: 'comprehensive',
+        retentionDays: 7,
+        createdAt: new Date().toISOString(),
+        createdBy: 'system'
+      },
+      'weekly-comprehensive': {
+        enabled: true,
+        cronExpression: '0 3 * * 0', // 3:00 AM every Sunday
+        description: 'Weekly comprehensive backup (DataDB + CoreDB) on Sunday at 3:00 AM',
+        backupType: 'comprehensive',
+        retentionDays: 30,
+        createdAt: new Date().toISOString(),
+        createdBy: 'system'
+      }
+    };
+    
+    // Save to CoreDB
+    await coreDB.setConfig('backup.schedules', defaultSchedules);
+    
+    // Reinitialize scheduler to load the new schedules
+    await backupSchedulerService.initialize();
+    
+    res.json({
+      success: true,
+      message: 'Default backup schedules restored successfully',
+      data: {
+        schedulesCreated: Object.keys(defaultSchedules).length,
+        schedules: defaultSchedules
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Failed to restore default schedules:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to restore default schedules',
+      details: error.message
+    });
+  }
+});
+
 export default router;

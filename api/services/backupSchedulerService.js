@@ -229,11 +229,19 @@ class BackupSchedulerService {
   async executeScheduledBackup(scheduleId, scheduleConfig) {
     try {
       console.log(`🔄 Executing scheduled backup: ${scheduleId}`);
+      const backupType = scheduleConfig.backupType || 'datadb'; // Default to datadb for backward compatibility
       
       const startTime = Date.now();
+      let backupInfo;
       
-      // Create and upload backup
-      const backupInfo = await backupStorageService.createAndUploadBackup('scheduled');
+      // Create backup based on configured type
+      if (backupType === 'comprehensive') {
+        console.log(`📊 Running comprehensive scheduled backup (DataDB + CoreDB)`);
+        backupInfo = await backupStorageService.createComprehensiveBackup('scheduled');
+      } else {
+        console.log(`📊 Running single database scheduled backup: ${backupType}`);
+        backupInfo = await backupStorageService.createAndUploadBackup('scheduled');
+      }
       
       const duration = Date.now() - startTime;
       
@@ -245,13 +253,19 @@ class BackupSchedulerService {
       }
 
       console.log(`✅ Scheduled backup completed: ${scheduleId}`);
-      console.log(`📊 Duration: ${duration}ms, Size: ${(backupInfo.size / 1024 / 1024).toFixed(2)} MB`);
+      
+      if (backupType === 'comprehensive') {
+        console.log(`📊 Duration: ${duration}ms, Databases: ${backupInfo.successfulBackups}/${backupInfo.totalBackups}, Total Size: ${(backupInfo.totalSize / 1024 / 1024).toFixed(2)} MB`);
+      } else {
+        console.log(`📊 Duration: ${duration}ms, Size: ${(backupInfo.size / 1024 / 1024).toFixed(2)} MB`);
+      }
       
       // Log successful backup to CoreDB for monitoring
       await this.logBackupExecution(scheduleId, {
         status: 'success',
         duration,
         backupInfo,
+        backupType,
         timestamp: new Date().toISOString()
       });
       
