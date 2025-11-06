@@ -151,6 +151,23 @@
   color: #d69e2e;
 }
 
+.status-warning {
+  margin-top: 15px;
+  padding: 15px;
+  background: #fef5e7;
+  border: 1px solid #f6ad55;
+  border-radius: 6px;
+  color: #744210;
+}
+
+.status-warning p {
+  margin: 0 0 10px 0;
+}
+
+.status-warning p:last-child {
+  margin-bottom: 0;
+}
+
 .action-buttons {
   display: flex;
   flex-direction: column;

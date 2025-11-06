@@ -234,15 +234,20 @@ const BackupManagement = () => {
       setError(null);
       setSuccess(null);
       
+      console.log('🔄 Calling restore-defaults endpoint...');
+      
       const data = await apiRequest('/api/backup/restore-defaults', {
         method: 'POST'
       });
+      
+      console.log('✅ Restore response:', data);
       
       setSuccess(`Default schedules restored: ${data.data.schedulesCreated} schedules created`);
       await loadSchedules();
       await loadBackupStatus();
     } catch (err) {
-      setError(`Failed to restore default schedules: ${err.message}`);
+      console.error('❌ Restore error:', err);
+      setError(`Failed to restore default schedules: ${err.message || err.toString()}`);
     } finally {
       setLoading(false);
     }
@@ -334,15 +339,30 @@ const BackupManagement = () => {
               </div>
               <div className="status-item">
                 <span className="label">Active Schedules:</span>
-                <span className="value success">{backupStatus.scheduler.activeSchedules}</span>
+                <span className={`value ${backupStatus.scheduler.activeSchedules > 0 ? 'success' : 'warning'}`}>
+                  {backupStatus.scheduler.activeSchedules}
+                </span>
               </div>
               <div className="status-item">
                 <span className="label">Inactive Schedules:</span>
                 <span className="value">{backupStatus.scheduler.inactiveSchedules}</span>
               </div>
+              {backupStatus.scheduler.totalSchedules === 0 && (
+                <div className="status-item">
+                  <span className="label">⚠️ Warning:</span>
+                  <span className="value warning">No backup schedules configured!</span>
+                </div>
+              )}
             </div>
           ) : (
             <div>Loading...</div>
+          )}
+          
+          {backupStatus?.scheduler?.totalSchedules === 0 && (
+            <div className="status-warning">
+              <p>⚠️ <strong>No automated backups scheduled!</strong></p>
+              <p>Go to the <strong>Schedules</strong> tab and click <strong>"Restore Default Schedules"</strong> to set up daily and weekly comprehensive backups.</p>
+            </div>
           )}
         </div>
       </div>
