@@ -164,6 +164,47 @@ const BackupManagement = () => {
     }
   };
 
+  const restoreBackup = async (filename) => {
+    // Extract backup type from filename
+    let backupType = 'auto';
+    let confirmMessage = `Are you sure you want to restore from backup: ${filename}?\n\n⚠️ WARNING: This will REPLACE your current database data!\n\nA safety backup will be created before restore.`;
+    
+    if (filename.includes('datadb') || filename.includes('blog')) {
+      backupType = 'datadb';
+      confirmMessage = `Are you sure you want to restore the BLOG DATABASE from: ${filename}?\n\n⚠️ WARNING: This will REPLACE all your current blog posts, users, and content!\n\nA safety backup will be created before restore.`;
+    } else if (filename.includes('coredb')) {
+      backupType = 'coredb';
+      confirmMessage = `Are you sure you want to restore the ADMIN DATABASE from: ${filename}?\n\n⚠️ WARNING: This will REPLACE all your current admin settings and configurations!\n\nA safety backup will be created before restore.`;
+    }
+
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+      setSuccess(null);
+      
+      console.log(`🔄 Starting restore of ${filename} (type: ${backupType})`);
+      
+      const data = await apiRequest(API_ENDPOINTS.BACKUP.RESTORE(filename), {
+        method: 'POST',
+        body: JSON.stringify({ type: backupType })
+      });
+      
+      console.log('✅ Restore completed:', data);
+      
+      setSuccess(`Database restored successfully from ${filename}${data.data.safetyBackup ? ` (safety backup: ${data.data.safetyBackup})` : ''}`);
+      
+    } catch (err) {
+      console.error('❌ Restore failed:', err);
+      setError(`Failed to restore backup: ${err.message || err.toString()}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const createSchedule = async () => {
     try {
       setError(null);
@@ -427,6 +468,14 @@ const BackupManagement = () => {
                         onClick={() => downloadBackup(backup.filename)}
                       >
                         Download
+                      </button>
+                      <button 
+                        className="btn btn-small btn-warning"
+                        onClick={() => restoreBackup(backup.filename)}
+                        disabled={loading}
+                        title={`Restore database from ${backup.filename} (⚠️ This will replace current data!)`}
+                      >
+                        {loading ? 'Restoring...' : 'Restore'}
                       </button>
                       <button 
                         className="btn btn-small btn-danger"

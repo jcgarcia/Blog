@@ -136,6 +136,8 @@ export const API_ENDPOINTS = {
     INITIALIZE: `${API_URL}/api/backup/initialize`,
     RESTORE_DEFAULTS: `${API_URL}/api/backup/restore-defaults`,
     SCHEDULE_CONFIG: `${API_URL}/api/backup/schedule-config`,
+    RESTORE: (filename) => `${API_URL}/api/backup/restore/${filename}`,
+    RESTORE_COMPREHENSIVE: `${API_URL}/api/backup/restore-comprehensive`,
   },
 };
 

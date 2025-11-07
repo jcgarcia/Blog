@@ -523,6 +523,43 @@ class BackupStorageService {
   }
 
   /**
+   * Download backup file content directly from S3
+   * @param {string} s3Key - S3 key for the backup file
+   * @returns {Promise<string>} Backup file content as string
+   */
+  async downloadBackupContent(s3Key) {
+    try {
+      if (!this.s3Client) {
+        await this.initialize();
+      }
+
+      console.log(`⬇️ Downloading backup content from S3: ${s3Key}`);
+      
+      const getCommand = new GetObjectCommand({
+        Bucket: this.bucketName,
+        Key: s3Key
+      });
+
+      const response = await this.s3Client.send(getCommand);
+      
+      // Convert stream to string
+      const chunks = [];
+      for await (const chunk of response.Body) {
+        chunks.push(chunk);
+      }
+      
+      const backupContent = Buffer.concat(chunks).toString('utf-8');
+      console.log(`✅ Downloaded backup content: ${s3Key} (${backupContent.length} characters)`);
+      
+      return backupContent;
+      
+    } catch (error) {
+      console.error('❌ Failed to download backup content:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Get backup statistics and health information
    * @returns {Promise<Object>} Backup statistics
    */

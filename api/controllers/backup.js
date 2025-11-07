@@ -703,4 +703,314 @@ router.post('/restore-defaults', requireAdminAuth, async (req, res) => {
   }
 });
 
+/**
+ * Restore database from backup
+ * POST /api/backup/restore/:filename
+ */
+router.post('/restore/:filename', requireAdminAuth, async (req, res) => {
+  try {
+    const { filename } = req.params;
+    const { type = 'auto' } = req.body; // 'datadb', 'coredb', or 'auto' (detect from filename)
+    
+    console.log(`🔄 Starting database restore from backup: ${filename}`);
+    
+    // Detect backup type from filename if not specified
+    let backupType = type;
+    if (type === 'auto') {
+      if (filename.includes('datadb') || filename.includes('blog')) {
+        backupType = 'datadb';
+      } else if (filename.includes('coredb')) {
+        backupType = 'coredb';
+      } else {
+        return res.status(400).json({
+          success: false,
+          error: 'Cannot determine backup type from filename. Please specify type in request body.'
+        });
+      }
+    }
+    
+    // Validate backup type
+    if (!['datadb', 'coredb'].includes(backupType)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid backup type. Must be "datadb" or "coredb".'
+      });
+    }
+    
+    console.log(`📋 Restore type detected/specified: ${backupType}`);
+    
+    // Create safety backup before restore
+    console.log('🛡️ Creating safety backup before restore...');
+    let safetyBackupInfo;
+    try {
+      if (backupType === 'datadb') {
+        safetyBackupInfo = await backupStorageService.createAndUploadBackup('pre-restore-safety');
+      } else {
+        const coreDBConnection = await databaseManager.getCoreDBConnection();
+        safetyBackupInfo = await backupStorageService.createSingleDatabaseBackup(
+          coreDBConnection, 
+          'pre-restore-safety', 
+          new Date().toISOString().replace(/[:.]/g, '-'),
+          'coredb'
+        );
+      }
+      console.log('✅ Safety backup created:', safetyBackupInfo.filename);
+    } catch (safetyError) {
+      console.error('⚠️ Safety backup failed, continuing with restore:', safetyError.message);
+    }
+    
+    // Download backup from S3
+    console.log('⬇️ Downloading backup file from S3...');
+    const s3Key = `database-backups/${filename}`;
+    const backupData = await backupStorageService.downloadBackupContent(s3Key);
+    
+    // Get database connection details
+    let dbConnection;
+    if (backupType === 'datadb') {
+      dbConnection = await databaseManager.getActiveConnection();
+    } else {
+      dbConnection = await databaseManager.getCoreDBConnection();
+    }
+    
+    console.log(`🔄 Restoring ${backupType} database...`);
+    
+    // Execute restore using psql
+    const { spawn } = await import('child_process');
+    const { promisify } = await import('util');
+    const fs = await import('fs');
+    const path = await import('path');
+    const { tmpdir } = await import('os');
+    
+    // Create temporary file for the backup data
+    const tempFilePath = path.join(tmpdir(), `restore_${Date.now()}.sql`);
+    await fs.promises.writeFile(tempFilePath, backupData);
+    
+    try {
+      // Build psql command
+      const psqlCommand = 'psql';
+      const psqlArgs = [
+        '-h', dbConnection.host,
+        '-p', dbConnection.port.toString(),
+        '-U', dbConnection.username,
+        '-d', dbConnection.database,
+        '-f', tempFilePath,
+        '--set', 'ON_ERROR_STOP=on'
+      ];
+      
+      console.log('🔧 Executing psql restore command...');
+      
+      // Execute restore
+      const child = spawn(psqlCommand, psqlArgs, {
+        env: {
+          ...process.env,
+          PGPASSWORD: dbConnection.password
+        },
+        stdio: ['pipe', 'pipe', 'pipe']
+      });
+      
+      let stdout = '';
+      let stderr = '';
+      
+      child.stdout.on('data', (data) => {
+        stdout += data.toString();
+      });
+      
+      child.stderr.on('data', (data) => {
+        stderr += data.toString();
+      });
+      
+      const exitCode = await new Promise((resolve) => {
+        child.on('close', resolve);
+      });
+      
+      // Clean up temporary file
+      await fs.promises.unlink(tempFilePath);
+      
+      if (exitCode === 0) {
+        console.log('✅ Database restore completed successfully');
+        
+        res.json({
+          success: true,
+          message: `${backupType.toUpperCase()} database restored successfully from ${filename}`,
+          data: {
+            filename,
+            backupType,
+            safetyBackup: safetyBackupInfo?.filename || null,
+            restoredAt: new Date().toISOString(),
+            stdout: stdout.trim(),
+            stderr: stderr.trim()
+          }
+        });
+      } else {
+        console.error('❌ Database restore failed:', stderr);
+        res.status(500).json({
+          success: false,
+          error: `Database restore failed with exit code ${exitCode}`,
+          details: stderr.trim()
+        });
+      }
+      
+    } catch (restoreError) {
+      // Clean up temporary file on error
+      try {
+        await fs.promises.unlink(tempFilePath);
+      } catch (unlinkError) {
+        console.error('⚠️ Failed to clean up temporary file:', unlinkError.message);
+      }
+      throw restoreError;
+    }
+    
+  } catch (error) {
+    console.error('❌ Failed to restore database:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to restore database',
+      details: error.message
+    });
+  }
+});
+
+/**
+ * Restore comprehensive backup (both DataDB and CoreDB)
+ * POST /api/backup/restore-comprehensive
+ */
+router.post('/restore-comprehensive', requireAdminAuth, async (req, res) => {
+  try {
+    const { timestamp } = req.body; // Expected format: 2025-11-07T02-00-00-020Z
+    
+    if (!timestamp) {
+      return res.status(400).json({
+        success: false,
+        error: 'Timestamp is required for comprehensive restore'
+      });
+    }
+    
+    console.log(`🔄 Starting comprehensive restore for timestamp: ${timestamp}`);
+    
+    // Find corresponding backup files
+    const datadbFilename = `backup-datadb-blog-${timestamp}.sql`;
+    const coredbFilename = `backup-coredb-coredb-${timestamp}.sql`;
+    
+    const results = {
+      datadb: null,
+      coredb: null,
+      errors: []
+    };
+    
+    // Create safety backups
+    console.log('🛡️ Creating safety backups before comprehensive restore...');
+    let safetyBackups = {};
+    
+    try {
+      safetyBackups.datadb = await backupStorageService.createAndUploadBackup('pre-comprehensive-restore-safety');
+      console.log('✅ DataDB safety backup created');
+    } catch (error) {
+      console.error('⚠️ DataDB safety backup failed:', error.message);
+    }
+    
+    try {
+      const coreDBConnection = await databaseManager.getCoreDBConnection();
+      safetyBackups.coredb = await backupStorageService.createSingleDatabaseBackup(
+        coreDBConnection, 
+        'pre-comprehensive-restore-safety', 
+        new Date().toISOString().replace(/[:.]/g, '-'),
+        'coredb'
+      );
+      console.log('✅ CoreDB safety backup created');
+    } catch (error) {
+      console.error('⚠️ CoreDB safety backup failed:', error.message);
+    }
+    
+    // Restore DataDB first
+    try {
+      console.log('🔄 Restoring DataDB...');
+      const datadbResponse = await fetch(`${process.env.API_URL || 'http://localhost:5000'}/api/backup/restore/${datadbFilename}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': req.headers.authorization
+        },
+        body: JSON.stringify({ type: 'datadb' })
+      });
+      
+      if (datadbResponse.ok) {
+        results.datadb = await datadbResponse.json();
+        console.log('✅ DataDB restore completed');
+      } else {
+        const error = await datadbResponse.json();
+        results.errors.push(`DataDB restore failed: ${error.error}`);
+        console.error('❌ DataDB restore failed:', error);
+      }
+    } catch (error) {
+      results.errors.push(`DataDB restore error: ${error.message}`);
+      console.error('❌ DataDB restore error:', error);
+    }
+    
+    // Restore CoreDB second
+    try {
+      console.log('🔄 Restoring CoreDB...');
+      const coredbResponse = await fetch(`${process.env.API_URL || 'http://localhost:5000'}/api/backup/restore/${coredbFilename}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': req.headers.authorization
+        },
+        body: JSON.stringify({ type: 'coredb' })
+      });
+      
+      if (coredbResponse.ok) {
+        results.coredb = await coredbResponse.json();
+        console.log('✅ CoreDB restore completed');
+      } else {
+        const error = await coredbResponse.json();
+        results.errors.push(`CoreDB restore failed: ${error.error}`);
+        console.error('❌ CoreDB restore failed:', error);
+      }
+    } catch (error) {
+      results.errors.push(`CoreDB restore error: ${error.message}`);
+      console.error('❌ CoreDB restore error:', error);
+    }
+    
+    const successCount = (results.datadb ? 1 : 0) + (results.coredb ? 1 : 0);
+    const totalAttempts = 2;
+    
+    if (successCount === totalAttempts) {
+      res.json({
+        success: true,
+        message: 'Comprehensive restore completed successfully',
+        data: {
+          timestamp,
+          results,
+          safetyBackups,
+          restoredAt: new Date().toISOString(),
+          successCount,
+          totalAttempts
+        }
+      });
+    } else {
+      res.status(207).json({ // 207 Multi-Status
+        success: false,
+        message: `Comprehensive restore partially failed: ${successCount}/${totalAttempts} databases restored`,
+        data: {
+          timestamp,
+          results,
+          safetyBackups,
+          errors: results.errors,
+          restoredAt: new Date().toISOString(),
+          successCount,
+          totalAttempts
+        }
+      });
+    }
+    
+  } catch (error) {
+    console.error('❌ Failed to restore comprehensive backup:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to restore comprehensive backup',
+      details: error.message
+    });
+  }
+});
+
 export default router;
