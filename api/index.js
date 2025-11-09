@@ -237,6 +237,46 @@ import { socialCrawlerMiddleware } from './middleware/socialCrawler.js';
 app.get('/share/post/:id', socialCrawlerMiddleware);
 app.get('/share', socialCrawlerMiddleware);
 
+// JSON Error Handling Middleware - Must be after all API routes
+// Handle 404 for API endpoints
+app.use('/api/*', (req, res) => {
+  res.status(404).json({
+    success: false,
+    error: 'API endpoint not found',
+    message: `Endpoint ${req.method} ${req.originalUrl} does not exist`,
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Handle method not allowed (405) for API endpoints
+app.use('/api/*', (err, req, res, next) => {
+  if (err.status === 405) {
+    return res.status(405).json({
+      success: false,
+      error: 'Method not allowed',
+      message: `Method ${req.method} is not allowed for ${req.originalUrl}`,
+      timestamp: new Date().toISOString()
+    });
+  }
+  next(err);
+});
+
+// Global error handler for API endpoints
+app.use('/api/*', (err, req, res, next) => {
+  console.error('API Error:', err);
+  
+  const status = err.status || 500;
+  const message = err.message || 'Internal server error';
+  
+  res.status(status).json({
+    success: false,
+    error: err.name || 'ServerError',
+    message: message,
+    timestamp: new Date().toISOString(),
+    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+  });
+});
+
 /**
  * Initialize default database connections in CoreDB
  * In the CoreDB-centric architecture, database connections are configured manually
