@@ -41,10 +41,11 @@ router.options("*", (req, res) => {
 // Public media health endpoint (no auth required)
 router.get("/", async (req, res) => {
   try {
-    const { executeQuery } = await import("../utils/database.js");
+    const { getDbPool } = await import("../db.js");
+    const pool = getDbPool();
     
     // Get basic media statistics without exposing sensitive data
-    const result = await executeQuery(`
+    const result = await pool.query(`
       SELECT 
         COUNT(*) as total_files,
         COUNT(CASE WHEN deleted_at IS NULL THEN 1 END) as active_files,
