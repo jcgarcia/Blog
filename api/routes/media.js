@@ -38,6 +38,42 @@ router.options("*", (req, res) => {
   res.status(200).end();
 });
 
+// Public media health endpoint (no auth required)
+router.get("/", async (req, res) => {
+  try {
+    const { executeQuery } = await import("../utils/database.js");
+    
+    // Get basic media statistics without exposing sensitive data
+    const result = await executeQuery(`
+      SELECT 
+        COUNT(*) as total_files,
+        COUNT(CASE WHEN deleted_at IS NULL THEN 1 END) as active_files,
+        COALESCE(SUM(CASE WHEN deleted_at IS NULL THEN file_size ELSE 0 END), 0) as total_size
+      FROM media_files
+    `);
+    
+    const stats = result.rows[0];
+    
+    res.json([{
+      id: 'health-check',
+      total_files: parseInt(stats.total_files),
+      active_files: parseInt(stats.active_files), 
+      file_size: parseInt(stats.total_size),
+      status: 'healthy'
+    }]);
+  } catch (error) {
+    console.error('Media health check error:', error);
+    res.status(500).json([{
+      id: 'health-check-error',
+      total_files: 0,
+      active_files: 0,
+      file_size: 0, 
+      status: 'error',
+      error: error.message
+    }]);
+  }
+});
+
 // Media file management routes
 router.post("/upload", requireAdminAuth, uploadToS3);              // POST /api/media/upload - Upload file to S3
 router.get("/files", requireAdminAuth, getMediaFiles);             // GET /api/media/files - Get all media files with pagination
