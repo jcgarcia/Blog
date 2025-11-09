@@ -139,7 +139,23 @@ async function resolveMediaUrl(mediaId) {
       console.error(`❌ CRITICAL: Error generating signed URL for S3 key ${mediaId}:`, error);
       console.error(`❌ Error name: ${error.name}, message: ${error.message}`);
       console.error(`❌ Full error stack:`, error.stack);
-      return mediaId; // Return S3 key as fallback
+      
+      // Instead of returning the S3 key, try to construct a media serving URL
+      if (typeof mediaId === 'string' && mediaId.startsWith('uploads/')) {
+        try {
+          // Extract just the filename from the S3 key path
+          const filename = mediaId.split('/').pop();
+          const baseUrl = process.env.API_BASE_URL || 'https://bapi.ingasti.com';
+          const fallbackUrl = `${baseUrl}/api/media/serve/${filename}`;
+          console.log(`🔄 Using fallback media serving URL: ${fallbackUrl}`);
+          return fallbackUrl;
+        } catch (filenameError) {
+          console.error('❌ Failed to create fallback URL:', filenameError);
+          return null; // Return null instead of invalid S3 key
+        }
+      }
+      
+      return mediaId; // Return original for non-S3 keys
     }
   }
   

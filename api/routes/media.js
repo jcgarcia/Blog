@@ -52,12 +52,26 @@ router.get("/trash", requireAdminAuth, getTrashFiles);             // GET /api/m
 router.post("/trash/:id/restore", requireAdminAuth, restoreMediaFile); // POST /api/media/trash/:id/restore - Restore file from trash
 router.delete("/trash/empty", requireAdminAuth, emptyTrash);       // DELETE /api/media/trash/empty - Empty trash (permanent delete)
 
-// Media serving route - serve files by filename with signed URLs (must be after other routes)
-router.get("/serve/:filename", async (req, res) => {
+// Media serving route - serve files by filename or S3 key with signed URLs (must be after other routes)
+router.get("/serve/*", async (req, res) => {
   try {
-    const { filename } = req.params;
-    console.log(`🎯 [MEDIA ROUTE] Request for filename: ${filename}`);
-    console.log(`🎯 [MEDIA ROUTE] Full URL path: ${req.originalUrl}`);
+    // Extract the full path after /serve/
+    const fullPath = req.params[0];
+    console.log(`🎯 [MEDIA ROUTE] Request for path: ${fullPath}`);
+    console.log(`🎯 [MEDIA ROUTE] Full URL: ${req.originalUrl}`);
+    
+    // Determine if it's a filename or S3 key path
+    let filename;
+    if (fullPath.includes('/')) {
+      // It's an S3 key path like "uploads/images/2025-11-09/terra-l5-e9bb73c5.png"
+      // Extract just the filename
+      filename = fullPath.split('/').pop();
+      console.log(`🔍 [MEDIA ROUTE] Extracted filename from S3 key: ${filename}`);
+    } else {
+      // It's already a filename
+      filename = fullPath;
+      console.log(`🔍 [MEDIA ROUTE] Direct filename: ${filename}`);
+    }
     
     // Look up the file in the database
     const { getDbPool } = await import("../db.js");
@@ -69,7 +83,7 @@ router.get("/serve/:filename", async (req, res) => {
     
     if (result.rows.length === 0) {
       console.log(`❌ [MEDIA ROUTE] File not found in database: ${filename}`);
-      return res.status(404).json({ error: "File not found" });
+      return res.status(404).json({ error: "File not found", filename: filename });
     }
     
     const { s3_key, s3_bucket } = result.rows[0];
