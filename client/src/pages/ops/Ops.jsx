@@ -11,9 +11,9 @@ import SocialMediaManagement from './components/SocialMediaManagement';
 import SiteSettings from './components/SiteSettings';
 import Analytics from './components/Analytics';
 import MediaManagement from './components/MediaManagement';
-import PageManagement from './components/PageManagement';
 import DatabaseManagement from './components/DatabaseManagement';
 import BackupManagement from './components/BackupManagement';
+import HealthMonitoring from './components/HealthMonitoring';
 
 export default function Ops() {
   const [activeTab, setActiveTab] = useState('content');
@@ -32,10 +32,10 @@ export default function Ops() {
 
   const renderContent = () => {
     switch (activeTab) {
+      case 'health':
+        return <HealthMonitoring />;
       case 'content':
         return <ContentManagement />;
-      case 'pages':
-        return <PageManagement />;
       case 'users':
         return <UserManagement />;
       case 'social':

@@ -5,6 +5,13 @@
 
 export const PANEL_CONFIG = {
   // CoreDB-only panels (always available - data stored in PostgreSQL CoreDB)
+  health: { 
+    requiresDatabase: false, 
+    icon: '❤️', 
+    title: 'Health',
+    description: 'System health monitoring',
+    path: '/ops/health'
+  },
   database: { 
     requiresDatabase: false, 
     icon: '💾', 
@@ -46,15 +53,8 @@ export const PANEL_CONFIG = {
     requiresDatabase: true, 
     icon: '📝', 
     title: 'Content',
-    description: 'Blog posts and articles',
+    description: 'Blog posts, pages, and categories',
     path: '/ops/content'
-  },
-  pages: { 
-    requiresDatabase: true, 
-    icon: '📄', 
-    title: 'Pages',
-    description: 'Static pages management',
-    path: '/ops/pages'
   },
   users: { 
     requiresDatabase: true, 
