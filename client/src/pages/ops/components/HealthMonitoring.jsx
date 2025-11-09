@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAdmin } from '../../../contexts/AdminContext';
+import { API_URL } from '../../../config/api';
 import './HealthMonitoring.css';
 
 const HealthMonitoring = () => {
@@ -23,7 +24,7 @@ const HealthMonitoring = () => {
 
   const checkAPIHealth = async () => {
     try {
-      const response = await fetch('/health');
+      const response = await fetch(`${API_URL}/health`);
       if (response.ok) {
         const data = await response.json();
         return {
@@ -34,13 +35,14 @@ const HealthMonitoring = () => {
       }
       return { status: 'error', uptime: 0, timestamp: null };
     } catch (error) {
+      console.error('API health check error:', error);
       return { status: 'error', uptime: 0, timestamp: null };
     }
   };
 
   const checkDatabaseHealth = async () => {
     try {
-      const response = await fetch('/health/db');
+      const response = await fetch(`${API_URL}/health/db`);
       if (response.ok) {
         const data = await response.json();
         return {
@@ -50,13 +52,14 @@ const HealthMonitoring = () => {
       }
       return { status: 'error', connections: 0 };
     } catch (error) {
+      console.error('Database health check error:', error);
       return { status: 'error', connections: 0 };
     }
   };
 
   const checkPostsHealth = async () => {
     try {
-      const response = await fetch('/api/posts');
+      const response = await fetch(`${API_URL}/api/posts`);
       if (response.ok) {
         const data = await response.json();
         return {
@@ -66,13 +69,14 @@ const HealthMonitoring = () => {
       }
       return { status: 'error', count: 0 };
     } catch (error) {
+      console.error('Posts health check error:', error);
       return { status: 'error', count: 0 };
     }
   };
 
   const checkMediaHealth = async () => {
     try {
-      const response = await fetch('/api/media');
+      const response = await fetch(`${API_URL}/api/media`);
       if (response.ok) {
         const data = await response.json();
         const totalSize = Array.isArray(data) ? 
@@ -85,13 +89,14 @@ const HealthMonitoring = () => {
       }
       return { status: 'error', storage: '0MB' };
     } catch (error) {
+      console.error('Media health check error:', error);
       return { status: 'error', storage: '0MB' };
     }
   };
 
   const checkKubernetesHealth = async () => {
     try {
-      const response = await fetch('/api/admin/system-status', {
+      const response = await fetch(`${API_URL}/api/admin/system-status`, {
         headers: {
           'Authorization': `Bearer ${adminToken}`
         }
@@ -108,6 +113,7 @@ const HealthMonitoring = () => {
       }
       return { status: 'error', pods: 0, cpu: '0%', memory: '0MB' };
     } catch (error) {
+      console.error('Kubernetes health check error:', error);
       return { status: 'error', pods: 0, cpu: '0%', memory: '0MB' };
     }
   };
