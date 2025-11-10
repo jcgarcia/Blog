@@ -798,7 +798,9 @@ export const uploadToS3 = async (req, res) => {
         res.status(500).json({ 
           success: false, 
           message: errorMessage,
-          debug: process.env.NODE_ENV === 'development' ? uploadError.message : undefined,
+          debug: uploadError.message, // Temporarily expose error details
+          awsErrorCode: uploadError.code,
+          awsErrorName: uploadError.name,
           errorType: 's3_upload'
         });
       }
