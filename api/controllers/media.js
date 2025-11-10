@@ -439,6 +439,9 @@ export const uploadToS3 = async (req, res) => {
       // --- NEW: Read storage settings from CoreDB ---
       const settings = await getMediaSettings();
       
+      // Get database pool for media record insertion
+      const pool = getDbPool();
+      
       // DEBUG: Log storage configuration
       console.log('🔍 Media Upload Debug - Storage Settings:');
       console.log('  media_storage_type:', settings.media_storage_type);
