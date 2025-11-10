@@ -898,8 +898,8 @@ export const updateAwsConfig = async (req, res) => {
 export const getMediaStorageConfig = async (req, res) => {
   try {
     // Import CoreDB manager
-    const { CoreDBConfigManager } = await import('../utils/coredb.js');
-    const coreDB = new CoreDBConfigManager();
+    const CoreDB = (await import('../services/CoreDB.js')).default;
+    const coreDB = new CoreDB();
     
     // Get storage type and configurations from CoreDB system_config table
     const storageType = await coreDB.getConfig('media.storage_type') || 
