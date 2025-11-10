@@ -902,12 +902,8 @@ export const getMediaStorageConfig = async (req, res) => {
     const coreDB = new CoreDB();
     
     // Get storage type and configurations from CoreDB system_config table
-    const storageType = await coreDB.getConfig('media.storage_type') || 
-                       await coreDB.getConfig('media_storage_type') || 'internal';
-    
-    const awsConfig = await coreDB.getConfig('aws.config') || 
-                     await coreDB.getConfig('aws_config') || {};
-    
+    const storageType = await coreDB.getConfig('media_storage_type') || 'internal';
+    const awsConfig = await coreDB.getConfig('aws_config') || {};
     const ociConfig = await coreDB.getConfig('oci_config') || {};
     
     const config = {
