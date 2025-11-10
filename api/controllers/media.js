@@ -9,7 +9,7 @@ import jwt from 'jsonwebtoken';
 import credentialManager from '../services/awsCredentialManager.js';
 import sharp from 'sharp';
 import { generatePdfThumbnail, deletePdfThumbnail, getThumbnailRelativePath } from '../utils/pdfThumbnails.js';
-import { CoreDBConfigManager } from '../utils/coredb.js';
+import CoreDB from '../services/CoreDB.js';
 import fs from 'fs/promises';
 import { existsSync } from 'fs';
 
@@ -19,7 +19,7 @@ import crypto from 'crypto';
 
 // Helper function to get media settings from CoreDB
 async function getMediaSettings() {
-  const coreDB = new CoreDBConfigManager();
+  const coreDB = new CoreDB();
   
   const mediaStorageType = await coreDB.getConfig('media.storage_type') || 
                            await coreDB.getConfig('media_storage_type') || 'internal';
