@@ -9,12 +9,48 @@ import jwt from 'jsonwebtoken';
 import credentialManager from '../services/awsCredentialManager.js';
 import sharp from 'sharp';
 import { generatePdfThumbnail, deletePdfThumbnail, getThumbnailRelativePath } from '../utils/pdfThumbnails.js';
+import { CoreDBConfigManager } from '../utils/coredb.js';
 import fs from 'fs/promises';
 import { existsSync } from 'fs';
 
 // Removed complex getS3Client function - using direct OIDC approach instead
 
 import crypto from 'crypto';
+
+// Helper function to get media settings from CoreDB
+async function getMediaSettings() {
+  const coreDB = new CoreDBConfigManager();
+  
+  const mediaStorageType = await coreDB.getConfig('media.storage_type') || 
+                           await coreDB.getConfig('media_storage_type') || 'internal';
+  
+  const awsConfigRaw = await coreDB.getConfig('aws.config') || 
+                       await coreDB.getConfig('aws_config') || '{}';
+  
+  const ociConfigRaw = await coreDB.getConfig('oci_config') || '{}';
+  
+  // Parse JSON configurations
+  let awsConfig, ociConfig;
+  try {
+    awsConfig = typeof awsConfigRaw === 'string' ? JSON.parse(awsConfigRaw) : awsConfigRaw;
+  } catch (e) {
+    console.error('Error parsing aws_config:', e);
+    awsConfig = {};
+  }
+  
+  try {
+    ociConfig = typeof ociConfigRaw === 'string' ? JSON.parse(ociConfigRaw) : ociConfigRaw;
+  } catch (e) {
+    console.error('Error parsing oci_config:', e);
+    ociConfig = {};
+  }
+  
+  return {
+    media_storage_type: mediaStorageType,
+    aws_config: awsConfig,
+    oci_config: ociConfig
+  };
+}
 
 // Helper: Generate signed URL for private S3 objects using OIDC
 export async function generateSignedUrl(s3Key, bucketName, expiresIn = 3600) {
@@ -404,30 +440,8 @@ export const uploadToS3 = async (req, res) => {
         }
       }
 
-      // --- NEW: Read storage settings from DB ---
-      const pool = getDbPool();
-      const settingsRes = await pool.query("SELECT key, value, type FROM settings WHERE key IN ('media_storage_type', 'oci_config', 'aws_config')");
-      const settings = {};
-      settingsRes.rows.forEach(row => {
-        if (row.type === 'json') {
-          try { 
-            // Check if value is already an object or needs parsing
-            if (typeof row.value === 'object' && row.value !== null) {
-              settings[row.key] = row.value;
-            } else if (typeof row.value === 'string') {
-              settings[row.key] = JSON.parse(row.value);
-            } else {
-              settings[row.key] = {};
-            }
-          } catch (e) { 
-            console.error(`Error parsing JSON setting ${row.key}:`, e);
-            console.error(`Raw value type: ${typeof row.value}, value:`, row.value);
-            settings[row.key] = {}; 
-          }
-        } else {
-          settings[row.key] = row.value;
-        }
-      });
+      // --- NEW: Read storage settings from CoreDB ---
+      const settings = await getMediaSettings();
       
       // DEBUG: Log storage configuration
       console.log('🔍 Media Upload Debug - Storage Settings:');
@@ -952,16 +966,8 @@ export const getMediaFiles = async (req, res) => {
       try {
         console.log('🔄 S3 sync requested, checking AWS configuration...');
         
-        const settingsRes = await pool.query("SELECT key, value FROM settings WHERE key IN ('media_storage_type', 'aws_config')");
-        const settings = {};
-        settingsRes.rows.forEach(row => {
-          try {
-            settings[row.key] = row.key === 'aws_config' ? JSON.parse(row.value) : row.value;
-          } catch (e) {
-            console.error(`Error parsing setting ${row.key}:`, e);
-          }
-        });
-        
+        const settings = await getMediaSettings();
+
         if (settings.media_storage_type === 'aws' && settings.aws_config) {
           const s3Client = await credentialManager.getS3Client();
           const syncResult = await syncS3WithDatabase(pool, s3Client, settings.aws_config.bucketName);
@@ -1210,24 +1216,7 @@ export const deleteMediaFile = async (req, res) => {
     const mediaFile = getResult.rows[0];
 
     // Get storage settings
-    const settingsRes = await pool.query("SELECT key, value, type FROM settings WHERE key IN ('media_storage_type', 'oci_config', 'aws_config')");
-    const settings = {};
-    settingsRes.rows.forEach(row => {
-      if (row.type === 'json') {
-        try { 
-          if (typeof row.value === 'string') {
-            settings[row.key] = JSON.parse(row.value);
-          } else {
-            settings[row.key] = row.value;
-          }
-        } catch (e) { 
-          console.error(`Error parsing JSON setting ${row.key}:`, e);
-          settings[row.key] = {}; 
-        }
-      } else {
-        settings[row.key] = row.value;
-      }
-    });
+    const settings = await getMediaSettings();
 
     if (permanent) {
       // PERMANENT DELETE: Actually remove from S3 and database
@@ -1553,24 +1542,7 @@ export const restoreMediaFile = async (req, res) => {
     const mediaFile = getResult.rows[0];
 
     // Get storage settings
-    const settingsRes = await pool.query("SELECT key, value, type FROM settings WHERE key IN ('media_storage_type', 'oci_config', 'aws_config')");
-    const settings = {};
-    settingsRes.rows.forEach(row => {
-      if (row.type === 'json') {
-        try { 
-          if (typeof row.value === 'string') {
-            settings[row.key] = JSON.parse(row.value);
-          } else {
-            settings[row.key] = row.value;
-          }
-        } catch (e) { 
-          console.error(`Error parsing JSON setting ${row.key}:`, e);
-          settings[row.key] = {}; 
-        }
-      } else {
-        settings[row.key] = row.value;
-      }
-    });
+    const settings = await getMediaSettings();
 
     // Restore files from trash in S3
     if (mediaFile.trash_s3_key) {
@@ -1676,24 +1648,7 @@ export const emptyTrash = async (req, res) => {
     }
 
     // Get storage settings
-    const settingsRes = await pool.query("SELECT key, value, type FROM settings WHERE key IN ('media_storage_type', 'oci_config', 'aws_config')");
-    const settings = {};
-    settingsRes.rows.forEach(row => {
-      if (row.type === 'json') {
-        try { 
-          if (typeof row.value === 'string') {
-            settings[row.key] = JSON.parse(row.value);
-          } else {
-            settings[row.key] = row.value;
-          }
-        } catch (e) { 
-          console.error(`Error parsing JSON setting ${row.key}:`, e);
-          settings[row.key] = {}; 
-        }
-      } else {
-        settings[row.key] = row.value;
-      }
-    });
+    const settings = await getMediaSettings();
 
     let deletedFromS3Count = 0;
     const s3Client = await credentialManager.getS3Client();
@@ -2124,24 +2079,7 @@ export const syncS3Files = async (req, res) => {
     const pool = getDbPool();
     
     // Get AWS configuration
-    const settingsRes = await pool.query("SELECT key, value FROM settings WHERE key IN ('media_storage_type', 'aws_config')");
-    const settings = {};
-    settingsRes.rows.forEach(row => {
-      try {
-        // Handle case where value is already parsed (jsonb type in PostgreSQL)
-        if (row.key === 'aws_config') {
-          settings[row.key] = typeof row.value === 'string' ? JSON.parse(row.value) : row.value;
-        } else {
-          settings[row.key] = row.value;
-        }
-      } catch (e) {
-        console.error(`Error parsing setting ${row.key}:`, e);
-        return res.status(500).json({
-          success: false,
-          message: `Configuration error: ${e.message}`
-        });
-      }
-    });
+    const settings = await getMediaSettings();
     
     if (settings.media_storage_type !== 'aws' || !settings.aws_config) {
       return res.status(400).json({
