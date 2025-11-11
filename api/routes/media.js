@@ -27,8 +27,6 @@ import {
   getSignedUrlForKey
 } from "../controllers/media.js";
 
-import { fixMediaSchema } from "../controllers/databaseFix.js";
-
 import { syncS3ToDatabase, syncS3ToDatabaseOIDC } from "../controllers/sync.js";
 
 const router = express.Router();
@@ -142,9 +140,6 @@ router.post("/test-oidc-connection", requireAdminAuth, testOidcConnection); // P
 router.post("/sync-s3", requireAdminAuth, syncS3Files);              // POST /api/media/sync-s3 - Sync S3 bucket with database (credentials-based)
 router.post("/sync-s3-oidc", requireAdminAuth, syncS3ToDatabaseOIDC);  // POST /api/media/sync-s3-oidc - Sync S3 bucket with database (OIDC-based)
 router.post("/clear-database", requireAdminAuth, clearMediaDatabase); // POST /api/media/clear-database - Clear all media records
-
-// Database schema fix for migration issues
-router.post("/fix-schema", requireAdminAuth, fixMediaSchema); // POST /api/media/fix-schema - Fix database schema after migration
 
 // AWS credential management
 router.get("/credential-status", requireAdminAuth, getAWSCredentialStatus); // GET /api/media/credential-status - Get credential status
