@@ -21,9 +21,9 @@ import crypto from 'crypto';
 async function getMediaSettings() {
   const coreDB = new CoreDB();
   
-  const mediaStorageType = await coreDB.getConfig('media_storage_type') || 'internal';
-  const awsConfigRaw = await coreDB.getConfig('aws_config') || '{}';
-  const ociConfigRaw = await coreDB.getConfig('oci_config') || '{}';
+  const mediaStorageType = await coreDB.getConfig('media.storage_type') || 'internal';
+  const awsConfigRaw = await coreDB.getConfig('aws.config') || '{}';
+  const ociConfigRaw = await coreDB.getConfig('oci.config') || '{}';
   
   // Parse JSON configurations
   let awsConfig, ociConfig;
