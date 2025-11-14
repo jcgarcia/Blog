@@ -4,6 +4,7 @@ import { fromSSO } from '@aws-sdk/credential-provider-sso';
 import { S3Client } from '@aws-sdk/client-s3';
 import { STSClient } from '@aws-sdk/client-sts';
 import { getDbPool } from '../db.js';
+import CoreDB from './CoreDB.js';
 
 class AwsSsoRefreshService {
   constructor() {
@@ -49,15 +50,14 @@ class AwsSsoRefreshService {
     }
 
     try {
-      const pool = getDbPool();
-      const result = await pool.query("SELECT value FROM settings WHERE key = 'aws_config'");
+      const awsConfigValue = await CoreDB.getConfig('aws.config');
       
-      if (result.rows.length === 0) {
+      if (!awsConfigValue) {
         console.log('ℹ️ No AWS configuration found, skipping refresh');
         return;
       }
 
-      const config = JSON.parse(result.rows[0].value);
+      const config = typeof awsConfigValue === 'string' ? JSON.parse(awsConfigValue) : awsConfigValue;
       
       // Check if auto-refresh is enabled and SSO is configured
       if (!config.autoRefreshEnabled || !config.ssoStartUrl || !config.accountId || !config.roleName) {
@@ -90,14 +90,13 @@ class AwsSsoRefreshService {
    */
   async manualRefresh() {
     try {
-      const pool = getDbPool();
-      const result = await pool.query("SELECT value FROM settings WHERE key = 'aws_config'");
+      const awsConfigValue = await CoreDB.getConfig('aws.config');
       
-      if (result.rows.length === 0) {
+      if (!awsConfigValue) {
         throw new Error('No AWS configuration found');
       }
 
-      const config = JSON.parse(result.rows[0].value);
+      const config = typeof awsConfigValue === 'string' ? JSON.parse(awsConfigValue) : awsConfigValue;
       
       if (!config.ssoStartUrl || !config.accountId || !config.roleName) {
         throw new Error('SSO configuration incomplete. Please configure SSO settings in the media panel.');
@@ -162,14 +161,10 @@ class AwsSsoRefreshService {
         credentialSource: 'aws-sso-temporary'
       };
 
-      // Save to database
-      const pool = getDbPool();
-      await pool.query(
-        "UPDATE settings SET value = $1 WHERE key = 'aws_config'",
-        [JSON.stringify(updatedConfig)]
-      );
+      // Save to CoreDB
+      await CoreDB.setConfig('aws.config', updatedConfig, 'json', 'aws', 'AWS configuration including credentials');
 
-      console.log('✅ AWS SSO credentials refreshed and saved successfully');
+      console.log('✅ AWS SSO credentials refreshed and saved successfully to CoreDB');
       console.log(`ℹ️ New temporary credentials expire at: ${expiresAt.toISOString()}`);
       
       return {
@@ -203,17 +198,16 @@ class AwsSsoRefreshService {
    */
   async getCredentialStatus() {
     try {
-      const pool = getDbPool();
-      const result = await pool.query("SELECT value FROM settings WHERE key = 'aws_config'");
+      const awsConfigValue = await CoreDB.getConfig('aws.config');
       
-      if (result.rows.length === 0) {
+      if (!awsConfigValue) {
         return {
           configured: false,
           message: 'No AWS configuration found'
         };
       }
 
-      const config = JSON.parse(result.rows[0].value);
+      const config = typeof awsConfigValue === 'string' ? JSON.parse(awsConfigValue) : awsConfigValue;
       
       if (!config.accessKey) {
         return {

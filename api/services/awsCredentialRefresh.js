@@ -2,6 +2,7 @@ import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { getDbPool } from '../config/database.js';
+import CoreDB from './CoreDB.js';
 
 // AWS SSO Configuration for Blog
 const AWS_CONFIG = {
@@ -98,12 +99,9 @@ class AWSCredentialRefresh {
         lastRefresh: new Date().toISOString()
       };
 
-      await pool.query(
-        "UPDATE settings SET value = $1 WHERE key = 'aws_config'",
-        [JSON.stringify(awsConfig)]
-      );
+      await CoreDB.setConfig('aws.config', awsConfig, 'json', 'aws', 'AWS configuration including credentials');
 
-      console.log('✅ AWS credentials updated in database');
+      console.log('✅ AWS credentials updated in CoreDB');
       console.log(`📅 New expiration: ${credentials.expiresAt.toISOString()}`);
       
       return true;
@@ -118,15 +116,14 @@ class AWSCredentialRefresh {
    */
   async needsRefresh() {
     try {
-      const pool = getDbPool();
-      const result = await pool.query("SELECT value FROM settings WHERE key = 'aws_config'");
+      const awsConfigValue = await CoreDB.getConfig('aws.config');
       
-      if (result.rows.length === 0) {
+      if (!awsConfigValue) {
         console.log('⚠️ No AWS config found - refresh needed');
         return true;
       }
 
-      const config = JSON.parse(result.rows[0].value);
+      const config = typeof awsConfigValue === 'string' ? JSON.parse(awsConfigValue) : awsConfigValue;
       
       if (!config.expiresAt) {
         console.log('⚠️ No expiration date found - refresh needed');
@@ -240,17 +237,16 @@ class AWSCredentialRefresh {
    */
   async getStatus() {
     try {
-      const pool = getDbPool();
-      const result = await pool.query("SELECT value FROM settings WHERE key = 'aws_config'");
+      const awsConfigValue = await CoreDB.getConfig('aws.config');
       
-      if (result.rows.length === 0) {
+      if (!awsConfigValue) {
         return { 
           status: 'missing', 
           message: 'No AWS configuration found' 
         };
       }
 
-      const config = JSON.parse(result.rows[0].value);
+      const config = typeof awsConfigValue === 'string' ? JSON.parse(awsConfigValue) : awsConfigValue;
       
       if (!config.expiresAt) {
         return { 

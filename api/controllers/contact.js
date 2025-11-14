@@ -1,5 +1,6 @@
 import { getDbPool } from "../db.js";
 import nodemailer from "nodemailer";
+import CoreDB from '../services/CoreDB.js';
 
 // Create email transporter using database settings
 const createTransporter = async (settings) => {
@@ -91,18 +92,21 @@ export const sendContactMessage = async (req, res) => {
       // If we can't store in database and can't send email, this is a real error
     }
 
-    // Get SMTP settings from database
+    // Get SMTP settings from CoreDB
     let smtpSettings = {};
     try {
-      const settingsResult = await pool.query(`
-        SELECT key, value FROM settings 
-        WHERE key IN ('smtp_host', 'smtp_port', 'smtp_user', 'smtp_pass', 'smtp_from', 'smtp_secure', 'contact_email', 'email_notifications')
-      `);
+      const smtpKeys = ['smtp.host', 'smtp.port', 'smtp.user', 'smtp.pass', 'smtp.from', 'smtp.secure', 'contact.email', 'email.notifications'];
       
-      settingsResult.rows.forEach(row => {
-        smtpSettings[row.key] = row.value;
-      });
-      console.log('SMTP settings loaded from database:', Object.keys(smtpSettings));
+      for (const key of smtpKeys) {
+        const value = await CoreDB.getConfig(key);
+        if (value !== null) {
+          // Convert dot notation to underscore for compatibility with existing code
+          const legacyKey = key.replace('.', '_');
+          smtpSettings[legacyKey] = value;
+        }
+      }
+      
+      console.log('SMTP settings loaded from CoreDB:', Object.keys(smtpSettings));
     } catch (settingsError) {
       console.error('Failed to load SMTP settings from database:', settingsError);
     }

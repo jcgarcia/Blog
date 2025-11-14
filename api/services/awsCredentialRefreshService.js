@@ -2,6 +2,7 @@ import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { getDbPool } from '../db.js';
+import CoreDB from './CoreDB.js';
 
 /**
  * AWS SSO Credential Refresh Service
@@ -116,10 +117,7 @@ class AwsCredentialRefreshService {
         lastRefresh: new Date().toISOString()
       };
       
-      await pool.query(
-        "UPDATE settings SET value = $1::jsonb WHERE key = 'aws_config'",
-        [JSON.stringify(awsConfig)]
-      );
+      await CoreDB.setConfig('aws.config', awsConfig, 'json', 'aws', 'AWS S3 storage configuration with OIDC');
       
       console.log('✅ AWS credentials updated in database');
       
@@ -163,15 +161,12 @@ class AwsCredentialRefreshService {
     const pool = getDbPool();
     
     try {
-      const result = await pool.query(
-        "SELECT value FROM settings WHERE key = 'aws_config'"
-      );
+      const config = await CoreDB.getConfig('aws.config');
       
-      if (result.rows.length === 0) {
+      if (!config) {
         return true; // No config exists
       }
       
-      const config = result.rows[0].value;
       if (!config.expiresAt) {
         return true; // No expiration info
       }

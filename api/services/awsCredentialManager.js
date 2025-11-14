@@ -4,6 +4,7 @@ import { SSOOIDCClient, CreateTokenCommand, StartDeviceAuthorizationCommand } fr
 import { S3Client } from '@aws-sdk/client-s3';
 import { fromSSO, fromWebToken, fromTemporaryCredentials } from '@aws-sdk/credential-providers';
 import { getDbPool } from '../db.js';
+import CoreDB from './CoreDB.js';
 import crypto from 'crypto';
 
 class AWSCredentialManager {
@@ -460,23 +461,20 @@ class AWSCredentialManager {
    */
   async getStoredAWSConfig() {
     try {
-      const pool = getDbPool();
-      const result = await pool.query("SELECT value FROM settings WHERE key = 'aws_config'");
+      const awsConfigValue = await CoreDB.getConfig('aws.config');
       
-      if (result.rows.length === 0) {
+      if (!awsConfigValue) {
         return null;
       }
 
-      const value = result.rows[0].value;
-      
-      // If value is already an object (PostgreSQL json type), return it directly
-      if (typeof value === 'object' && value !== null) {
-        return value;
+      // If value is already an object, return it directly
+      if (typeof awsConfigValue === 'object' && awsConfigValue !== null) {
+        return awsConfigValue;
       }
       
       // If value is a string, parse it as JSON
-      if (typeof value === 'string') {
-        return JSON.parse(value);
+      if (typeof awsConfigValue === 'string') {
+        return JSON.parse(awsConfigValue);
       }
       
       // Fallback: log the type and return null
@@ -495,11 +493,8 @@ class AWSCredentialManager {
     try {
       const pool = getDbPool();
       
-      // Store new configuration
-      await pool.query(
-        "INSERT INTO settings (key, value, type) VALUES ($1, $2, $3) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value",
-        ['aws_config', JSON.stringify(newConfig), 'json']
-      );
+      // Store new configuration in CoreDB
+      await CoreDB.setConfig('aws.config', newConfig, 'json', 'aws', 'AWS S3 storage configuration with OIDC');
       
       // Reinitialize with new configuration
       await this.reinitialize();
@@ -524,11 +519,8 @@ class AWSCredentialManager {
     try {
       const pool = getDbPool();
       
-      // Store updated configuration with new credentials
-      await pool.query(
-        "INSERT INTO settings (key, value, type) VALUES ($1, $2, $3) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value",
-        ['aws_config', JSON.stringify(updatedConfig), 'json']
-      );
+      // Store updated configuration with new credentials in CoreDB
+      await CoreDB.setConfig('aws.config', updatedConfig, 'json', 'aws', 'AWS S3 storage configuration with OIDC');
       
       console.log('✅ AWS credentials updated in database');
       

@@ -2757,9 +2757,9 @@ export const getSignedUrlForKey = async (req, res) => {
     
     const pool = getDbPool();
     
-    // Get AWS config from settings
-    const settingsRes = await pool.query("SELECT value FROM settings WHERE key = 'aws_config'");
-    if (settingsRes.rows.length === 0) {
+    // Get AWS config from CoreDB
+    const awsConfigValue = await CoreDB.getConfig('aws.config');
+    if (!awsConfigValue) {
       return res.status(500).json({ 
         success: false, 
         error: 'AWS configuration not found' 
@@ -2768,11 +2768,10 @@ export const getSignedUrlForKey = async (req, res) => {
     
     // Parse AWS config (handle both string and object formats)
     let awsConfig;
-    const configValue = settingsRes.rows[0].value;
-    if (typeof configValue === 'string') {
-      awsConfig = JSON.parse(configValue);
+    if (typeof awsConfigValue === 'string') {
+      awsConfig = JSON.parse(awsConfigValue);
     } else {
-      awsConfig = configValue; // Already an object
+      awsConfig = awsConfigValue; // Already an object
     }
     const signedUrl = await generateSignedUrl(key, awsConfig.bucketName);
     

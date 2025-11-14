@@ -5,6 +5,7 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import credentialManager from '../services/awsCredentialManager.js';
 import { getDefaultCategoryId } from "./category.js";
 import { generateSignedUrl } from './media.js';
+import CoreDB from '../services/CoreDB.js';
 
 // Helper function to get valid category ID
 async function getCategoryIdForPost(categoryInput) {
@@ -58,13 +59,13 @@ async function resolveMediaUrl(mediaId) {
       if (s3Key.startsWith('uploads/')) {
         console.log(`🔍 Processing S3 key: ${s3Key}`);
         const pool = getDbPool();
-        const settingsRes = await pool.query("SELECT value FROM settings WHERE key = 'aws_config'");
-        if (settingsRes.rows.length === 0) {
+        const awsConfigValue = await CoreDB.getConfig('aws.config');
+        if (!awsConfigValue) {
           console.warn('❌ AWS configuration not found');
           return mediaId; // Return original URL as fallback
         }
         
-        const awsConfig = JSON.parse(settingsRes.rows[0].value);
+        const awsConfig = typeof awsConfigValue === 'string' ? JSON.parse(awsConfigValue) : awsConfigValue;
         console.log(`🔧 AWS Config loaded - Bucket: ${awsConfig.bucketName}, Region: ${awsConfig.region}`);
         const credentials = await credentialManager.getCredentials();
         const s3Client = new S3Client({
@@ -118,17 +119,16 @@ async function resolveMediaUrl(mediaId) {
       });
       console.log(`🔗 S3 Client obtained from OIDC credential manager`);
       
-      // Get bucket name from database config
+      // Get bucket name from CoreDB config
       const pool = getDbPool();
-      const settingsRes = await pool.query("SELECT value FROM settings WHERE key = 'aws_config'");
-      if (settingsRes.rows.length === 0) {
+      const awsConfigValue = await CoreDB.getConfig('aws.config');
+      if (!awsConfigValue) {
         console.warn('❌ AWS configuration not found in database');
         return mediaId; // Return S3 key as fallback
       }
       
-      // Handle both JSON string and object formats from database
-      const rawValue = settingsRes.rows[0].value;
-      const awsConfig = typeof rawValue === 'string' ? JSON.parse(rawValue) : rawValue;
+      // Handle both JSON string and object formats
+      const awsConfig = typeof awsConfigValue === 'string' ? JSON.parse(awsConfigValue) : awsConfigValue;
       console.log(`🔧 Using bucket: ${awsConfig.bucketName} with OIDC authentication`);
       
       console.log(`📝 Using manual signing for bucket: ${awsConfig.bucketName}, key: ${mediaId}`);
@@ -175,14 +175,14 @@ async function resolveMediaUrl(mediaId) {
     
     // If it's a private bucket, generate signed URL
     if (media.public_url === 'PRIVATE_BUCKET') {
-      // Get AWS config
-      const settingsRes = await pool.query("SELECT value FROM settings WHERE key = 'aws_config'");
-      if (settingsRes.rows.length === 0) {
+      // Get AWS config from CoreDB
+      const awsConfigValue = await CoreDB.getConfig('aws.config');
+      if (!awsConfigValue) {
         console.warn('AWS configuration not found');
         return null;
       }
       
-      const awsConfig = JSON.parse(settingsRes.rows[0].value);
+      const awsConfig = typeof awsConfigValue === 'string' ? JSON.parse(awsConfigValue) : awsConfigValue;
       const credentials = await credentialManager.getCredentials();
       const s3Client = new S3Client({
         region: awsConfig.region || 'eu-west-2',

@@ -1,27 +1,21 @@
 import { S3Client, ListObjectsV2Command } from '@aws-sdk/client-s3';
 import { getDbPool } from '../db.js';
 import awsCredentialManager from '../services/awsCredentialManager.js';
+import CoreDB from '../services/CoreDB.js';
 
 // Sync S3 bucket contents with database
 export const syncS3ToDatabase = async (req, res) => {
   try {
     const pool = getDbPool();
     
-    // Get AWS configuration from database
-    const settingsRes = await pool.query("SELECT key, value, type FROM settings WHERE key IN ('media_storage_type', 'aws_config')");
-    const settings = {};
-    settingsRes.rows.forEach(row => {
-      if (row.type === 'json') {
-        try { 
-          settings[row.key] = JSON.parse(row.value); 
-        } catch (e) { 
-          console.error(`Error parsing JSON setting ${row.key}:`, e);
-          settings[row.key] = {}; 
-        }
-      } else {
-        settings[row.key] = row.value;
-      }
-    });
+    // Get AWS configuration from CoreDB
+    const mediaStorageType = await CoreDB.getConfig('media.storage_type');
+    const awsConfigValue = await CoreDB.getConfig('aws.config');
+    
+    const settings = {
+      media_storage_type: mediaStorageType,
+      aws_config: typeof awsConfigValue === 'string' ? JSON.parse(awsConfigValue) : awsConfigValue
+    };
 
     if (settings.media_storage_type !== 'aws' || !settings.aws_config?.bucketName) {
       return res.status(400).json({
@@ -172,32 +166,31 @@ export const syncS3ToDatabaseOIDC = async (req, res) => {
     console.log('🔄 OIDC Sync Phase 1: Starting OIDC S3 sync...');
     const pool = getDbPool();
     
-    // Get AWS configuration from database - simple approach
-    console.log('🔄 OIDC Sync Phase 2: Retrieving AWS config from database...');
-    const awsConfigRes = await pool.query("SELECT value FROM settings WHERE key = 'aws_config' AND type = 'json'");
-    if (awsConfigRes.rows.length === 0) {
-      console.error('❌ Phase 2 Failed: AWS configuration not found in database');
+    // Get AWS configuration from CoreDB
+    console.log('🔄 OIDC Sync Phase 2: Retrieving AWS config from CoreDB...');
+    const awsConfigValue = await CoreDB.getConfig('aws.config');
+    if (!awsConfigValue) {
+      console.error('❌ Phase 2 Failed: AWS configuration not found in CoreDB');
       return res.status(400).json({
         success: false,
-        message: 'AWS configuration not found in database'
+        message: 'AWS configuration not found in CoreDB'
       });
     }
 
     let awsConfig;
-    const rawValue = awsConfigRes.rows[0].value;
-    console.log('🔍 Raw AWS config value type:', typeof rawValue);
-    console.log('🔍 Raw AWS config value:', rawValue);
+    console.log('🔍 Raw AWS config value type:', typeof awsConfigValue);
+    console.log('🔍 Raw AWS config value:', awsConfigValue);
     
     try {
-      // PostgreSQL JSONB columns return objects directly, not strings
-      if (typeof rawValue === 'object' && rawValue !== null) {
-        awsConfig = rawValue;
-      } else if (typeof rawValue === 'string') {
+      // Handle both string and object formats
+      if (typeof awsConfigValue === 'object' && awsConfigValue !== null) {
+        awsConfig = awsConfigValue;
+      } else if (typeof awsConfigValue === 'string') {
         // Only parse if it's actually a JSON string
-        if (rawValue.startsWith('{') || rawValue.startsWith('[')) {
-          awsConfig = JSON.parse(rawValue);
+        if (awsConfigValue.startsWith('{') || awsConfigValue.startsWith('[')) {
+          awsConfig = JSON.parse(awsConfigValue);
         } else {
-          throw new Error(`Invalid JSON format: ${rawValue}`);
+          throw new Error(`Invalid JSON format: ${awsConfigValue}`);
         }
       } else {
         throw new Error(`Unexpected value type: ${typeof rawValue}`);
