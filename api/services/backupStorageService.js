@@ -31,7 +31,7 @@ class BackupStorageService {
       
       // Get AWS configuration from CoreDB (same as media library)
       const coreDb = CoreDB.getInstance();
-      const awsConfigValue = await coreDb.getConfig('aws_config');
+      const awsConfigValue = await coreDb.getConfig('aws.config');
       
       if (!awsConfigValue) {
         throw new Error('AWS configuration not found in CoreDB. Please configure AWS settings in Operations Panel.');
