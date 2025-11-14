@@ -665,6 +665,22 @@ class CoreDB {
         }
         return CoreDB.instance;
     }
+
+    // Static wrapper methods for convenience
+    static async getConfig(key) {
+        const instance = CoreDB.getInstance();
+        return instance.getConfig(key);
+    }
+
+    static async setConfig(key, value, description = null, configType = 'string', isEncrypted = false, groupName = 'general') {
+        const instance = CoreDB.getInstance();
+        return instance.setConfig(key, value, description, configType, isEncrypted, groupName);
+    }
+
+    static async deleteConfig(key) {
+        const instance = CoreDB.getInstance();
+        return instance.deleteConfig(key);
+    }
 }
 
 CoreDB.instance = null;
