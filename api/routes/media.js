@@ -116,9 +116,9 @@ router.get("/serve/*", async (req, res) => {
     console.log('🔑 [MEDIA ROUTE] Using OIDC credential manager for signed URL generation');
     const { generateSignedUrl } = await import("../controllers/media.js");
     
-    // Use the OIDC-aware signed URL generator instead of manual S3Client creation
+    // Use the bucket from database or fallback to the one stored in s3_bucket field
     console.log('🎯 [MEDIA ROUTE] About to call generateSignedUrl from media.js');
-    const signedUrl = await generateSignedUrl(s3_key, 'bedtimeblog-medialibrary', 3600);
+    const signedUrl = await generateSignedUrl(s3_key, s3_bucket, 3600);
     console.log(`✅ [MEDIA ROUTE] Generated signed URL for: ${filename}`);
     
     // Redirect to the signed URL

@@ -621,10 +621,10 @@ class AWSCredentialManager {
           'The AWS SSO session needs to be established on the server side.',
           'This typically requires server-side AWS CLI configuration:',
           '1. Run: aws configure sso',
-          '2. Use SSO Start URL: https://ingasti.awsapps.com/start/#',
-          '3. Use SSO Region: eu-west-2', 
-          '4. Select account: 007041844937',
-          '5. Select role: BlogMediaLibraryAccess',
+          '2. Enter your SSO Start URL (configured in admin panel)',
+          '3. Enter your SSO Region (configured in admin panel)', 
+          '4. Select your AWS account (configured in admin panel)',
+          '5. Select your IAM role (configured in admin panel)',
           'Alternative: Use temporary credentials from AWS Identity Center portal'
         ],
         technicalError: error.message

@@ -4,18 +4,33 @@ import path from 'path';
 import { getDbPool } from '../config/database.js';
 import CoreDB from './CoreDB.js';
 
-// AWS SSO Configuration for Blog
-const AWS_CONFIG = {
-  accountId: '007041844937',
-  roleName: 'BlogMediaLibraryAccess',
-  region: 'eu-west-2',
-  bucketName: 'bedtimeblog-medialibrary'
-};
-
 class AWSCredentialRefresh {
   constructor() {
     this.isRefreshing = false;
     this.refreshInterval = null;
+    // Configuration loaded from CoreDB, not hardcoded
+    this.config = null;
+  }
+
+  /**
+   * Load AWS configuration from CoreDB
+   */
+  async loadConfig() {
+    if (this.config) return this.config;
+    
+    const awsConfigValue = await CoreDB.getConfig('aws.config');
+    if (!awsConfigValue) {
+      throw new Error('AWS configuration not found in CoreDB. Please configure AWS settings first.');
+    }
+    
+    this.config = typeof awsConfigValue === 'string' ? JSON.parse(awsConfigValue) : awsConfigValue;
+    
+    // Validate required fields
+    if (!this.config.accountId || !this.config.roleName || !this.config.region) {
+      throw new Error('AWS configuration incomplete. Missing required fields: accountId, roleName, or region');
+    }
+    
+    return this.config;
   }
 
   /**
@@ -55,8 +70,11 @@ class AWSCredentialRefresh {
         throw new Error('No valid SSO access token found. Run "aws sso login" first.');
       }
 
+      // Load AWS config from CoreDB
+      const config = await this.loadConfig();
+
       // Get role credentials using access token
-      const credsCommand = `aws sso get-role-credentials --account-id ${AWS_CONFIG.accountId} --role-name ${AWS_CONFIG.roleName} --region ${AWS_CONFIG.region} --access-token ${accessToken} --output json`;
+      const credsCommand = `aws sso get-role-credentials --account-id ${config.accountId} --role-name ${config.roleName} --region ${config.region} --access-token ${accessToken} --output json`;
       
       const credsOutput = execSync(credsCommand, { encoding: 'utf8' });
       const credentials = JSON.parse(credsOutput);
@@ -72,8 +90,8 @@ class AWSCredentialRefresh {
         secretKey: creds.secretAccessKey,
         sessionToken: creds.sessionToken,
         expiresAt: new Date(creds.expiration),
-        region: AWS_CONFIG.region,
-        bucketName: AWS_CONFIG.bucketName
+        region: config.region,
+        bucketName: config.bucketName
       };
 
     } catch (error) {
@@ -265,8 +283,8 @@ class AWSCredentialRefresh {
         expiresAt: expiresAt.toISOString(),
         lastRefresh: config.lastRefresh || 'unknown',
         timeUntilExpiry: Math.max(0, Math.floor((expiresAt - now) / 1000 / 60)), // minutes
-        accountId: AWS_CONFIG.accountId,
-        roleName: AWS_CONFIG.roleName,
+        accountId: config.accountId,
+        roleName: config.roleName,
         bucketName: config.bucketName
       };
     } catch (error) {

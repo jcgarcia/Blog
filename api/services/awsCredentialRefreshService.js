@@ -10,10 +10,29 @@ import CoreDB from './CoreDB.js';
  */
 class AwsCredentialRefreshService {
   constructor() {
-    this.accountId = '147997129378';
-    this.roleName = 'Route53'; // Update this to the correct role
-    this.region = 'eu-west-2';
-    this.bucketName = 'bedtimeblog-medialibrary';
+    // Configuration is loaded from CoreDB, not hardcoded
+    this.config = null;
+  }
+
+  /**
+   * Load AWS configuration from CoreDB
+   */
+  async loadConfig() {
+    if (this.config) return this.config;
+    
+    const awsConfigValue = await CoreDB.getConfig('aws.config');
+    if (!awsConfigValue) {
+      throw new Error('AWS configuration not found in CoreDB. Please configure AWS settings first.');
+    }
+    
+    this.config = typeof awsConfigValue === 'string' ? JSON.parse(awsConfigValue) : awsConfigValue;
+    
+    // Validate required fields
+    if (!this.config.accountId || !this.config.roleName || !this.config.region || !this.config.bucketName) {
+      throw new Error('AWS configuration incomplete. Missing required fields: accountId, roleName, region, or bucketName');
+    }
+    
+    return this.config;
   }
 
   /**
@@ -73,12 +92,13 @@ class AwsCredentialRefreshService {
    */
   async getNewCredentials() {
     try {
+      const config = await this.loadConfig();
       const accessToken = this.getAccessToken();
       
       const command = `aws sso get-role-credentials \
-        --account-id "${this.accountId}" \
-        --role-name "${this.roleName}" \
-        --region "${this.region}" \
+        --account-id "${config.accountId}" \
+        --role-name "${config.roleName}" \
+        --region "${config.region}" \
         --access-token "${accessToken}" \
         --output json`;
       
@@ -107,19 +127,21 @@ class AwsCredentialRefreshService {
     const pool = getDbPool();
     
     try {
+      const config = await this.loadConfig();
+      
+      // Merge new credentials with existing config
       const awsConfig = {
+        ...config,
         accessKey: credentials.accessKey,
         secretKey: credentials.secretKey,
         sessionToken: credentials.sessionToken,
-        region: this.region,
-        bucketName: this.bucketName,
         expiresAt: new Date(credentials.expiration).toISOString(),
         lastRefresh: new Date().toISOString()
       };
       
       await CoreDB.setConfig('aws.config', awsConfig, 'json', 'aws', 'AWS S3 storage configuration with OIDC');
       
-      console.log('✅ AWS credentials updated in database');
+      console.log('✅ AWS credentials updated in CoreDB');
       
       // Calculate expiration time
       const expiresIn = Math.floor((credentials.expiration - Date.now()) / 1000);
