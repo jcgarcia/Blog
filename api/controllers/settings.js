@@ -840,23 +840,19 @@ export const updateAwsConfig = async (req, res) => {
       }
     }
     
-    const pool = getDbPool();
+    // Use CoreDB to save configuration with correct dot notation keys
+    const { default: CoreDB } = await import('../services/CoreDB.js');
+    const coreDB = CoreDB.getInstance();
     
-    // Save the consolidated aws_config object
-    await pool.query(
-      'INSERT INTO settings (key, value, type) VALUES ($1, $2, $3) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, type = EXCLUDED.type',
-      ['aws_config', JSON.stringify(awsConfig), 'json']
-    );
+    // Save the consolidated aws_config object to CoreDB with dot notation
+    await coreDB.setConfig('aws.config', awsConfig, 'aws', false);
+    console.log('✅ AWS config saved to CoreDB with key: aws.config');
 
-    // Set media storage type to AWS
-    await pool.query(
-      'INSERT INTO settings (key, value, type) VALUES ($1, $2, $3) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, type = EXCLUDED.type',
-      ['media_storage_type', 'aws', 'string']
-    );
+    // Set media storage type to AWS in CoreDB with dot notation
+    await coreDB.setConfig('media.storage_type', 'aws', 'media', false);
+    console.log('✅ Media storage type set to AWS in CoreDB with key: media.storage_type');
 
-    console.log('🔧 Media storage type set to AWS');
-
-    // Also save External ID separately for the External ID management
+    // Also save External ID to CoreDB with dot notation
     const externalIdData = {
       externalId: trimmedExternalId,
       generatedAt: new Date().toISOString(),
@@ -864,12 +860,8 @@ export const updateAwsConfig = async (req, res) => {
       adminUserId: req.adminUser.id
     };
 
-    await pool.query(
-      'INSERT INTO settings (key, value, type) VALUES ($1, $2, $3) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, type = EXCLUDED.type',
-      ['aws_external_id', JSON.stringify(externalIdData), 'json']
-    );
-
-    console.log('🔧 AWS configuration saved successfully:', awsConfig);
+    await coreDB.setConfig('aws.external_id', externalIdData, 'aws', false);
+    console.log('✅ AWS External ID saved to CoreDB with key: aws.external_id');
     
     // Reinitialize credential manager with new configuration
     try {
