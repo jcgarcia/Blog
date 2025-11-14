@@ -288,9 +288,9 @@ class CoreDB {
             { key: 'oauth_cognito_domain', value: '""', group_name: 'oauth', is_public: false },
             
             // Media storage configuration
-            { key: 'media_storage_type', value: '"aws"', group_name: 'media', is_public: false },
-            { key: 'media_storage_s3_bucket', value: '"bedtime-blog-media"', group_name: 'media', is_public: false },
-            { key: 'aws_config', value: '{"region": "eu-west-2", "roleArn": "arn:aws:iam::007041844937:role/BedtimeBlogMediaRole", "accountId": "007041844937", "authMethod": "oidc", "bucketName": "bedtimeblog-medialibrary", "oidcSubject": "system:serviceaccount:blog:media-access-sa", "oidcAudience": "https://oidc.ingasti.com", "oidcIssuerUrl": "https://oidc.ingasti.com"}', group_name: 'aws', is_public: false },
+            { key: 'media.storage_type', value: '"aws"', group_name: 'media', is_public: false },
+            { key: 'media.storage_s3_bucket', value: '"bedtime-blog-media"', group_name: 'media', is_public: false },
+            { key: 'aws.config', value: '{"region": "eu-west-2", "roleArn": "arn:aws:iam::007041844937:role/BedtimeBlogMediaRole", "accountId": "007041844937", "authMethod": "oidc", "bucketName": "bedtimeblog-medialibrary", "oidcSubject": "system:serviceaccount:blog:media-access-sa", "oidcAudience": "https://oidc.ingasti.com", "oidcIssuerUrl": "https://oidc.ingasti.com"}', group_name: 'aws', is_public: false },
             { key: 'media.max_upload_size', value: '"10485760"', group_name: 'general', is_public: false },
             
             // Email configuration
