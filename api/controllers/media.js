@@ -19,7 +19,7 @@ import crypto from 'crypto';
 
 // Helper function to get media settings from CoreDB
 async function getMediaSettings() {
-  const coreDB = new CoreDB();
+  const coreDB = CoreDB.getInstance();
   
   const mediaStorageType = await coreDB.getConfig('media.storage_type') || 'internal';
   const awsConfigRaw = await coreDB.getConfig('aws.config') || '{}';
