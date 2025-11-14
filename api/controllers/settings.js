@@ -632,19 +632,11 @@ export const saveAwsExternalId = async (req, res) => {
 // Get AWS Configuration (admin only)
 export const getAwsConfig = async (req, res) => {
   try {
-    const pool = getDbPool();
-    const result = await pool.query(
-      "SELECT value FROM settings WHERE key = 'aws_config'"
-    );
+    const awsConfigValue = await CoreDB.getConfig('aws.config');
     
     let awsConfig = {};
-    if (result.rows.length > 0) {
-      try {
-        awsConfig = JSON.parse(result.rows[0].value);
-      } catch (e) {
-        console.error('Error parsing aws_config JSON:', e);
-        awsConfig = {};
-      }
+    if (awsConfigValue) {
+      awsConfig = typeof awsConfigValue === 'string' ? JSON.parse(awsConfigValue) : awsConfigValue;
     }
     
     res.status(200).json({
