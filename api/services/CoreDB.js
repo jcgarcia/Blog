@@ -291,14 +291,14 @@ class CoreDB {
             { key: 'media.storage_type', value: '"aws"', group_name: 'media', is_public: false },
             { key: 'media.storage_s3_bucket', value: '""', group_name: 'media', is_public: false },
             { key: 'aws.config', value: JSON.stringify({
-                region: process.env.AWS_REGION || 'eu-west-2',
-                roleArn: process.env.AWS_ROLE_ARN || '',
-                accountId: process.env.AWS_ACCOUNT_ID || '',
-                authMethod: process.env.AWS_AUTH_METHOD || 'oidc',
-                bucketName: process.env.AWS_S3_BUCKET || '',
-                oidcSubject: process.env.AWS_OIDC_SUBJECT || '',
-                oidcAudience: process.env.AWS_OIDC_AUDIENCE || '',
-                oidcIssuerUrl: process.env.AWS_OIDC_ISSUER_URL || ''
+                region: 'eu-west-2',
+                roleArn: '',
+                accountId: '',
+                authMethod: 'oidc',
+                bucketName: '',
+                oidcSubject: '',
+                oidcAudience: '',
+                oidcIssuerUrl: ''
             }), group_name: 'aws', is_public: false },
             { key: 'media.max_upload_size', value: '"10485760"', group_name: 'general', is_public: false },
             
@@ -339,16 +339,17 @@ class CoreDB {
                 updated_at = NOW()
         `, ['Production Blog Database', 'postgresql', 'blog-postgres-service', 5432, 'blog', 'DataDBConnect', defaultPassword, 'prefer', true]);
 
-        // Load AWS S3 storage provider using environment variables
+        // Load AWS S3 storage provider with empty defaults
+        // AWS configuration must be set through ops panel or API - NOT environment variables
         const awsConfig = this.encrypt(JSON.stringify({
-            region: process.env.AWS_REGION || 'eu-west-2',
-            roleArn: process.env.AWS_ROLE_ARN || '',
-            accountId: process.env.AWS_ACCOUNT_ID || '',
-            authMethod: process.env.AWS_AUTH_METHOD || 'oidc',
-            bucketName: process.env.AWS_S3_BUCKET || '',
-            oidcSubject: process.env.AWS_OIDC_SUBJECT || '',
-            oidcAudience: process.env.AWS_OIDC_AUDIENCE || '',
-            oidcIssuerUrl: process.env.AWS_OIDC_ISSUER_URL || ''
+            region: 'eu-west-2',
+            roleArn: '',
+            accountId: '',
+            authMethod: 'oidc',
+            bucketName: '',
+            oidcSubject: '',
+            oidcAudience: '',
+            oidcIssuerUrl: ''
         }));
 
         await this.pool.query(`
@@ -358,7 +359,7 @@ class CoreDB {
         `, ['AWS S3 Production', 'aws-s3', awsConfig, true]);
 
         console.log('✅ CoreDB: Production data loaded successfully');
-        console.log('ℹ️  AWS configuration loaded from environment variables. Set AWS_ACCOUNT_ID, AWS_ROLE_ARN, AWS_S3_BUCKET, etc. in your environment.');
+        console.log('⚙️  Configure AWS settings through the ops panel at /ops');
     }
 
     // Authentication method
