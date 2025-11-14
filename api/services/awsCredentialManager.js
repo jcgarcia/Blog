@@ -27,6 +27,13 @@ class AWSCredentialManager {
         throw new Error('No AWS configuration found in database');
       }
 
+      // Debug: Log the config to see what we're working with
+      console.log('🔍 AWS Config loaded from CoreDB:', JSON.stringify(config, null, 2));
+      console.log('🔍 Config keys:', Object.keys(config));
+      console.log('🔍 authMethod:', config.authMethod);
+      console.log('🔍 roleArn:', config.roleArn);
+      console.log('🔍 oidcSubject:', config.oidcSubject);
+
       let credentialProvider;
 
       // Method 1: Use OIDC Web Identity Token if configured (Kubernetes service account)
