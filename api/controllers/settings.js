@@ -124,6 +124,17 @@ export const getAllSettings = async (req, res) => {
       settings[camelKey] = value;
     });
     
+    // Add AWS configuration from CoreDB
+    try {
+      const awsConfigValue = await CoreDB.getConfig('aws.config');
+      if (awsConfigValue) {
+        settings.awsConfig = typeof awsConfigValue === 'string' ? JSON.parse(awsConfigValue) : awsConfigValue;
+      }
+    } catch (awsError) {
+      console.error('Error loading AWS config from CoreDB:', awsError);
+      // Don't fail the entire request, just log the error
+    }
+    
     res.status(200).json(settings);
   } catch (error) {
     console.error("Error fetching all settings:", error);
