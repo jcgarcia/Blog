@@ -320,11 +320,7 @@ class CoreDB {
             await this.pool.query(`
                 INSERT INTO system_config (key, config_value, group_name, is_public, created_at, updated_at)
                 VALUES ($1, $2, $3, $4, NOW(), NOW())
-                ON CONFLICT (key) DO UPDATE SET
-                config_value = EXCLUDED.config_value,
-                group_name = EXCLUDED.group_name,
-                is_public = EXCLUDED.is_public,
-                updated_at = NOW()
+                ON CONFLICT (key) DO NOTHING
             `, [config.key, config.value, config.group_name, config.is_public]);
         }
 
