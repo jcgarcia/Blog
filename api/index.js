@@ -33,6 +33,7 @@ import { initializeDatabaseMigrations } from "./migrations.js";
 import CoreDB from "./services/CoreDB.js";
 import backupStorageService from "./services/backupStorageService.js";
 import backupSchedulerService from "./services/backupSchedulerService.js";
+import AwsSsoRefreshService from "./services/awsSsoRefreshService.js";
 
 // Load environment variables
 dotenv.config({ path: '.env.local' });
@@ -361,6 +362,11 @@ const server = app.listen(PORT, async () => {
           await backupSchedulerService.initialize();
           console.log('✅ BackupSchedulerService initialized successfully');
           console.log('📅 S3-based scheduled backup system is ready');
+          
+          // Initialize AWS SSO credential auto-refresh service
+          const awsSsoRefreshService = new AwsSsoRefreshService();
+          await awsSsoRefreshService.startAutoRefresh();
+          console.log('✅ AWS SSO auto-refresh service started - credentials will refresh automatically');
         } catch (error) {
           console.error('⚠️ Backup services initialization failed:', error.message);
           console.error('🔄 S3 backup functionality may be limited');
