@@ -227,8 +227,8 @@
     padding: 20px;
     border-radius: 8px;
     border: 1px solid #dee2e6;
-    width: 70vw;
-    max-width: 100%;
+    width: auto !important;
+    max-width: 600px;
     box-sizing: border-box;
 }
 
@@ -243,7 +243,6 @@
 .writeScheduleInputs {
     display: flex;
     gap: 20px;
-    width: 100%;
     align-items: flex-end;
     flex-wrap: wrap;
 }
@@ -263,21 +262,23 @@
 }
 
 .writeScheduleDate {
-    min-width: 180px;
+    width: 180px;
     padding: 10px;
     font-size: 16px;
     border: 1px solid #ddd;
     border-radius: 5px;
     font-family: "Poppins", sans-serif;
+    box-sizing: border-box;
 }
 
 .writeScheduleTime {
-    min-width: 130px;
+    width: 150px;
     padding: 10px;
     font-size: 16px;
     border: 1px solid #ddd;
     border-radius: 5px;
     font-family: "Poppins", sans-serif;
+    box-sizing: border-box;
 }
 
 .writeScheduleDate:focus,
@@ -291,7 +292,7 @@
     margin-top: 15px;
     margin-left: 0;
     color: #6c757d;
-    width: 100%;
+    max-width: 500px;
 }
 
 .writeText{
