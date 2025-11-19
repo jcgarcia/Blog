@@ -384,6 +384,14 @@ export const addPost = async (req, res) => {
     const canChangeAuthor = userInfo.role === 'super_admin' || userInfo.role === 'admin' || userInfo.role === 'editor';
     const authorId = canChangeAuthor && req.body.author_id ? req.body.author_id : userInfo.id;
     
+    // Handle published_at based on status
+    let publishedAt = null;
+    if (req.body.status === 'published') {
+      publishedAt = new Date();
+    } else if (req.body.status === 'scheduled' && req.body.published_at) {
+      publishedAt = new Date(req.body.published_at);
+    }
+    
     const values = [
       req.body.title,
       slug,
@@ -392,7 +400,7 @@ export const addPost = async (req, res) => {
       categoryId,     // Use validated category ID
       authorId,       // This maps to author_id column (custom or current user)
       req.body.status || 'draft',
-      req.body.status === 'published' ? new Date() : null
+      publishedAt
     ];
     
     const result = await pool.query(q, values);
@@ -569,6 +577,18 @@ export const updatePost = async (req, res) => {
     // Get valid category ID (with fallback to default)
     const categoryId = await getCategoryIdForPost(req.body.cat);
     
+    // Handle published_at based on status
+    let publishedAt = null;
+    if (req.body.status === 'published' && !currentPost.rows[0].published_at) {
+      // Only set published_at if transitioning to published and it wasn't set before
+      publishedAt = new Date();
+    } else if (req.body.status === 'scheduled' && req.body.published_at) {
+      publishedAt = new Date(req.body.published_at);
+    } else if (req.body.published_at) {
+      // Allow explicit published_at override
+      publishedAt = new Date(req.body.published_at);
+    }
+    
     // Determine if user can change author
     const canChangeAuthor = userInfo.role === 'super_admin' || userInfo.role === 'admin' || userInfo.role === 'editor';
     
@@ -581,8 +601,8 @@ export const updatePost = async (req, res) => {
       if (authorId) {
         q = `
           UPDATE posts 
-          SET title=$1, slug=$2, content=$3, featured_image=$4, category_id=$5, status=$6, author_id=$7, updated_at=CURRENT_TIMESTAMP 
-          WHERE id = $8
+          SET title=$1, slug=$2, content=$3, featured_image=$4, category_id=$5, status=$6, author_id=$7, published_at=$8, updated_at=CURRENT_TIMESTAMP 
+          WHERE id = $9
           RETURNING *
         `;
         values = [
@@ -593,13 +613,14 @@ export const updatePost = async (req, res) => {
           categoryId,  // Use validated category ID
           req.body.status,
           authorId,
+          publishedAt,
           postId
         ];
       } else {
         q = `
           UPDATE posts 
-          SET title=$1, slug=$2, content=$3, featured_image=$4, category_id=$5, status=$6, updated_at=CURRENT_TIMESTAMP 
-          WHERE id = $7
+          SET title=$1, slug=$2, content=$3, featured_image=$4, category_id=$5, status=$6, published_at=$7, updated_at=CURRENT_TIMESTAMP 
+          WHERE id = $8
           RETURNING *
         `;
         values = [
@@ -609,6 +630,7 @@ export const updatePost = async (req, res) => {
           req.body.img, 
           categoryId,  // Use validated category ID
           req.body.status,
+          publishedAt,
           postId
         ];
       }
@@ -619,8 +641,8 @@ export const updatePost = async (req, res) => {
       if (authorId) {
         q = `
           UPDATE posts 
-          SET title=$1, slug=$2, content=$3, featured_image=$4, category_id=$5, status=$6, author_id=$7, updated_at=CURRENT_TIMESTAMP 
-          WHERE id = $8
+          SET title=$1, slug=$2, content=$3, featured_image=$4, category_id=$5, status=$6, author_id=$7, published_at=$8, updated_at=CURRENT_TIMESTAMP 
+          WHERE id = $9
           RETURNING *
         `;
         values = [
@@ -631,13 +653,14 @@ export const updatePost = async (req, res) => {
           categoryId,  // Use validated category ID
           req.body.status,
           authorId,
+          publishedAt,
           postId
         ];
       } else {
         q = `
           UPDATE posts 
-          SET title=$1, slug=$2, content=$3, featured_image=$4, category_id=$5, status=$6, updated_at=CURRENT_TIMESTAMP 
-          WHERE id = $7
+          SET title=$1, slug=$2, content=$3, featured_image=$4, category_id=$5, status=$6, published_at=$7, updated_at=CURRENT_TIMESTAMP 
+          WHERE id = $8
           RETURNING *
         `;
         values = [
@@ -647,6 +670,7 @@ export const updatePost = async (req, res) => {
           req.body.img, 
           categoryId,  // Use validated category ID
           req.body.status,
+          publishedAt,
           postId
         ];
       }
@@ -654,8 +678,8 @@ export const updatePost = async (req, res) => {
       // Regular users can only edit their own posts and cannot change author
       q = `
         UPDATE posts 
-        SET title=$1, slug=$2, content=$3, featured_image=$4, category_id=$5, status=$6, updated_at=CURRENT_TIMESTAMP 
-        WHERE id = $7 AND author_id = $8
+        SET title=$1, slug=$2, content=$3, featured_image=$4, category_id=$5, status=$6, published_at=$7, updated_at=CURRENT_TIMESTAMP 
+        WHERE id = $8 AND author_id = $9
         RETURNING *
       `;
       values = [
@@ -665,6 +689,7 @@ export const updatePost = async (req, res) => {
         req.body.img, 
         categoryId,  // Use validated category ID
         req.body.status,
+        publishedAt,
         postId, 
         userInfo.id
       ];

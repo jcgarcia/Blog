@@ -103,7 +103,8 @@ export default function Write() {
     category: '',
     featuredImage: '',
     status: 'draft',
-    authorId: currentUser?.id || ''
+    authorId: currentUser?.id || '',
+    published_at: ''
   });
   const [categories, setCategories] = useState([]);
   const [authors, setAuthors] = useState([]);
@@ -219,6 +220,13 @@ export default function Write() {
           featuredImageUrl = await getSignedUrl(featuredImageUrl);
         }
         
+        // Format published_at for datetime-local input if it exists
+        let publishedAt = '';
+        if (post.published_at) {
+          const date = new Date(post.published_at);
+          publishedAt = date.toISOString().slice(0, 16); // Format: YYYY-MM-DDTHH:mm
+        }
+        
         setFormData({
           title: post.title || '',
           content: contentWithSignedUrls,
@@ -226,7 +234,8 @@ export default function Write() {
           category: post.category_id || '',
           featuredImage: featuredImageUrl,
           status: post.status || 'draft',
-          authorId: post.author_id || currentUser?.id || ''
+          authorId: post.author_id || currentUser?.id || '',
+          published_at: publishedAt
         });
       } else {
         setError('Failed to load post for editing');
@@ -335,6 +344,11 @@ export default function Write() {
       if (canEditAuthor() && formData.authorId) {
         postData.author_id = formData.authorId;
       }
+      
+      // Include published_at if status is scheduled
+      if (formData.status === 'scheduled' && formData.published_at) {
+        postData.published_at = formData.published_at;
+      }
 
       // Handle featured image - extract S3 key if it's a signed URL
       if (formData.featuredImage) {
@@ -388,7 +402,8 @@ export default function Write() {
             category: '',
             featuredImage: '',
             status: 'draft',
-            authorId: currentUser?.id || ''
+            authorId: currentUser?.id || '',
+            published_at: ''
           });
         } else {
           // Check for specific authentication errors
@@ -560,6 +575,25 @@ export default function Write() {
             <option value="published">Published</option>
             <option value="scheduled">Scheduled</option>
           </select>
+          
+          {formData.status === 'scheduled' && (
+            <div className="writeFormGroup">
+              <label htmlFor="published_at">Publish Date & Time</label>
+              <input
+                type="datetime-local"
+                id="published_at"
+                name="published_at"
+                className="writeInput"
+                value={formData.published_at}
+                onChange={handleInputChange}
+                min={new Date().toISOString().slice(0, 16)}
+                required
+              />
+              <small className="writeHelperText">
+                Set the date and time when this post should be published
+              </small>
+            </div>
+          )}
         </div>
 
         {canEditAuthor() && (
