@@ -301,6 +301,36 @@ export const getDrafts = async (req, res) => {
   }
 };
 
+// Get all posts for admin panel (includes all statuses: published, draft, scheduled, etc.)
+export const getAllPosts = async (req, res) => {
+  const pool = getDbPool();
+  try {
+    const q = `
+      SELECT p.*, u.username, u.first_name, u.last_name, u.email, c.name as category_name, c.slug as category_slug
+      FROM posts p
+      LEFT JOIN users u ON p.author_id = u.id
+      LEFT JOIN categories c ON p.category_id = c.id
+      ORDER BY p.created_at DESC
+    `;
+    const result = await pool.query(q);
+    
+    // Resolve featured image URLs for all posts
+    const postsWithImages = await Promise.all(
+      result.rows.map(async (post) => {
+        if (post.featured_image) {
+          post.featured_image = await resolveMediaUrl(post.featured_image);
+        }
+        return post;
+      })
+    );
+    
+    return res.status(200).json(postsWithImages);
+  } catch (err) {
+    console.error('Database error in getAllPosts:', err);
+    return res.status(500).json({ error: 'Failed to fetch all posts' });
+  }
+};
+
 export const getPost = async (req, res) => {
   const pool = getDbPool();
   try {

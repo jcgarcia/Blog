@@ -69,7 +69,7 @@ export default function ContentManagement() {
 
   const fetchPosts = async () => {
     try {
-      const response = await fetch(API_ENDPOINTS.POSTS.LIST);
+      const response = await fetch(API_ENDPOINTS.POSTS.ALL);
       if (response.ok) {
         const data = await response.json();
         setPosts(data);

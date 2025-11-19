@@ -5,6 +5,7 @@ import {
   getPost,
   getPosts,
   getDrafts,
+  getAllPosts,
   updatePost,
   searchPosts,
 } from "../controllers/post.js";
@@ -12,6 +13,7 @@ import {
 const router = express.Router();
 
 router.get("/", getPosts);
+router.get("/all", getAllPosts);
 router.get("/drafts", getDrafts);
 router.get("/search", searchPosts);
 router.get("/:id", getPost);

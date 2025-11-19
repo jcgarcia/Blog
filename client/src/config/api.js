@@ -33,6 +33,7 @@ export const API_ENDPOINTS = {
   // Posts
   POSTS: {
     LIST: `${API_URL}/api/posts`,
+    ALL: `${API_URL}/api/posts/all`,
     CREATE: `${API_URL}/api/posts`,
     GET: (id) => `${API_URL}/api/posts/${id}`,
     UPDATE: (id) => `${API_URL}/api/posts/${id}`,
