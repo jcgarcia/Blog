@@ -6,10 +6,16 @@ const MediaSelector = ({ onSelect, selectedImage, onClose, title = "Select Featu
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedItem, setSelectedItem] = useState(null);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 20,
+    total: 0,
+    totalPages: 0
+  });
 
   useEffect(() => {
     fetchMedia();
-  }, []);
+  }, [pagination.page]);
 
   const fetchMedia = async () => {
     try {
@@ -24,9 +30,14 @@ const MediaSelector = ({ onSelect, selectedImage, onClose, title = "Select Featu
       
       console.log('MediaSelector: Fetching media with token:', token.substring(0, 20) + '...');
       
-      // Directly fetch all media files without folder filtering since they all have folder_path: "/"
-      // Use limit=1000 to get all images (backend defaults to only 20 if not specified)
-      const mediaUrl = `https://bapi.ingasti.com/api/media/files?folder=${encodeURIComponent('/')}&limit=1000`;
+      // Fetch media files with pagination
+      const params = new URLSearchParams({
+        folder: '/',
+        page: pagination.page.toString(),
+        limit: pagination.limit.toString()
+      });
+      
+      const mediaUrl = `https://bapi.ingasti.com/api/media/files?${params}`;
       
       const response = await fetch(mediaUrl, {
         headers: {
@@ -60,6 +71,7 @@ const MediaSelector = ({ onSelect, selectedImage, onClose, title = "Select Featu
         
         console.log('MediaSelector: Filtered image files:', imageFiles.length);
         setMedia(imageFiles);
+        setPagination(data.pagination || pagination);
       } else {
         console.log('MediaSelector: No media found in response');
         setMedia([]);
@@ -182,6 +194,28 @@ const MediaSelector = ({ onSelect, selectedImage, onClose, title = "Select Featu
               <span>Click an image to select it</span>
             )}
           </div>
+          
+          {/* Pagination controls */}
+          {pagination.totalPages > 1 && (
+            <div className="pagination">
+              <button 
+                className="btn-secondary"
+                disabled={pagination.page === 1}
+                onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}
+              >
+                Previous
+              </button>
+              <span>Page {pagination.page} of {pagination.totalPages}</span>
+              <button 
+                className="btn-secondary"
+                disabled={pagination.page === pagination.totalPages}
+                onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
+              >
+                Next
+              </button>
+            </div>
+          )}
+          
           <div className="footer-buttons">
             <button className="btn-secondary" onClick={onClose}>Cancel</button>
             <button 
