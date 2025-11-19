@@ -187,6 +187,23 @@ export const postsAPI = {
       };
     }
   },
+
+  // Get scheduled posts
+  getScheduledPosts: async () => {
+    try {
+      const response = await apiClient.get('/api/posts/scheduled');
+      return {
+        success: true,
+        data: response.data || []
+      };
+    } catch (error) {
+      console.error('Error fetching scheduled posts:', error);
+      return {
+        success: false,
+        error: error.response?.data?.error || 'Failed to fetch scheduled posts'
+      };
+    }
+  },
 };
 
 // Auth API functions

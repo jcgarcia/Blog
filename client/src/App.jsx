@@ -8,6 +8,7 @@ import Write from "./pages/write/Write";
 import EditPage from "./pages/editPage/EditPage";
 import Ops from "./pages/ops/Ops";
 import DraftManagement from "./pages/ops/DraftManagement";
+import ScheduledManagement from "./pages/ops/ScheduledManagement";
 import Settings from "./pages/settings/Settings";
 import Login from "./pages/login/Login";
 import UserLogin from "./pages/userLogin/UserLogin";
@@ -102,6 +103,13 @@ function App() {
                 <ProtectedRoute requireAdmin={true}>
                   <DatabaseConnectionProvider>
                     <DraftManagement />
+                  </DatabaseConnectionProvider>
+                </ProtectedRoute>
+              } />
+              <Route path="/ops/scheduled" element={
+                <ProtectedRoute requireAdmin={true}>
+                  <DatabaseConnectionProvider>
+                    <ScheduledManagement />
                   </DatabaseConnectionProvider>
                 </ProtectedRoute>
               } />

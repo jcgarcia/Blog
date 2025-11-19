@@ -69,7 +69,7 @@ export default function ContentManagement() {
 
   const fetchPosts = async () => {
     try {
-      const response = await fetch(API_ENDPOINTS.POSTS.ALL);
+      const response = await fetch(API_ENDPOINTS.POSTS.LIST);
       if (response.ok) {
         const data = await response.json();
         setPosts(data);
@@ -435,12 +435,7 @@ export default function ContentManagement() {
           <button 
             className="btn-secondary"
             onClick={() => {
-              const scheduled = posts.filter(post => post.status === 'scheduled');
-              if (scheduled.length === 0) {
-                alert('No scheduled posts found');
-              } else {
-                alert(`Found ${scheduled.length} scheduled post(s). This feature will be enhanced in a future update.`);
-              }
+              window.location.href = '/ops/scheduled';
             }}
           >
             Schedule
