@@ -577,20 +577,45 @@ export default function Write() {
           </select>
           
           {formData.status === 'scheduled' && (
-            <div className="writeFormGroup">
-              <label htmlFor="published_at">Publish Date & Time</label>
-              <input
-                type="datetime-local"
-                id="published_at"
-                name="published_at"
-                className="writeInput"
-                value={formData.published_at}
-                onChange={handleInputChange}
-                min={new Date().toISOString().slice(0, 16)}
-                required
-              />
+            <div className="writeFormGroup writeScheduleGroup">
+              <label htmlFor="published_at" className="writeScheduleLabel">
+                📅 Schedule Publication
+              </label>
+              <div className="writeScheduleInputs">
+                <div className="writeScheduleField">
+                  <label htmlFor="schedule_date" className="writeFieldLabel">Date</label>
+                  <input
+                    type="date"
+                    id="schedule_date"
+                    className="writeInput writeScheduleDate"
+                    value={formData.published_at ? formData.published_at.slice(0, 10) : ''}
+                    onChange={(e) => {
+                      const date = e.target.value;
+                      const time = formData.published_at ? formData.published_at.slice(11, 16) : '12:00';
+                      setFormData({...formData, published_at: date ? `${date}T${time}` : ''});
+                    }}
+                    min={new Date().toISOString().slice(0, 10)}
+                    required
+                  />
+                </div>
+                <div className="writeScheduleField">
+                  <label htmlFor="schedule_time" className="writeFieldLabel">Time</label>
+                  <input
+                    type="time"
+                    id="schedule_time"
+                    className="writeInput writeScheduleTime"
+                    value={formData.published_at ? formData.published_at.slice(11, 16) : '12:00'}
+                    onChange={(e) => {
+                      const time = e.target.value;
+                      const date = formData.published_at ? formData.published_at.slice(0, 10) : new Date().toISOString().slice(0, 10);
+                      setFormData({...formData, published_at: `${date}T${time}`});
+                    }}
+                    required
+                  />
+                </div>
+              </div>
               <small className="writeHelperText">
-                Set the date and time when this post should be published
+                ℹ️ Post will be saved as scheduled. You'll need to publish it manually at the scheduled time, or set up automated publishing.
               </small>
             </div>
           )}

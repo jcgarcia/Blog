@@ -219,6 +219,62 @@
     font-style: italic;
 }
 
+/* Scheduled post date/time inputs */
+.writeScheduleGroup {
+    flex-direction: column;
+    align-items: flex-start !important;
+    background-color: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+}
+
+.writeScheduleLabel {
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 15px;
+    font-family: "Poppins", sans-serif;
+}
+
+.writeScheduleInputs {
+    display: flex;
+    gap: 20px;
+    width: 100%;
+    align-items: flex-end;
+}
+
+.writeScheduleField {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.writeFieldLabel {
+    font-size: 14px;
+    font-weight: 500;
+    color: #555;
+    font-family: "Poppins", sans-serif;
+}
+
+.writeScheduleDate {
+    width: 200px;
+    padding: 10px;
+    font-size: 16px;
+}
+
+.writeScheduleTime {
+    width: 150px;
+    padding: 10px;
+    font-size: 16px;
+}
+
+.writeScheduleGroup .writeHelperText {
+    margin-top: 15px;
+    margin-left: 0;
+    color: #6c757d;
+}
+
 .writeText{
     font-size: 16px;
     min-height: 400px;
@@ -330,6 +386,17 @@
 
     .featured-image-preview img {
         max-width: 100%;
+    }
+
+    /* Scheduled post inputs on mobile */
+    .writeScheduleInputs {
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .writeScheduleDate,
+    .writeScheduleTime {
+        width: 100%;
     }
 
     /* TinyMCE mobile adjustments */
