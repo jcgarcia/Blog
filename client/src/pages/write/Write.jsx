@@ -583,7 +583,7 @@ export default function Write() {
               </label>
               <div className="writeScheduleInputs">
                 <div className="writeScheduleField">
-                  <label htmlFor="schedule_date" className="writeFieldLabel">Date</label>
+                  <label htmlFor="schedule_date" className="writeFieldLabel">Date (optional)</label>
                   <input
                     type="date"
                     id="schedule_date"
@@ -595,11 +595,10 @@ export default function Write() {
                       setFormData({...formData, published_at: date ? `${date}T${time}` : ''});
                     }}
                     min={new Date().toISOString().slice(0, 10)}
-                    required
                   />
                 </div>
                 <div className="writeScheduleField">
-                  <label htmlFor="schedule_time" className="writeFieldLabel">Time</label>
+                  <label htmlFor="schedule_time" className="writeFieldLabel">Time (optional)</label>
                   <input
                     type="time"
                     id="schedule_time"
@@ -610,12 +609,11 @@ export default function Write() {
                       const date = formData.published_at ? formData.published_at.slice(0, 10) : new Date().toISOString().slice(0, 10);
                       setFormData({...formData, published_at: `${date}T${time}`});
                     }}
-                    required
                   />
                 </div>
               </div>
               <small className="writeHelperText">
-                ℹ️ Post will be saved as scheduled. You'll need to publish it manually at the scheduled time, or set up automated publishing.
+                ℹ️ Post will be saved as scheduled. Leave date/time empty to keep it "on hold" until you're ready to set a publication date.
               </small>
             </div>
           )}
