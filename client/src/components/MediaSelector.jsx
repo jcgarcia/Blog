@@ -15,7 +15,7 @@ const MediaSelector = ({ onSelect, selectedImage, onClose, title = "Select Featu
 
   useEffect(() => {
     fetchMedia();
-  }, [pagination.page]);
+  }, [pagination.page]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchMedia = async () => {
     try {
@@ -30,11 +30,12 @@ const MediaSelector = ({ onSelect, selectedImage, onClose, title = "Select Featu
       
       console.log('MediaSelector: Fetching media with token:', token.substring(0, 20) + '...');
       
-      // Fetch media files with pagination
+      // Fetch media files with pagination - request only image types from backend
       const params = new URLSearchParams({
         folder: '/',
         page: pagination.page.toString(),
-        limit: pagination.limit.toString()
+        limit: pagination.limit.toString(),
+        type: 'image' // Only request image files from the backend
       });
       
       const mediaUrl = `https://bapi.ingasti.com/api/media/files?${params}`;
@@ -54,24 +55,25 @@ const MediaSelector = ({ onSelect, selectedImage, onClose, title = "Select Featu
       
       const data = await response.json();
       console.log('MediaSelector: API response data:', data);
+      console.log('MediaSelector: Pagination data:', data.pagination);
       
       if (data.success && data.media && Array.isArray(data.media)) {
-        // Filter only image files and add them with proper URLs
-        const imageFiles = data.media.filter(item => {
-          const isImage = item.mime_type && item.mime_type.startsWith('image/');
-          const hasImageExtension = (item.filename || item.file_name || item.original_name)?.match(/\.(jpg|jpeg|png|gif|webp|svg)$/i);
-          return isImage || hasImageExtension;
-        }).map(item => ({
+        // Backend already filtered for images, just map to add display properties
+        const imageFiles = data.media.map(item => ({
           ...item,
-          // Preserve both original_name for display and filename for serving
           display_name: item.original_name || item.file_name || item.filename,
           filename: item.filename || item.file_name,
           public_url: item.public_url || item.signed_url || item.url
         }));
         
-        console.log('MediaSelector: Filtered image files:', imageFiles.length);
+        console.log('MediaSelector: Image files:', imageFiles.length);
+        console.log('MediaSelector: Total pages:', data.pagination?.totalPages);
         setMedia(imageFiles);
-        setPagination(data.pagination || pagination);
+        
+        // Update pagination with response data
+        if (data.pagination) {
+          setPagination(data.pagination);
+        }
       } else {
         console.log('MediaSelector: No media found in response');
         setMedia([]);
