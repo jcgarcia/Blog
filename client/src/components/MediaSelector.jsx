@@ -25,7 +25,8 @@ const MediaSelector = ({ onSelect, selectedImage, onClose, title = "Select Featu
       console.log('MediaSelector: Fetching media with token:', token.substring(0, 20) + '...');
       
       // Directly fetch all media files without folder filtering since they all have folder_path: "/"
-      const mediaUrl = `https://bapi.ingasti.com/api/media/files?folder=${encodeURIComponent('/')}`;
+      // Use limit=1000 to get all images (backend defaults to only 20 if not specified)
+      const mediaUrl = `https://bapi.ingasti.com/api/media/files?folder=${encodeURIComponent('/')}&limit=1000`;
       
       const response = await fetch(mediaUrl, {
         headers: {
