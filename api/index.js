@@ -34,6 +34,7 @@ import CoreDB from "./services/CoreDB.js";
 import backupStorageService from "./services/backupStorageService.js";
 import backupSchedulerService from "./services/backupSchedulerService.js";
 import AwsSsoRefreshService from "./services/awsSsoRefreshService.js";
+import oidcCredentialRefreshService from "./services/oidcCredentialRefreshService.js";
 
 // Load environment variables
 dotenv.config({ path: '.env.local' });
@@ -367,6 +368,8 @@ const server = app.listen(PORT, async () => {
           const awsSsoRefreshService = new AwsSsoRefreshService();
           await awsSsoRefreshService.startAutoRefresh();
           console.log('✅ AWS SSO auto-refresh service started - credentials will refresh automatically');
+          // Initialize OIDC credential auto-refresh service for Kubernetes
+          await oidcCredentialRefreshService.start();
         } catch (error) {
           console.error('⚠️ Backup services initialization failed:', error.message);
           console.error('🔄 S3 backup functionality may be limited');
@@ -405,7 +408,12 @@ async function gracefulShutdown() {
     }
     
     try {
-      console.log('Server closed. Cleaning up database connections...');
+      console.log('Server closed. Cleaning up services...');
+      
+      // Stop OIDC credential refresh service
+      oidcCredentialRefreshService.stop();
+      
+      console.log('Cleaning up database connections...');
       await closeDbPool();
       console.log('Graceful shutdown complete.');
       process.exit(0);

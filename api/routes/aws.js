@@ -1,5 +1,6 @@
 import express from 'express';
 import awsSsoRefreshService from '../services/awsSsoRefreshService.js';
+import oidcCredentialRefreshService from '../services/oidcCredentialRefreshService.js';
 
 const router = express.Router();
 
@@ -121,5 +122,49 @@ router.post('/stop-monitoring', (req, res) => {
     });
   }
 });
+
+
+/**
+ * GET /api/aws/oidc-status
+ * Get OIDC credential refresh service status
+ */
+router.get('/oidc-status', async (req, res) => {
+  try {
+    const status = oidcCredentialRefreshService.getStatus();
+    res.json({
+      success: true,
+      ...status
+    });
+  } catch (error) {
+    console.error('Failed to get OIDC status:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+/**
+ * POST /api/aws/oidc-refresh
+ * Manually trigger OIDC credential refresh
+ */
+router.post('/oidc-refresh', async (req, res) => {
+  try {
+    console.log('🔄 Manual OIDC credential refresh requested');
+    await oidcCredentialRefreshService.refreshCredentials();
+    res.json({
+      success: true,
+      message: 'OIDC credentials refreshed successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Manual OIDC refresh failed:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 
 export default router;
