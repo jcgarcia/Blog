@@ -41,14 +41,26 @@ class OidcCredentialRefreshService {
     }
 
     try {
+      // Load configuration from CoreDB if not in environment
+      if (!this.config.roleArn) {
+        this.config.roleArn = await CoreDB.get('AWS_ROLE_ARN');
+      }
+      if (!this.config.region || this.config.region === 'us-east-1') {
+        const dbRegion = await CoreDB.get('AWS_REGION');
+        if (dbRegion) {
+          this.config.region = dbRegion;
+        }
+      }
+      
       // Validate configuration
       if (!this.config.roleArn) {
-        console.warn('⚠️  AWS_ROLE_ARN not configured - OIDC refresh service disabled');
+        console.warn('⚠️  AWS_ROLE_ARN not configured in environment or CoreDB - OIDC refresh service disabled');
         return;
       }
 
       console.log('🚀 Starting OIDC credential auto-refresh service...');
       console.log(`   Role ARN: ${this.config.roleArn}`);
+      console.log(`   Region: ${this.config.region}`);
       console.log(`   Refresh interval: ${this.refreshIntervalMs / 60000} minutes`);
 
       // Do initial refresh
