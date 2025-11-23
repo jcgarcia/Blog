@@ -42,13 +42,15 @@ class OidcCredentialRefreshService {
 
     try {
       // Load configuration from CoreDB if not in environment
-      if (!this.config.roleArn) {
-        this.config.roleArn = await CoreDB.getConfig('AWS_ROLE_ARN');
-      }
-      if (!this.config.region || this.config.region === 'us-east-1') {
-        const dbRegion = await CoreDB.getConfig('AWS_REGION');
-        if (dbRegion) {
-          this.config.region = dbRegion;
+      if (!this.config.roleArn || !this.config.region) {
+        const awsConfig = await CoreDB.getConfig('aws.config');
+        if (awsConfig) {
+          if (!this.config.roleArn && awsConfig.roleArn) {
+            this.config.roleArn = awsConfig.roleArn;
+          }
+          if ((!this.config.region || this.config.region === 'us-east-1') && awsConfig.region) {
+            this.config.region = awsConfig.region;
+          }
         }
       }
       
