@@ -43,10 +43,10 @@ class OidcCredentialRefreshService {
     try {
       // Load configuration from CoreDB if not in environment
       if (!this.config.roleArn) {
-        this.config.roleArn = await CoreDB.get('AWS_ROLE_ARN');
+        this.config.roleArn = await CoreDB.getConfig('AWS_ROLE_ARN');
       }
       if (!this.config.region || this.config.region === 'us-east-1') {
-        const dbRegion = await CoreDB.get('AWS_REGION');
+        const dbRegion = await CoreDB.getConfig('AWS_REGION');
         if (dbRegion) {
           this.config.region = dbRegion;
         }
@@ -128,10 +128,10 @@ class OidcCredentialRefreshService {
       }
 
       // Update CoreDB with new credentials
-      await CoreDB.set('AWS_ACCESS_KEY_ID', response.Credentials.AccessKeyId);
-      await CoreDB.set('AWS_SECRET_ACCESS_KEY', response.Credentials.SecretAccessKey);
-      await CoreDB.set('AWS_SESSION_TOKEN', response.Credentials.SessionToken);
-      await CoreDB.set('AWS_CREDENTIAL_EXPIRATION', response.Credentials.Expiration.toISOString());
+      await CoreDB.setConfig('AWS_ACCESS_KEY_ID', response.Credentials.AccessKeyId, 'AWS access key from OIDC', 'string', true, 'aws');
+      await CoreDB.setConfig('AWS_SECRET_ACCESS_KEY', response.Credentials.SecretAccessKey, 'AWS secret key from OIDC', 'string', true, 'aws');
+      await CoreDB.setConfig('AWS_SESSION_TOKEN', response.Credentials.SessionToken, 'AWS session token from OIDC', 'string', true, 'aws');
+      await CoreDB.setConfig('AWS_CREDENTIAL_EXPIRATION', response.Credentials.Expiration.toISOString(), 'AWS credential expiration time', 'string', false, 'aws');
 
       this.lastRefreshTime = new Date();
       this.lastRefreshStatus = 'success';
