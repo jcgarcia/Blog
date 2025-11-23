@@ -363,16 +363,19 @@ const server = app.listen(PORT, async () => {
           await backupSchedulerService.initialize();
           console.log('✅ BackupSchedulerService initialized successfully');
           console.log('📅 S3-based scheduled backup system is ready');
-          
-          // Initialize AWS SSO credential auto-refresh service
-          const awsSsoRefreshService = new AwsSsoRefreshService();
-          await awsSsoRefreshService.startAutoRefresh();
-          console.log('✅ AWS SSO auto-refresh service started - credentials will refresh automatically');
-          // Initialize OIDC credential auto-refresh service for Kubernetes
-          await oidcCredentialRefreshService.start();
         } catch (error) {
           console.error('⚠️ Backup services initialization failed:', error.message);
           console.error('🔄 S3 backup functionality may be limited');
+        }
+
+        // Initialize OIDC credential auto-refresh service for Kubernetes
+        // This runs OUTSIDE the backup services try-catch to ensure it always starts
+        try {
+          await oidcCredentialRefreshService.start();
+          console.log('✅ OIDC credential auto-refresh service started');
+        } catch (error) {
+          console.error('⚠️ OIDC auto-refresh service failed to start:', error.message);
+          console.error('🔄 AWS credentials will need manual refresh');
         }
       })
       .catch((error) => {
