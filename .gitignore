@@ -84,6 +84,12 @@ dist/.env
 activity/
 activity/**/*
 /activity
+
+# 🗄️ ARCHIVED COMPONENTS: Legacy services and experimental features
+# These components are not used in production and should not be deployed
+archived-components/
+archived-components/**/*
+
 # AWS configuration files with secrets
 AWS_IDENTITY_CENTER_*.md
 AWS_PRODUCTION_*.md
