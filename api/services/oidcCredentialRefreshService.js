@@ -129,11 +129,13 @@ class OidcCredentialRefreshService {
         throw new Error('No credentials returned from STS');
       }
 
-      // Update CoreDB with new credentials
-      await CoreDB.setConfig('AWS_ACCESS_KEY_ID', response.Credentials.AccessKeyId, 'AWS access key from OIDC', 'string', true, 'aws');
-      await CoreDB.setConfig('AWS_SECRET_ACCESS_KEY', response.Credentials.SecretAccessKey, 'AWS secret key from OIDC', 'string', true, 'aws');
-      await CoreDB.setConfig('AWS_SESSION_TOKEN', response.Credentials.SessionToken, 'AWS session token from OIDC', 'string', true, 'aws');
-      await CoreDB.setConfig('AWS_CREDENTIAL_EXPIRATION', response.Credentials.Expiration.toISOString(), 'AWS credential expiration time', 'string', false, 'aws');
+      // Update CoreDB with new credentials - store as JSON in config_value column
+      await CoreDB.setConfig('aws.oidc_credentials', JSON.stringify({
+        accessKeyId: response.Credentials.AccessKeyId,
+        secretAccessKey: response.Credentials.SecretAccessKey,
+        sessionToken: response.Credentials.SessionToken,
+        expiration: response.Credentials.Expiration.toISOString()
+      }), 'aws', false);
 
       this.lastRefreshTime = new Date();
       this.lastRefreshStatus = 'success';
