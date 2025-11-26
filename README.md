@@ -2,6 +2,10 @@
 
 A comprehensive, production-ready blog platform with advanced content management, media handling, user authentication, and administrative tools. Built with modern technologies and deployed on Kubernetes infrastructure.
 
+=============================================
+wrong README, it must be modified
+============================================
+
 ## 🏛️ Architecture Overview
 
 **Infrastructure**: Kubernetes ARM64 cluster on Oracle Cloud Infrastructure  
