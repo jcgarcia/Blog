@@ -82,10 +82,14 @@ pipeline {
         }
         
         stage('Build OIDC Provider Image') {
+            when {
+                expression { fileExists('oidc-provider/Dockerfile') }
+            }
             steps {
                 script {
                     echo "🔨 Building OIDC provider Docker image..."
                     env.OIDC_IMAGE = "${REGISTRY_URL}/oidc-provider:${BUILD_NUMBER}-${env.GIT_COMMIT_SHORT}"
+                    env.OIDC_BUILD_ENABLED = "true"
                     sh """
                         docker build -f oidc-provider/Dockerfile -t ${env.OIDC_IMAGE} oidc-provider/
                         docker tag ${env.OIDC_IMAGE} ${REGISTRY_URL}/oidc-provider:latest
@@ -95,10 +99,14 @@ pipeline {
         }
         
         stage('Build PostgreSQL Container Image') {
+            when {
+                expression { fileExists('postgres/Dockerfile') }
+            }
             steps {
                 script {
                     echo "🐘 Building PostgreSQL container Docker image..."
                     env.POSTGRES_IMAGE = "${REGISTRY_URL}/blog-postgres:${BUILD_NUMBER}-${env.GIT_COMMIT_SHORT}"
+                    env.POSTGRES_BUILD_ENABLED = "true"
                     sh """
                         docker build -f postgres/Dockerfile -t ${env.POSTGRES_IMAGE} postgres/
                         docker tag ${env.POSTGRES_IMAGE} ${REGISTRY_URL}/blog-postgres:latest
@@ -119,15 +127,29 @@ pipeline {
                         echo "Pushing frontend image..."
                         docker push ${env.FRONTEND_IMAGE}
                         docker push ${REGISTRY_URL}/blog-frontend:latest
-                        
-                        echo "Pushing OIDC provider image..."
-                        docker push ${env.OIDC_IMAGE}
-                        docker push ${REGISTRY_URL}/oidc-provider:latest
-                        
-                        echo "Pushing PostgreSQL container image..."
-                        docker push ${env.POSTGRES_IMAGE}
-                        docker push ${REGISTRY_URL}/blog-postgres:latest
                     """
+                    
+                    // Push OIDC provider if it was built
+                    if (env.OIDC_BUILD_ENABLED == 'true') {
+                        sh """
+                            echo "Pushing OIDC provider image..."
+                            docker push ${env.OIDC_IMAGE}
+                            docker push ${REGISTRY_URL}/oidc-provider:latest
+                        """
+                    } else {
+                        echo "⚠️  OIDC provider not built (oidc-provider/Dockerfile not found)"
+                    }
+                    
+                    // Push PostgreSQL if it was built
+                    if (env.POSTGRES_BUILD_ENABLED == 'true') {
+                        sh """
+                            echo "Pushing PostgreSQL container image..."
+                            docker push ${env.POSTGRES_IMAGE}
+                            docker push ${REGISTRY_URL}/blog-postgres:latest
+                        """
+                    } else {
+                        echo "⚠️  PostgreSQL not built (postgres/Dockerfile not found)"
+                    }
                 }
             }
         }
@@ -416,18 +438,18 @@ pipeline {
             }
         }
         success {
+            echo "🎉 Blog deployment pipeline completed successfully!"
+            echo ""
+            echo "📱 Blog services should be available at:"
+            echo "  Frontend: https://blog.ingasti.com"
+            echo "  Backend: https://bapi.ingasti.com"
+            echo ""
+            echo "🔍 Monitor with:"
+            echo "  kubectl get pods -n blog -w"
+            echo "  kubectl logs -f deployment/blog-backend -n blog"
+            echo "  kubectl logs -f deployment/blog-frontend -n blog"
+            
             script {
-                echo "🎉 Blog deployment pipeline completed successfully!"
-                echo ""
-                echo "📱 Blog services should be available at:"
-                echo "  Frontend: https://blog.ingasti.com"
-                echo "  Backend: https://bapi.ingasti.com"
-                echo ""
-                echo "🔍 Monitor with:"
-                echo "  kubectl get pods -n blog -w"
-                echo "  kubectl logs -f deployment/blog-backend -n blog"
-                echo "  kubectl logs -f deployment/blog-frontend -n blog"
-                
                 // Show final status
                 sh """
                     echo "🌐 Service and Ingress Status:"
@@ -437,11 +459,10 @@ pipeline {
             }
         }
         failure {
+            echo "❌ Blog deployment pipeline failed!"
+            echo ""
+            echo "🔍 Debug information:"
             script {
-                echo "❌ Blog deployment pipeline failed!"
-                echo ""
-                echo "🔍 Debug information:"
-                
                 try {
                     sh """
                         echo "Kubernetes cluster status:"

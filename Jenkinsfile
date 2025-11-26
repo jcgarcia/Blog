@@ -1,5 +1,5 @@
 pipeline {
-    agent { label 'local-agent' }
+    agent any
     
     environment {
         // CoreDB credentials - the ONLY configuration database credentials needed
