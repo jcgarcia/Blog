@@ -1,0 +1,228 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: blog-backend
+  namespace: blog
+  labels:
+    app: blog-backend
+    version: v1
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: blog-backend
+  template:
+    metadata:
+      labels:
+        app: blog-backend
+        version: v1
+    spec:
+      serviceAccountName: media-access-sa
+      containers:
+      - name: blog-backend
+        image: localhost:5000/blog-backend:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 5000
+          name: http
+        env:
+        - name: BLOG_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: blog-secrets
+              key: BLOG_API_KEY
+        - name: BLOG_API_URL
+          value: "https://bapi.ingasti.com/api"
+        - name: BLOG_USER_ID
+          value: "1"
+        - name: CORS_ORIGIN
+          valueFrom:
+            configMapKeyRef:
+              name: blog-config
+              key: cors-origin
+        - name: PORT
+          value: "5000"
+        - name: NODE_ENV
+          valueFrom:
+            configMapKeyRef:
+              name: blog-config
+              key: node-env
+        - name: GOOGLE_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: blog-secrets
+              key: GOOGLE_CLIENT_ID
+        - name: GOOGLE_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: blog-secrets
+              key: GOOGLE_CLIENT_SECRET
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: blog-secrets
+              key: JWT_SECRET
+        - name: SESSION_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: blog-secrets
+              key: SESSION_SECRET
+        - name: COREDB_ADMIN_USER
+          valueFrom:
+            secretKeyRef:
+              name: blog-secrets
+              key: COREDB_ADMIN_USER
+        - name: COREDB_ADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: blog-secrets
+              key: COREDB_ADMIN_PASSWORD
+        - name: COREDB_ENCRYPTION_KEY
+          valueFrom:
+            secretKeyRef:
+              name: blog-secrets
+              key: COREDB_ENCRYPTION_KEY
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: blog-secrets
+              key: POSTGRES_PASSWORD
+        - name: PGUSER
+          valueFrom:
+            secretKeyRef:
+              name: blog-secrets
+              key: PGUSER
+        - name: PGPASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: blog-secrets
+              key: PGPASSWORD
+        - name: PGHOST
+          valueFrom:
+            secretKeyRef:
+              name: blog-secrets
+              key: PGHOST
+        - name: PGDATABASE
+          valueFrom:
+            secretKeyRef:
+              name: blog-secrets
+              key: PGDATABASE
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 5000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 5000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          runAsUser: 1001
+          runAsGroup: 1001
+        volumeMounts:
+        - name: uploads
+          mountPath: /app/uploads
+      volumes:
+      - name: uploads
+        persistentVolumeClaim:
+          claimName: blog-uploads-pvc
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: blog-backend-service
+  namespace: blog
+  labels:
+    app: blog-backend
+spec:
+  selector:
+    app: blog-backend
+  ports:
+  - port: 80
+    targetPort: 5000
+    name: http
+  type: ClusterIP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: blog-backend-ingress
+  namespace: blog
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  tls:
+  - hosts:
+    - bapi.ingasti.com
+    secretName: bapi-ingasti-tls
+  rules:
+  - host: bapi.ingasti.com
+    http:
+      paths:
+      - path: /api
+        pathType: Prefix
+        backend:
+          service:
+            name: blog-backend-service
+            port:
+              number: 80
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: blog-backend-pdb
+  namespace: blog
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: blog-backend
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: blog-backend-hpa
+  namespace: blog
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: blog-backend
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80

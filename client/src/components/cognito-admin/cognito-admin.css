@@ -1,0 +1,327 @@
+.cognito-admin-panel {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  padding: 2rem;
+  margin: 2rem 0;
+  max-width: 500px;
+}
+.cognito-admin-panel h2 {
+  margin-bottom: 1rem;
+  font-size: 1.5rem;
+  color: #2d3748;
+}
+.cognito-admin-panel label {
+  display: block;
+  margin-bottom: 1rem;
+  font-weight: 500;
+}
+.cognito-admin-panel input[type="text"] {
+  width: 100%;
+  padding: 0.5rem;
+  margin-top: 0.25rem;
+  border: 1px solid #cbd5e0;
+  border-radius: 4px;
+}
+.cognito-admin-panel input[type="checkbox"] {
+  margin-left: 0.5rem;
+}
+.cognito-admin-panel fieldset {
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+.cognito-admin-panel legend {
+  font-weight: 600;
+  color: #4a5568;
+}
+.cognito-admin-panel button {
+  background: #3182ce;
+  color: #fff;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 4px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.cognito-admin-panel button:hover {
+  background: #2b6cb0;
+}
+
+/* Cognito Tabs Styles */
+.cognito-tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 30px;
+  background: #e9ecef;
+  border-radius: 8px;
+  padding: 4px;
+}
+
+.cognito-tabs button {
+  padding: 10px 20px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  color: #666;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cognito-tabs button.active {
+  background: #fff;
+  color: #007bff;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.cognito-tabs button:hover:not(.active) {
+  color: #333;
+  background: transparent;
+}
+
+.config-section,
+.demo-section {
+  min-height: 400px;
+}
+
+.cognito-admin-panel {
+  max-width: none;
+}
+
+/* Database Manager Styles */
+.database-manager {
+  min-height: 400px;
+}
+
+.database-manager .section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.database-manager .section-header h3 {
+  margin: 0;
+  color: #2d3748;
+  font-size: 1.5rem;
+}
+
+.database-manager .refresh-controls {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.database-manager .refresh-controls label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: #4a5568;
+  margin: 0;
+}
+
+.database-manager .refresh-controls button {
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+}
+
+.database-manager .current-database {
+  background: #f0f9ff;
+  border: 1px solid #0ea5e9;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+.database-manager .current-database h4 {
+  margin: 0;
+  color: #0c4a6e;
+}
+
+.database-manager .database-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 1.5rem;
+}
+
+.database-manager .database-card {
+  background: #fff;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1.5rem;
+  transition: all 0.2s ease;
+}
+
+.database-manager .database-card.active {
+  border-color: #22c55e;
+  background: #f0fdf4;
+  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.15);
+}
+
+.database-manager .database-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.database-manager .card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.database-manager .card-header h4 {
+  margin: 0;
+  font-size: 1.125rem;
+  color: #374151;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.database-manager .active-badge {
+  background: #22c55e;
+  color: white;
+  padding: 0.25rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-left: 0.5rem;
+}
+
+.database-manager .status-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.database-manager .status-row .label {
+  font-weight: 500;
+  color: #6b7280;
+}
+
+.database-manager .status.healthy {
+  color: #22c55e;
+  font-weight: 600;
+}
+
+.database-manager .status.error {
+  color: #ef4444;
+  font-weight: 600;
+}
+
+.database-manager .status.unavailable {
+  color: #6b7280;
+  font-weight: 600;
+}
+
+.database-manager .config-section {
+  margin: 1rem 0;
+  padding: 1rem;
+  background: #f9fafb;
+  border-radius: 6px;
+}
+
+.database-manager .config-details {
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  color: #4b5563;
+}
+
+.database-manager .pool-stats {
+  margin: 1rem 0;
+}
+
+.database-manager .stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  color: #4b5563;
+}
+
+.database-manager .health-info {
+  margin: 1rem 0;
+}
+
+.database-manager .error-message {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 4px;
+  padding: 0.75rem;
+  margin-top: 0.5rem;
+  color: #dc2626;
+  font-size: 0.875rem;
+}
+
+.database-manager .card-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.database-manager .test-btn {
+  background: #3b82f6;
+  flex: 1;
+}
+
+.database-manager .test-btn:hover {
+  background: #2563eb;
+}
+
+.database-manager .switch-btn {
+  background: #f59e0b;
+  flex: 1;
+}
+
+.database-manager .switch-btn:hover {
+  background: #d97706;
+}
+
+.database-manager .test-results {
+  margin-top: 1rem;
+  padding: 1rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+}
+
+.database-manager .test-results.success {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+}
+
+.database-manager .test-results.error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+}
+
+.database-manager .test-success > div {
+  margin-bottom: 0.25rem;
+}
+
+.database-manager .loading-state {
+  text-align: center;
+  padding: 3rem;
+  color: #6b7280;
+  font-size: 1.125rem;
+}
+
+.database-manager .loading-state i {
+  margin-right: 0.5rem;
+}

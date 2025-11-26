@@ -1,0 +1,306 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: oidc-discovery-sa
+  namespace: kube-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: oidc-discovery-reader
+rules:
+- apiGroups: [""]
+  resources: ["serviceaccounts"]
+  verbs: ["get", "list"]
+- nonResourceURLs: ["/openid/v1/jwks"]
+  verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: oidc-discovery-binding
+subjects:
+- kind: ServiceAccount
+  name: oidc-discovery-sa
+  namespace: kube-system
+roleRef:
+  kind: ClusterRole
+  name: oidc-discovery-reader
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: secure-oidc-discovery
+  namespace: kube-system
+spec:
+  replicas: 1  # Single replica due to hostNetwork port binding
+  selector:
+    matchLabels:
+      app: secure-oidc-discovery
+  template:
+    metadata:
+      labels:
+        app: secure-oidc-discovery
+    spec:
+      serviceAccountName: oidc-discovery-sa
+      hostNetwork: true  # CRITICAL: Enable access to K3s API on localhost:6443
+      dnsPolicy: ClusterFirstWithHostNet  # Maintain cluster DNS resolution
+      securityContext:
+        runAsNonRoot: false  # Need access to K3s keys
+        fsGroup: 0
+      containers:
+      - name: oidc-discovery
+        image: node:18-alpine
+        workingDir: /app
+        command: ["/bin/sh"]
+        args: ["-c", "npm install express && node /app/secure-oidc-service.js"]
+        ports:
+        - containerPort: 3002
+          name: http
+        volumeMounts:
+        - name: app-code
+          mountPath: /app/secure-oidc-service.js
+          subPath: secure-oidc-service.js
+          readOnly: true
+        - name: k3s-keys
+          mountPath: /var/lib/rancher/k3s/server/tls
+          readOnly: true
+        env:
+        - name: NODE_ENV
+          value: "production"
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false
+          runAsUser: 0  # Need root to read K3s keys
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3002
+          initialDelaySeconds: 10
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3002
+          initialDelaySeconds: 5
+          periodSeconds: 10
+      volumes:
+      - name: app-code
+        configMap:
+          name: secure-oidc-code-auth
+          defaultMode: 0644
+      - name: k3s-keys
+        hostPath:
+          path: /var/lib/rancher/k3s/server/tls
+          type: Directory
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: secure-oidc-code-auth
+  namespace: kube-system
+data:
+  secure-oidc-service.js: |
+    const express = require('express');
+    const https = require('https');
+    const crypto = require('crypto');
+    const fs = require('fs');
+
+    const app = express();
+    const PORT = 3002; // Changed to avoid conflict with Jenkins testing (uses 3001)
+
+    // OIDC Discovery Configuration - WORKING ISSUER URL
+    const ISSUER = 'https://oidc.ingasti.com';
+
+    // Cache for K3s JWKS - refresh every 5 minutes
+    let cachedJWKS = null;
+    let lastFetch = 0;
+    const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+    // Helper function to read Kubernetes service account token for K3s API authentication
+    function getServiceAccountToken() {
+      try {
+        return fs.readFileSync('/var/run/secrets/kubernetes.io/serviceaccount/token', 'utf8');
+      } catch (error) {
+        console.error('Failed to read service account token:', error);
+        return null;
+      }
+    }
+
+    // Fetch JWKS directly from K3s API server with authentication
+    async function fetchK3sJWKS() {
+      return new Promise((resolve, reject) => {
+        const token = getServiceAccountToken();
+        if (!token) {
+          reject(new Error('No service account token available'));
+          return;
+        }
+
+        const options = {
+          hostname: '127.0.0.1', // localhost works with hostNetwork: true
+          port: 6443,
+          path: '/openid/v1/jwks',
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
+          rejectUnauthorized: false, // K3s uses self-signed certs
+          timeout: 3000
+        };
+
+        const req = https.request(options, (res) => {
+          let data = '';
+          res.on('data', (chunk) => { data += chunk; });
+          res.on('end', () => {
+            try {
+              const jwks = JSON.parse(data);
+              if (jwks.keys && Array.isArray(jwks.keys)) {
+                console.log('Successfully fetched K3s JWKS from localhost:6443');
+                resolve(jwks);
+              } else {
+                console.error('Invalid JWKS structure:', jwks);
+                reject(new Error('Invalid JWKS structure'));
+              }
+            } catch (error) {
+              console.error('Error parsing K3s JWKS:', error);
+              reject(error);
+            }
+          });
+        });
+
+        req.on('error', reject);
+        req.on('timeout', () => { req.destroy(); reject(new Error('Timeout')); });
+        req.end();
+      });
+    }    // Get JWKS with caching
+    async function getCachedJWKS() {
+      const now = Date.now();
+      if (!cachedJWKS || (now - lastFetch) > CACHE_DURATION) {
+        try {
+          console.log('Fetching fresh K3s JWKS...');
+          cachedJWKS = await fetchK3sJWKS();
+          lastFetch = now;
+          console.log('JWKS cache updated successfully');
+        } catch (error) {
+          console.error('Failed to fetch K3s JWKS:', error);
+          if (!cachedJWKS) throw error;
+          console.log('Using cached JWKS due to fetch failure');
+        }
+      }
+      return cachedJWKS;
+    }
+
+    // OIDC Discovery endpoint - FIXED: hyphen instead of underscore
+    app.get('/.well-known/openid-configuration', (req, res) => {
+      console.log('OIDC Discovery request from:', req.ip);
+      
+      const config = {
+        issuer: ISSUER,
+        jwks_uri: `${ISSUER}/.well-known/jwks.json`,
+        authorization_endpoint: `${ISSUER}/auth`,
+        token_endpoint: `${ISSUER}/token`,
+        userinfo_endpoint: `${ISSUER}/userinfo`,
+        subject_types_supported: ['public'],
+        response_types_supported: ['code', 'token', 'id_token'],
+        claims_supported: ['sub', 'aud', 'exp', 'iat', 'iss'],
+        id_token_signing_alg_values_supported: ['RS256'],
+        scopes_supported: ['openid']
+      };
+      
+      res.json(config);
+    });
+
+    // JWKS endpoint - now proxies K3s JWKS directly
+    app.get('/.well-known/jwks.json', async (req, res) => {
+      console.log('JWKS request from:', req.ip);
+      
+      try {
+        const jwks = await getCachedJWKS();
+        console.log('Serving K3s JWKS with', jwks.keys ? jwks.keys.length : 0, 'keys');
+        res.json(jwks);
+      } catch (error) {
+        console.error('Failed to retrieve JWKS:', error);
+        res.status(500).json({ 
+          error: 'Unable to retrieve JWKS',
+          details: error.message 
+        });
+      }
+    });
+
+    // Health check - test JWKS connectivity
+    app.get('/health', async (req, res) => {
+      try {
+        if (cachedJWKS && cachedJWKS.keys) {
+          res.json({ 
+            status: 'ok', 
+            service: 'OIDC Discovery Service',
+            issuer: ISSUER,
+            jwks_source: 'K3s API Server (hostNetwork)',
+            cache_age: Math.floor((Date.now() - lastFetch) / 1000),
+            cached_keys: cachedJWKS.keys.length
+          });
+        } else {
+          const healthTimeout = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Health timeout')), 2000)
+          );
+          try {
+            await Promise.race([getCachedJWKS(), healthTimeout]);
+            res.json({ status: 'ok', service: 'OIDC Discovery Service', issuer: ISSUER });
+          } catch {
+            res.json({ status: 'degraded', service: 'OIDC Discovery Service', issuer: ISSUER });
+          }
+        }
+      } catch (error) {
+        res.status(200).json({ status: 'degraded', service: 'OIDC Discovery Service', issuer: ISSUER });
+      }
+    });
+
+    // Root endpoint
+    app.get('/', (req, res) => {
+      res.json({
+        service: 'OIDC Discovery Service',
+        issuer: ISSUER,
+        endpoints: {
+          discovery: '/.well-known/openid-configuration',
+          jwks: '/.well-known/jwks.json',
+          health: '/health'
+        },
+        source: 'K3s API Server JWKS (proxied via hostNetwork)'
+      });
+    });
+
+    app.listen(PORT, () => {
+      console.log(`🔐 OIDC Discovery Service running on port ${PORT}`);
+      console.log(`📍 Issuer: ${ISSUER}`);
+      console.log(`🔍 Discovery: ${ISSUER}/.well-known/openid-configuration`);
+      console.log(`🔑 JWKS: ${ISSUER}/.well-known/jwks.json`);
+      console.log(`🔗 Source: K3s API Server (localhost:6443 via hostNetwork)`);
+      console.log(`⚠️  Security: Proxying K3s JWKS for token verification`);
+      
+      // Populate cache on startup (don't block)
+      getCachedJWKS().catch(err => {
+        console.warn('Initial JWKS fetch failed:', err.message);
+      });
+    });
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: secure-oidc-discovery
+  namespace: kube-system
+spec:
+  selector:
+    app: secure-oidc-discovery
+  ports:
+  - port: 80
+    targetPort: 3002
+    name: http
+  type: ClusterIP

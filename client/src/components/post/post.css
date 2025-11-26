@@ -1,0 +1,156 @@
+.post{
+    width: 100%;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    overflow: hidden;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.post:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+}
+
+.postImg{
+    width: 100%;
+    height: 190px;
+    object-fit: cover;
+}
+
+.postInfo{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    flex-grow: 1;
+}
+
+.postCat{
+    font-family: "Fredoka", sans-serif;
+    font-size: 18px;
+    color: #be9656;
+    line-height: 20px;
+    margin-top: 15px;
+    margin-right: 10px;
+    cursor: pointer;
+
+}
+
+.postTitle{
+    font-family: "Kanit", sans-serif;
+    font-size: 24px;
+    font-weight: 700;
+    margin-top: 15px;
+    cursor: pointer;
+
+}
+
+.link {
+    text-decoration: none;
+    color: inherit;
+}
+
+.link:hover .postTitle {
+    color: #be9656;
+}
+
+.postMeta {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    margin-top: 15px;
+}
+
+.postDate{
+    font-family: "Poppins", sans-serif;
+    font-style: italic;
+    font-size: 16px;
+    color: #a7a4a4;
+}
+
+.postAuthor {
+    font-family: "Poppins", sans-serif;
+    font-size: 14px;
+    color: #666;
+    font-weight: 500;
+}
+
+.postDescription{
+    font-family: "Roboto", sans-serif;
+    font-size: 15px;
+    color: #444;
+    line-height: 21px;
+    margin-top: 17px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+}
+.postContent{
+    font-family: "Playwrite DE Grund", cursive;
+    font-optical-sizing: auto;
+
+}
+
+.postSocialActions {
+    padding: 15px;
+    border-top: 1px solid #e9ecef;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    background: #f8f9fa;
+    min-height: 50px;
+}
+
+.postSocialActions > * {
+    flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+    .postImg {
+        height: 200px;
+    }
+    
+    .postInfo {
+        padding: 15px;
+    }
+    
+    .postTitle {
+        font-size: 20px;
+    }
+    
+    .postSocialActions {
+        padding: 12px 15px;
+        gap: 12px;
+    }
+}
+
+@media (max-width: 480px) {
+    .postImg {
+        height: 180px;
+    }
+    
+    .postInfo {
+        padding: 12px;
+    }
+    
+    .postTitle {
+        font-size: 18px;
+    }
+    
+    .postCat {
+        font-size: 16px;
+    }
+    
+    .postSocialActions {
+        padding: 10px 12px;
+        gap: 10px;
+    }
+}

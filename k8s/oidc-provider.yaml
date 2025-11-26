@@ -1,0 +1,83 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: oidc-provider
+  namespace: kube-system
+  labels:
+    app: oidc-provider
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: oidc-provider
+  template:
+    metadata:
+      labels:
+        app: oidc-provider
+    spec:
+      serviceAccount: oidc-provider-sa
+      containers:
+      - name: oidc-provider
+        image: localhost:5000/oidc-provider:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+        env:
+        - name: PORT
+          value: "8080"
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        volumeMounts:
+        - name: service-account-token
+          mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+          readOnly: true
+      volumes:
+      - name: service-account-token
+        projected:
+          sources:
+          - serviceAccountToken:
+              path: token
+              audience: https://oidc.ingasti.com
+              expirationSeconds: 3600
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: oidc-provider-service
+  namespace: kube-system
+  labels:
+    app: oidc-provider
+spec:
+  selector:
+    app: oidc-provider
+  ports:
+  - port: 80
+    targetPort: 8080
+    protocol: TCP
+  type: ClusterIP
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: oidc-provider-sa
+  namespace: kube-system
+  labels:
+    app: oidc-provider

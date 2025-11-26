@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: blog
+  labels:
+    name: blog
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: blog-secrets
+  namespace: blog
+type: Opaque
+data:
+  # These are production-ready secrets - update with your actual values
+  # To encode: echo -n "your-secret-value" | base64
+  # Example: DATABASE_URL for Aiven MySQL
+  database-url: bXlzcWw6Ly91c2VyOnBhc3N3b3JkQGhvc3Q6cG9ydC9kYm5hbWU= # Update with your Aiven MySQL connection string
+  jwt-secret: YmVkdGltZS1ibG9nLWp3dC1wcm9kdWN0aW9uLXNlY3JldC0yMDI1 # Strong production JWT secret
+  google-client-id: WU9VUl9HT09HTEVfQ0xJRU5UX0lE # Update with your Google OAuth client ID
+  google-client-secret: WU9VUl9HT09HTEVfQ0xJRU5UX1NFQ1JFVA== # Update with your Google OAuth client secret
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: blog-config
+  namespace: blog
+data:
+  cors-origin: "https://blog.ingasti.com"
+  api-url: "https://bapi.ingasti.com"
+  node-env: "production"

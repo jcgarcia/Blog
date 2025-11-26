@@ -1,0 +1,84 @@
+# Caddyfile for Jenkins server - Docker Registry with HTTPS
+# This file should be placed at /etc/caddy/Caddyfile on the Jenkins server
+
+# Main Ingasti Website
+ingasti.com {
+    reverse_proxy localhost:9443 {
+        transport http {
+            tls_insecure_skip_verify
+        }
+    }
+    
+    # Logging
+    log {
+        output file /var/log/caddy/ingasti.log
+    }
+}
+
+# Docker Registry with HTTPS
+registry.ingasti.com {
+    reverse_proxy localhost:5000
+    
+    # Enable CORS for Docker registry
+    header Access-Control-Allow-Origin *
+    header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+    header Access-Control-Allow-Headers "Authorization, Content-Type"
+    
+    # Handle preflight requests
+    @options method OPTIONS
+    handle @options {
+        respond 200
+    }
+    
+    # Logging
+    log {
+        output file /var/log/caddy/registry.log
+    }
+}
+
+# Jenkins web interface (if needed)
+jenkins.ingasti.com {
+    reverse_proxy localhost:8080
+    
+    # Logging
+    log {
+        output file /var/log/caddy/jenkins.log
+    }
+}
+
+# Blog Frontend
+blog.ingasti.com {
+    @apipages path /api/pages/*
+    reverse_proxy @apipages bapi.ingasti.com
+
+    reverse_proxy 10.43.86.27:80
+
+    # Logging
+    log {
+        output file /var/log/caddy/blog-frontend.log
+    }
+}
+
+# Blog Backend API
+bapi.ingasti.com {
+    # Enable CORS for Blog API - Apply to ALL responses
+    header {
+        Access-Control-Allow-Origin "https://blog.ingasti.com"
+        Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+        Access-Control-Allow-Headers "Origin, X-Requested-With, Content-Type, Accept, Authorization"
+        Access-Control-Allow-Credentials "true"
+    }
+    
+    # Handle preflight requests
+    @options method OPTIONS
+    handle @options {
+        respond 200
+    }
+
+    reverse_proxy 10.43.194.250:80
+
+    # Logging
+    log {
+        output file /var/log/caddy/blog-backend.log
+    }
+}

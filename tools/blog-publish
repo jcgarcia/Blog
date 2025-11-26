@@ -1,0 +1,22 @@
+#!/bin/bash
+
+# Blog Publisher CLI Wrapper
+# This script makes it easier to run the Node.js blog publisher
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+NODE_SCRIPT="$SCRIPT_DIR/blog-publish.js"
+
+# Check if Node.js is available
+if ! command -v node &> /dev/null; then
+    echo "❌ Error: Node.js is not installed or not in PATH"
+    exit 1
+fi
+
+# Check if the Node.js script exists
+if [ ! -f "$NODE_SCRIPT" ]; then
+    echo "❌ Error: blog-publish.js not found at $NODE_SCRIPT"
+    exit 1
+fi
+
+# Run the Node.js script with all arguments
+node "$NODE_SCRIPT" "$@"

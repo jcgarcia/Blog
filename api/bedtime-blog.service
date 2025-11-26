@@ -1,0 +1,14 @@
+[Unit]
+Description=Bedtime Blog API
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/path/to/your/blog/api
+ExecStart=/usr/bin/pnpm start
+Restart=always
+Environment=NODE_ENV=production
+EnvironmentFile=/path/to/your/blog/api/.env
+
+[Install]
+WantedBy=multi-user.target

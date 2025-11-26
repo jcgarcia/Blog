@@ -1,0 +1,99 @@
+.simple-rich-editor {
+  width: 100%;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  overflow: hidden;
+  background: white;
+}
+
+.editor-toolbar {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  background: #f8f9fa;
+  border-bottom: 1px solid #ddd;
+  gap: 4px;
+}
+
+.toolbar-btn {
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.toolbar-btn:hover {
+  background: #e9ecef;
+  border-color: #adb5bd;
+}
+
+.toolbar-btn:active {
+  background: #dee2e6;
+}
+
+.image-btn {
+  background: #007bff;
+  color: white;
+  border-color: #007bff;
+}
+
+.image-btn:hover {
+  background: #0056b3;
+  border-color: #0056b3;
+}
+
+.toolbar-separator {
+  width: 1px;
+  height: 20px;
+  background: #ddd;
+  margin: 0 8px;
+}
+
+.editor-textarea {
+  width: 100%;
+  border: none;
+  outline: none;
+  padding: 16px;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 14px;
+  line-height: 1.6;
+  resize: vertical;
+  min-height: 400px;
+  background: white;
+}
+
+.editor-textarea:focus {
+  outline: none;
+}
+
+/* Markdown preview styles */
+.markdown-preview {
+  padding: 16px;
+  border-top: 1px solid #ddd;
+  background: #f8f9fa;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.markdown-preview h2 {
+  margin: 0 0 8px 0;
+  color: #333;
+}
+
+.markdown-preview strong {
+  font-weight: bold;
+}
+
+.markdown-preview em {
+  font-style: italic;
+}
+
+.markdown-preview img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 4px;
+  margin: 8px 0;
+}

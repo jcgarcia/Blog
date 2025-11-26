@@ -1,0 +1,11 @@
+              key              |          value           |           description            
+-------------------------------+--------------------------+----------------------------------
+ oauth_google_client_id        |                          | Google OAuth Client ID
+ oauth_google_client_secret    |                          | Google OAuth Client Secret
+ oauth_facebook_app_id         |                          | Facebook OAuth App ID
+ oauth_facebook_app_secret     |                          | Facebook OAuth App Secret
+ oauth_twitter_consumer_key    |                          | Twitter OAuth Consumer Key
+ oauth_twitter_consumer_secret |                          | Twitter OAuth Consumer Secret
+ oauth_frontend_url            | https://blog.ingasti.com | Frontend URL for OAuth callbacks
+(7 rows)
+

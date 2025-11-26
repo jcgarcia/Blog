@@ -1,0 +1,436 @@
+.write{
+    padding-top: 50px;
+    padding-bottom: 50px;
+}
+
+.writeImg{
+    margin-left: 150px;
+    width: 72vw; 
+    height: 300px;
+    border-radius: 10PX;
+    object-fit: cover;
+ }
+
+.write-header {
+    margin-left: 150px;
+    margin-bottom: 20px;
+}
+
+.write-header h1 {
+    color: #333;
+    font-family: "Kanit", sans-serif;
+    margin-bottom: 5px;
+}
+
+.write-header p {
+    color: #666;
+    font-family: "Poppins", sans-serif;
+    margin: 0;
+}
+
+.write-error {
+    margin-left: 150px;
+    padding: 40px;
+    text-align: center;
+    background-color: #f8f9fa;
+    border-radius: 10px;
+    border: 1px solid #e1e5e9;
+}
+
+.write-error h2 {
+    color: #e74c3c;
+    margin-bottom: 15px;
+}
+
+.write-error button {
+    background-color: #be9656;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    margin-top: 15px;
+}
+
+.write-error-message, .write-success-message {
+    margin-left: 150px;
+    padding: 15px;
+    border-radius: 5px;
+    margin-bottom: 20px;
+    font-family: "Poppins", sans-serif;
+}
+
+.write-error-message {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.write-success-message {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.writeForm{
+    position: relative;
+}
+
+.writeFormGroup{
+    margin-left: 150px;
+    display: flex;
+    align-items: center;
+    margin-bottom: 20px;
+    gap: 15px;
+}
+
+.writeFormGroupFull {
+    margin-left: 150px;
+    margin-bottom: 20px;
+    width: 70vw;
+}
+
+.writeFormGroupFull .lexical-container {
+    width: 100%;
+}
+
+.featured-image-preview {
+    position: relative;
+    display: inline-block;
+    margin-bottom: 10px;
+}
+
+.featured-image-preview img {
+    max-width: 300px;
+    max-height: 200px;
+    border-radius: 5px;
+    object-fit: cover;
+}
+
+.remove-image-btn {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background-color: #e74c3c;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+}
+
+.remove-image-btn:hover {
+    background-color: #c0392b;
+}
+
+.file-upload-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #666;
+    font-size: 14px;
+    cursor: pointer;
+    margin-right: 15px;
+}
+
+.featured-image-options {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 15px;
+    align-items: center;
+}
+
+.media-library-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #666;
+    font-size: 14px;
+    cursor: pointer;
+    background: none;
+    border: 1px solid #ddd;
+    padding: 8px 12px;
+    border-radius: 5px;
+    transition: all 0.3s ease;
+}
+
+.media-library-btn:hover {
+    background-color: #f5f5f5;
+    border-color: #be9656;
+    color: #be9656;
+}
+
+.media-library-btn:hover .writeIcon {
+    color: #be9656;
+}
+
+.writeIcon{
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 1px solid;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    color: rgb(92, 92, 92);
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.writeIcon:hover {
+    background-color: #f5f5f5;
+    transform: scale(1.1);
+}
+
+.writeInput{
+    font-size: 18px;
+    border: 1px solid #ddd;
+    padding: 15px;
+    width: 70vw;
+    border-radius: 5px;
+    font-family: "Poppins", sans-serif;
+    transition: border-color 0.3s ease;
+}
+
+.writeInput:focus{
+    outline: none;
+    border-color: #be9656;
+    box-shadow: 0 0 0 3px rgba(190, 150, 86, 0.1);
+}
+
+.writeSelect {
+    width: auto;
+    min-width: 200px;
+}
+
+.writeHelperText {
+    display: block;
+    margin-top: 5px;
+    font-size: 12px;
+    color: #666;
+    font-family: "Poppins", sans-serif;
+    font-style: italic;
+}
+
+/* Scheduled post date/time inputs */
+.writeScheduleGroup {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    background-color: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+    width: auto !important;
+    max-width: 600px;
+    box-sizing: border-box;
+}
+
+.writeScheduleLabel {
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 15px;
+    font-family: "Poppins", sans-serif;
+}
+
+.writeScheduleInputs {
+    display: flex;
+    gap: 20px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+}
+
+.writeScheduleField {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 0 0 auto;
+}
+
+.writeFieldLabel {
+    font-size: 14px;
+    font-weight: 500;
+    color: #555;
+    font-family: "Poppins", sans-serif;
+}
+
+.writeScheduleDate {
+    width: 180px;
+    padding: 10px;
+    font-size: 16px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-family: "Poppins", sans-serif;
+    box-sizing: border-box;
+}
+
+.writeScheduleTime {
+    width: 150px;
+    padding: 10px;
+    font-size: 16px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-family: "Poppins", sans-serif;
+    box-sizing: border-box;
+}
+
+.writeScheduleDate:focus,
+.writeScheduleTime:focus {
+    outline: none;
+    border-color: #be9656;
+    box-shadow: 0 0 0 3px rgba(190, 150, 86, 0.1);
+}
+
+.writeScheduleGroup .writeHelperText {
+    margin-top: 15px;
+    margin-left: 0;
+    color: #6c757d;
+    max-width: 500px;
+}
+
+.writeText{
+    font-size: 16px;
+    min-height: 400px;
+    resize: vertical;
+    font-family: "Poppins", sans-serif;
+    line-height: 1.6;
+}
+
+.writeFormActions {
+    margin-left: 150px;
+    display: flex;
+    gap: 15px;
+    margin-top: 30px;
+}
+
+.writeSubmit, .writeCancel{
+    color: white;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    font-family: "Poppins", sans-serif;
+    transition: all 0.3s ease;
+}
+
+.writeSubmit {
+    background-color: #be9656;
+}
+
+.writeSubmit:hover {
+    background-color: #a0824a;
+    transform: translateY(-2px);
+}
+
+.writeSubmit:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.writeCancel {
+    background-color: #6c757d;
+}
+
+.writeCancel:hover {
+    background-color: #545b62;
+    transform: translateY(-2px);
+}
+
+/* TinyMCE Editor Styling */
+.tox-tinymce {
+    border-radius: 5px !important;
+    border: 1px solid #ddd !important;
+}
+
+.tox .tox-toolbar,
+.tox .tox-toolbar__primary {
+    background: #f8f9fa !important;
+    border-bottom: 1px solid #ddd !important;
+}
+
+.tox .tox-edit-area__iframe {
+    background: white !important;
+}
+
+.tox .tox-statusbar {
+    border-top: 1px solid #ddd !important;
+    background: #f8f9fa !important;
+}
+
+/* Focus state for TinyMCE */
+.tox.tox-tinymce-aux .tox-toolbar__primary {
+    background: #fff !important;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+    .writeImg, .writeFormGroup, .writeFormGroupFull, .write-header, .write-error, 
+    .write-error-message, .write-success-message, .writeFormActions {
+        margin-left: 20px;
+        margin-right: 20px;
+    }
+    
+    .writeImg {
+        width: calc(100vw - 40px);
+    }
+    
+    .writeInput {
+        width: calc(100vw - 100px);
+        font-size: 16px;
+    }
+
+    .writeFormGroupFull {
+        width: calc(100vw - 40px);
+    }
+
+    .writeFormGroupFull .lexical-container {
+        width: 100%;
+    }
+    
+    .writeFormActions {
+        flex-direction: column;
+    }
+    
+    .writeSubmit, .writeCancel {
+        width: 100%;
+    }
+
+    .featured-image-preview img {
+        max-width: 100%;
+    }
+
+    /* Scheduled post inputs on mobile */
+    .writeScheduleGroup {
+        width: calc(100vw - 80px);
+        padding: 15px;
+    }
+
+    .writeScheduleInputs {
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .writeScheduleField {
+        width: 100%;
+    }
+
+    .writeScheduleDate,
+    .writeScheduleTime {
+        width: 100%;
+        min-width: 0;
+    }
+
+    /* TinyMCE mobile adjustments */
+    .tox .tox-toolbar__primary {
+        flex-wrap: wrap !important;
+    }
+}

@@ -1,0 +1,10 @@
+.single{
+    display: flex;
+}
+
+/* Mobile responsive layout */
+@media (max-width: 768px) {
+    .single {
+        flex-direction: column;
+    }
+}

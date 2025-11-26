@@ -1,0 +1,90 @@
+# Ignore root-level node_modules
+node_modules
+
+# Ignore client directory dependencies
+client/node_modules
+
+# Ignore api directory dependencies
+api/node_modules
+
+# Optional: Add dist folder if created during builds
+client/dist
+api/dist
+client/build
+api/build
+
+# Ignore any system-specific or editor-specific files
+*.log
+.DS_Store
+
+# 🔐 SECURITY: AWS and cloud provider credentials
+*AWS*SETUP*.md
+*IDENTITY*CENTER*.md
+*aws*credentials*
+*cloud*config*
+AWS_*.md
+*_CREDENTIALS_*.md
+
+# 🔐 SECURITY: Environment files with secrets
+.env
+.env.local
+.env.*.local
+.env.production
+.env.staging
+.env.development
+*.env
+.envrc
+
+# 🔐 SECURITY: Database and API credentials
+database-credentials.txt
+api-keys.txt
+secrets.json
+config/production.json
+config/staging.json
+
+# 🔐 SECURITY: Secret files and directories
+secrets/
+config/secrets
+private/
+keys/
+certificates/
+*.pem
+*.key
+*.crt
+*.p12
+*.jks
+
+# 🔐 SECURITY: Backup files that might contain secrets
+*.bak
+*.backup
+*.orig
+backup-*.sql
+dump-*.sql
+
+# 🔐 SECURITY: Temporary files that might contain credentials
+temp-*
+tmp-*
+*-temp
+*-tmp
+*.tmp
+
+# 🔐 SECURITY: Archive files that might contain secrets
+*.zip
+*.tar.gz
+*.7z
+archive-*
+.vscode/
+.idea/
+.vite/
+dist/.env
+**/*.env
+
+# 🚨 INTERNAL USE ONLY: Activity folder for sprint documentation and backups
+# This folder contains sensitive project information and should NEVER be pushed to public repo
+activity/
+activity/**/*
+/activity
+# AWS configuration files with secrets
+AWS_IDENTITY_CENTER_*.md
+AWS_PRODUCTION_*.md
+*_CREDENTIALS.md

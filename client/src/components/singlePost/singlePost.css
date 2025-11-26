@@ -1,0 +1,228 @@
+.singlePost{
+    flex: 9;
+}
+
+.singlePostWrapper{
+    padding: 20px;
+    padding-right: 0;
+}
+
+.singlePostImg{
+   width: 100%; 
+   height: 300px;
+   border-radius: 10PX;
+   object-fit: cover;
+}
+
+.singlePostTitle{
+    text-align: center;
+    margin: 10px;
+    font-family: "Kanit", sans-serif;
+    font-size: 27px;
+}
+
+.singlePostEdit{
+    float: right;
+    font-size: 18px;
+}
+
+.SinglePostIcon{
+    margin-left: 10Px;
+    cursor: pointer;
+}
+
+.SinglePostIcon:first-child{
+    color: teal;
+}
+
+.SinglePostIcon:last-child{
+    color: tomato;
+}
+
+.singlePostInfo{
+    margin-top: 20px;
+    display: flex;
+    justify-content: space-between;
+    font-size: 18px;
+    color: #b39656;
+    font-family: "Roboto", system-ui;
+}
+
+.singlePostAuthor{
+margin-left: 5px;
+}
+
+.singlePostDesc {
+color: #666;
+font-size: 18px;
+line-height: 27px;
+}
+
+.singlePostDesc::first-letter {
+margin-left: 20px;
+font-size: 30px;
+font-weight: 600;
+}
+
+/* New styles for dynamic content */
+.loading, .error {
+    text-align: center;
+    padding: 40px 20px;
+    font-family: "Poppins", sans-serif;
+}
+
+.loading p {
+    font-size: 18px;
+    color: #666;
+}
+
+.error p {
+    font-size: 18px;
+    color: #e74c3c;
+    margin-bottom: 20px;
+}
+
+.retry-btn {
+    background-color: #be9656;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-family: "Poppins", sans-serif;
+    font-size: 14px;
+    transition: background-color 0.3s ease;
+}
+
+.retry-btn:hover {
+    background-color: #a0824a;
+}
+
+.singlePostTags {
+    margin: 20px 0;
+    font-family: "Roboto", sans-serif;
+}
+
+.singlePostTag {
+    display: inline-block;
+    background-color: #be9656;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    margin-right: 8px;
+    font-size: 14px;
+}
+
+.singlePostDescription {
+    margin: 20px 0;
+    font-family: "Roboto", sans-serif;
+    font-size: 16px;
+    color: #666;
+    border-left: 4px solid #be9656;
+    padding-left: 16px;
+}
+
+.singlePostContent {
+    color: #666;
+    font-size: 18px;
+    line-height: 27px;
+    margin-top: 30px;
+    font-family: "Roboto", sans-serif;
+}
+
+.singlePostContent::first-letter {
+    margin-left: 20px;
+    font-size: 30px;
+    font-weight: 600;
+}
+
+/* Style for content headings */
+.singlePostContent h1,
+.singlePostContent h2,
+.singlePostContent h3 {
+    color: #333;
+    margin-top: 30px;
+    margin-bottom: 15px;
+    font-family: "Kanit", sans-serif;
+}
+
+.singlePostContent p {
+    margin-bottom: 15px;
+}
+
+.singlePostContent code {
+    background-color: #f4f4f4;
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-family: monospace;
+}
+
+.singlePostContent pre {
+    background-color: #f4f4f4;
+    padding: 15px;
+    border-radius: 5px;
+    overflow-x: auto;
+    margin: 20px 0;
+}
+
+.singlePostContent blockquote {
+    border-left: 4px solid #be9656;
+    padding-left: 16px;
+    margin: 20px 0;
+    font-style: italic;
+    color: #555;
+}
+
+.singlePostStats {
+    margin-top: 30px;
+    padding: 20px;
+    background-color: #f9f9f9;
+    border-radius: 8px;
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+    font-family: "Poppins", sans-serif;
+    font-size: 14px;
+    color: #666;
+}
+
+.singlePostStats span {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+/* Mobile responsive styles */
+@media (max-width: 768px) {
+    .singlePost {
+        flex: 1;
+    }
+    
+    .singlePostWrapper {
+        padding: 15px;
+        padding-right: 15px;
+    }
+    
+    .singlePostTitle {
+        font-size: 22px;
+        margin: 15px 5px;
+    }
+    
+    .singlePostInfo {
+        flex-direction: column;
+        gap: 10px;
+        font-size: 16px;
+    }
+    
+    .singlePostDesc, .singlePostContent {
+        font-size: 16px;
+        line-height: 24px;
+    }
+    
+    .singlePostStats {
+        flex-direction: column;
+        gap: 10px;
+        text-align: center;
+    }
+}

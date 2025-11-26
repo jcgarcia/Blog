@@ -1,0 +1,123 @@
+.posts{
+    flex: 9;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 30px;
+    margin: 20px;
+    align-items: start;
+}
+
+/* On very wide screens, limit to 3 columns to maintain readability */
+@media (min-width: 1400px) {
+    .posts {
+        grid-template-columns: repeat(3, 1fr);
+        max-width: 1200px;
+        margin: 20px auto;
+    }
+}
+
+/* On medium screens, ensure 2 columns */
+@media (min-width: 768px) and (max-width: 1399px) {
+    .posts {
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    }
+}
+
+/* On mobile, single column */
+@media (max-width: 767px) {
+    .posts {
+        grid-template-columns: 1fr;
+        margin: 10px;
+        gap: 20px;
+    }
+}
+
+.category-header {
+    width: 100%;
+    padding: 20px 0;
+    border-bottom: 2px solid #eb0bba;
+    margin-bottom: 30px;
+    text-align: center;
+}
+
+.category-header h2 {
+    color: #eb0bba;
+    font-family: 'Merriweather', serif;
+    font-size: 28px;
+    margin: 0 0 10px 0;
+    text-transform: capitalize;
+}
+
+.category-header p {
+    color: #666;
+    font-family: "Poppins", sans-serif;
+    font-size: 16px;
+    margin: 0;
+    font-style: italic;
+}
+
+.loading, .error, .no-posts {
+    width: 100%;
+    text-align: center;
+    padding: 40px 20px;
+    font-family: "Poppins", sans-serif;
+}
+
+.loading p {
+    font-size: 18px;
+    color: #666;
+}
+
+.error p {
+    font-size: 18px;
+    color: #e74c3c;
+    margin-bottom: 20px;
+}
+
+.no-posts p {
+    font-size: 18px;
+    color: #999;
+}
+
+.retry-btn, .load-more-btn {
+    background-color: #be9656;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-family: "Poppins", sans-serif;
+    font-size: 14px;
+    transition: background-color 0.3s ease;
+}
+
+.retry-btn:hover, .load-more-btn:hover {
+    background-color: #a0824a;
+}
+
+.retry-btn:disabled, .load-more-btn:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
+
+.load-more {
+    width: 100%;
+    text-align: center;
+    margin-top: 20px;
+}
+
+.error-notice {
+    width: 100%;
+    text-align: center;
+    padding: 10px;
+    background-color: #fee;
+    border: 1px solid #fcc;
+    border-radius: 5px;
+    margin-top: 20px;
+}
+
+.error-notice p {
+    color: #c33;
+    margin: 0;
+    font-size: 14px;
+}

@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bedtime-blog-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bedtime-blog-api
+  template:
+    metadata:
+      labels:
+        app: bedtime-blog-api
+    spec:
+      containers:
+      - name: api
+        image: bedtime-blog:latest
+        ports:
+        - containerPort: 8800
+        env:
+        - name: DB_HOST
+          value: <your-db-host>
+        - name: DB_USER
+          value: <your-db-user>
+        - name: DB_PASSWORD
+          value: <your-db-password>
+        - name: DB_NAME
+          value: <your-db-name>
+        - name: JWT_SECRET
+          value: <your-jwt-secret>
+        - name: GOOGLE_CLIENT_ID
+          value: <your-google-client-id>
+        - name: GOOGLE_CLIENT_SECRET
+          value: <your-google-client-secret>
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bedtime-blog-frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bedtime-blog-frontend
+  template:
+    metadata:
+      labels:
+        app: bedtime-blog-frontend
+    spec:
+      containers:
+      - name: frontend
+        image: bedtime-blog:latest
+        command: ["pnpm", "preview", "--", "--port", "5173"]
+        ports:
+        - containerPort: 5173

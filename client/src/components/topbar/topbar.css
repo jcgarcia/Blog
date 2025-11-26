@@ -1,0 +1,405 @@
+
+.top {
+    width: 100%;
+    height: 50px;
+    background-color: white;
+    position: sticky; 
+    top: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: nowrap; /* Ensure all content stays in one line */
+    padding: 10px;
+    font-family: "Oswald", sans-serif;
+    z-index: 999;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1); /* Add subtle shadow */
+}
+
+.topLeft {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start; /* Align social media icons to the left */
+    flex: 1 1 auto;
+}
+
+.topCenter {
+    display: flex;
+    justify-content: center;
+}
+
+.topRight {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex: 1 1 auto;
+}
+
+.topIcon {
+    font-size: 45px; /* Restore original size */
+    margin-right: 5px;
+    color: #444;
+    cursor: pointer;
+}
+
+.topIcon:hover {
+    color: #eb0bba; /* Highlight color on hover */
+    transform: scale(1.1); /* Slightly enlarge icon on hover */
+    transition: transform 0.2s ease-in-out;
+}
+
+.topImg {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.topList {
+    display: flex;
+    justify-content: center;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    transition: max-height 0.3s ease-in-out;
+}
+
+.topList.open {
+    max-height: 500px; /* Expand menu when open */
+}
+
+.topListItem {
+    margin-right: 20px;
+    font-size: 3px;
+    font-weight: bold;
+    cursor: pointer;
+    list-style: none;
+}
+
+.topListItem:hover {
+    color: #eb0bba; /* Highlight color on hover */
+    font-weight: bold; /* Emphasize on hover */
+    text-decoration: underline;
+}
+
+.topListItem.active {
+    color: #eb0bba; /* Highlight active link */
+    font-weight: bold;
+    border-bottom: 2px solid #eb0bba; /* Add underline for active link */
+}
+
+.topSearchIcon {
+    font-size: 27px;
+    color: #666;
+    cursor: pointer;
+    margin-left: 15px;
+}
+
+.loginIcon {
+    font-size: 24px;
+    margin: 0 10px;
+    color: #444;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    padding: 5px;
+}
+
+.loginIcon:hover {
+    color: #eb0bba;
+}
+
+.hamburgerIcon {
+    display: none;
+    font-size: 24px;
+    cursor: pointer;
+    margin-left: 15px;
+    color: #444;
+}
+
+.hamburgerIcon:hover {
+    color: #eb0bba;
+}
+
+/* Mobile Styles */
+@media (max-width: 767px) {
+    .top {
+        flex-wrap: nowrap;
+        position: sticky;
+        top: 0;
+        width: 100%;
+        height: 40px; /* Reduce height even more */
+        background-color: white;
+        z-index: 1000;
+        margin: 0;
+        padding: 5px 10px; /* Reduce padding */
+        border: none;
+        box-sizing: border-box;
+    }
+
+    .topLeft {
+        order: 1;
+        flex: 1;
+        min-width: 0;
+    }
+
+    .topRight {
+        order: 2;
+        flex: 0 0 auto;
+        min-width: 0;
+    }
+
+    /* Desktop menu is not rendered on mobile, so no styles needed */
+    .topCenter {
+        display: none;
+    }
+
+    /* Mobile menu styles */
+    .mobileMenu {
+        position: fixed;
+        top: 40px; /* Match the reduced nav bar height */
+        left: 0;
+        right: 0;
+        width: 100vw;
+        z-index: 9999;
+        background-color: white;
+        border-top: 1px solid #eee;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        max-height: calc(100vh - 40px);
+        overflow-y: auto;
+        animation: slideDown 0.3s ease;
+    }
+
+    @keyframes slideDown {
+        from {
+            transform: translateY(-100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+
+    .topList {
+        flex-direction: column;
+        width: 100%;
+        align-items: stretch; /* Full width items */
+        margin: 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    .topListItem {
+        margin: 0;
+        font-size: 20px;
+        text-align: left;
+        width: 100%;
+        padding: 20px 30px;
+        border-bottom: 1px solid #f0f0f0;
+        display: block;
+        background-color: white;
+        transition: background-color 0.2s ease;
+    }
+
+    .topListItem:hover {
+        background-color: #f8f9fa;
+        color: #eb0bba;
+    }
+
+    .topListItem:last-child {
+        border-bottom: none;
+    }
+
+    .topListItem .link {
+        display: block;
+        width: 100%;
+        text-decoration: none;
+        color: inherit;
+        font-weight: 600;
+    }
+
+    .hamburgerIcon {
+        display: block !important; /* Force show hamburger on mobile */
+        font-size: 24px;
+        color: #444;
+        cursor: pointer;
+        padding: 8px;
+        border-radius: 4px;
+        transition: background-color 0.2s ease;
+    }
+
+    .hamburgerIcon:hover {
+        background-color: #f0f0f0;
+        color: #eb0bba;
+    }
+
+    .topIcon {
+        font-size: 30px; /* Much smaller icons on mobile */
+        margin-right: 3px;
+    }
+
+    .topSearchIcon {
+        font-size: 20px;
+        margin-left: 8px;
+    }
+
+    /* Add overlay when menu is open */
+    .topCenter.open::before {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0,0,0,0.3);
+        z-index: -1;
+    }
+}
+
+
+@media (min-width: 768px) {
+    .top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px;
+        flex-wrap: nowrap;
+    }
+
+    .topLeft {
+        display: flex;
+        align-items: center;
+        justify-content: flex-start; /* Align social media icons to the left */
+        flex: 1 1 auto;
+        order: 1;
+    }
+
+    .topCenter {
+        flex: 2;
+        display: flex !important; /* Always show on desktop */
+        justify-content: center;
+        order: 2;
+        margin-top: 0;
+        border-top: none;
+        padding: 0;
+    }
+
+    .topRight {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end; /* Align other components to the right */
+        flex: 1 1 auto;
+        order: 3;
+    }
+
+    .topIcon {
+        font-size: 45px; /* Ensure visibility on desktop */
+        margin-right: 10px;
+    }
+
+    .topList {
+        flex-direction: row;
+        align-items: center;
+    }
+
+    .topListItem {
+        margin: 0 20px 0 0;
+        font-size: 36px;
+        text-align: left;
+        width: auto;
+        padding: 0;
+        border-bottom: none;
+    }
+
+    .hamburgerIcon {
+        display: none !important; /* Hide hamburger on desktop */
+    }
+}
+
+/* Login Menu Styles */
+.loginMenu {
+    position: relative;
+}
+
+.loginIcon {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+    padding: 8px 12px;
+    border-radius: 8px;
+    transition: background-color 0.2s ease;
+}
+
+.loginIcon:hover {
+    background-color: #f5f5f5;
+}
+
+.loginIcon i {
+    font-size: 20px;
+    color: #444;
+}
+
+.loginIcon .fa-chevron-down {
+    font-size: 12px;
+}
+
+.loginDropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background: white;
+    border: 1px solid #e1e5e9;
+    border-radius: 12px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    padding: 8px 0;
+    min-width: 220px;
+    z-index: 1000;
+    margin-top: 8px;
+}
+
+.loginOption {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    text-decoration: none;
+    color: #333;
+    transition: background-color 0.2s ease;
+}
+
+.loginOption:hover {
+    background-color: #f8f9ff;
+}
+
+.loginOption.admin:hover {
+    background-color: #fef2f2;
+}
+
+.loginOption i {
+    font-size: 18px;
+    min-width: 20px;
+    color: #667eea;
+}
+
+.loginOption.admin i {
+    color: #dc2626;
+}
+
+.loginOption div {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.loginOption strong {
+    font-weight: 600;
+    font-size: 14px;
+    color: #333;
+}
+
+.loginOption span {
+    font-size: 12px;
+    color: #666;
+    line-height: 1.2;
+}

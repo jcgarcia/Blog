@@ -1,0 +1,55 @@
+apiVersion: v1apiVersion: v1apiVersion: v1
+
+kind: ConfigMap
+
+metadata:kind: ConfigMapkind: ConfigMap
+
+  name: oidc-jwks
+
+  namespace: kube-systemmetadata:metadata:
+
+data:
+
+  jwks.json: |  name: oidc-jwks  name: k3s-jwks
+
+    {
+
+      "keys": [  namespace: kube-system  namespace: kube-system
+
+        {
+
+          "use": "sig",data:data:
+
+          "kty": "RSA",
+
+          "kid": "xYU6Ub4r2wQfWUjudci6Okg2KwEWbvLPzm01Y2HBXjk",  jwks.json: |  jwks.json: |
+
+          "alg": "RS256",
+
+          "n": "ra2RpF6O8J-JcMd57sCSuz9Q5-bWyg7IAa0NV4DBs0kj_oNYQQRvVwSDbSQULz3YicuXa9b8InuGnmtACSkBez6fF0i0BIRmztt3CbgpnYRfPpvJBIajABQhWk8MQiZDljkVqFil5z4Ov7R-7toLXW1c0zTw-c59R66lqKoPi492Eg7lKtzKV0ByxORhLSCx2xFMa4sIguyqCRR0VLmHs8eaJ9rxamjWVGSoXixuN6XBxd9FM5iiSLotiM4h-yI1x10MmomUjV50JdHM_ZlV8K86iUpxAq_U_X7s_JtTTvJyxY8aslv2mAcSOQvXXvR2NYmpY_JCa-FexZyH89xgNw",    {    {
+
+          "e": "AQAB"
+
+        }      "keys": [      "keys": [
+
+      ]
+
+    }        {        {
+
+          "use": "sig",          "kty": "RSA",
+
+          "kty": "RSA",          "use": "sig",
+
+          "kid": "k3s-server",          "kid": "xYU6Ub4r2wQfWUjudci6Okg2KwEWbvLPzm01Y2HBXjk",
+
+          "alg": "RS256",          "alg": "RS256",
+
+          "n": "example-modulus-will-be-extracted-from-k3s",          "n": "ra2RpF6O8J-JcMd57sCSuz9Q5-bWyg7IAa0NV4DBs0kj_oNYQQRvVwSDbSQULz3YicuXa9b8InuGnmtACSkBez6fF0i0BIRmztt3CbgpnYRfPpvJBIajABQhWk8MQiZDljkVqFil5z4Ov7R-7toLXW1c0zTw-c59R66lqKoPi492Eg7lKtzKV0ByxORhLSCx2xFMa4sIguyqCRR0VLmHs8eaJ9rxamjWVGSoXixuN6XBxd9FM5iiSLotiM4h-yI1x10MmomUjV50JdHM_ZlV8K86iUpxAq_U_X7s_JtTTvJyxY8aslv2mAcSOQvXXvR2NYmpY_JCa-FexZyH89xgNw",
+
+          "e": "AQAB"          "e": "AQAB"
+
+        }        }
+
+      ]      ]
+
+    }    }

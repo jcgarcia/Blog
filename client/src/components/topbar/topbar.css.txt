@@ -1,0 +1,176 @@
+.top {
+    width: 100%;
+    height: 50px;
+    background-color: white;
+    position: sticky; 
+    top: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: nowrap; /* Ensure all content stays in one line */
+    padding: 10px;
+    font-family: "Oswald", sans-serif;
+    z-index: 999;
+}
+
+.topLeft {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start; /* Align social media icons to the left */
+    flex: 1;
+}
+
+.topCenter {
+    flex: 2;
+    display: flex;
+    justify-content: center;
+}
+
+.topRight {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex: 1;
+}
+
+.topIcon {
+    font-size: 27px; /* Restore original size */
+    margin-right: 10px;
+    color: #444;
+    cursor: pointer;
+}
+
+.topIcon:hover {
+    color: #eb0bba; /* Highlight color on hover */
+    transform: scale(1.1); /* Slightly enlarge icon on hover */
+    transition: transform 0.2s ease-in-out;
+}
+
+.topImg {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.topList {
+    display: flex;
+    justify-content: center;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    transition: max-height 0.3s ease-in-out;
+}
+
+.topList.open {
+    max-height: 500px; /* Expand menu when open */
+}
+
+.topListItem {
+    margin-right: 20px;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+    list-style: none;
+}
+
+.topListItem:hover {
+    color: #eb0bba; /* Highlight color on hover */
+    font-weight: bold; /* Emphasize on hover */
+    text-decoration: underline;
+}
+
+.topListItem.active {
+    color: #eb0bba; /* Highlight active link */
+    font-weight: bold;
+    border-bottom: 2px solid #eb0bba; /* Add underline for active link */
+}
+
+.topSearchIcon {
+    font-size: 27px;
+    color: #666;
+    cursor: pointer;
+    margin-left: 15px;
+}
+
+.hamburgerIcon {
+    display: none;
+    font-size: 24px;
+    cursor: pointer;
+    margin-left: 15px;
+}
+
+.hamburgerIcon, .topListItem .fa-right-to-bracket {
+    display: none; /* Remove the login icon */
+}
+
+@media (max-width: 768px) {
+    .top {
+        flex-direction: row; /* Ensure all content stays in one line */
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px;
+    }
+
+    .topLeft {
+        display: flex;
+        align-items: center;
+        justify-content: flex-start; /* Align social media icons to the left */
+        flex: 1;
+    }
+
+    .topCenter {
+        display: flex;
+        justify-content: center;
+        flex: 2;
+    }
+
+    .topRight {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        flex: 1;
+    }
+
+    .topIcon {
+        font-size: 27px; /* Ensure visibility on mobile */
+        margin-right: 10px;
+    }
+
+    .topList {
+        display: flex;
+        justify-content: center;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    .topListItem {
+        margin-right: 10px;
+        font-size: 14px;
+        font-weight: bold;
+    }
+
+    .topList {
+        flex-direction: column;
+        align-items: center;
+        max-height: 0;
+        overflow: hidden;
+        display: none; /* Hide menu by default */
+    }
+
+    .topList.open {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .hamburgerIcon {
+        display: block;
+    }
+
+    .topListItem {
+        margin-right: 0;
+        margin-bottom: 10px;
+    }
+}

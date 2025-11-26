@@ -1,0 +1,233 @@
+/* Protected Route Styles */
+
+/* Loading State */
+.protected-loading {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 50vh;
+  padding: 40px;
+  text-align: center;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #eb0bba;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 20px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.protected-loading p {
+  color: #666;
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+/* Unauthorized Access Styles */
+.protected-unauthorized {
+  min-height: 80vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+}
+
+.unauthorized-content {
+  background: white;
+  border-radius: 15px;
+  padding: 40px;
+  max-width: 600px;
+  width: 100%;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+  text-align: center;
+  border: 3px solid #eb0bba;
+}
+
+.unauthorized-icon {
+  font-size: 4rem;
+  color: #eb0bba;
+  margin-bottom: 20px;
+}
+
+.unauthorized-content h1 {
+  color: #333;
+  font-size: 2.5rem;
+  margin: 0 0 15px 0;
+  font-weight: 700;
+}
+
+.unauthorized-content > p {
+  color: #666;
+  font-size: 1.2rem;
+  line-height: 1.6;
+  margin-bottom: 30px;
+}
+
+.unauthorized-details {
+  background: #f8f9fa;
+  border-radius: 10px;
+  padding: 25px;
+  margin: 30px 0;
+  border-left: 5px solid #eb0bba;
+}
+
+.unauthorized-details h3 {
+  color: #333;
+  font-size: 1.3rem;
+  margin: 0 0 15px 0;
+  font-weight: 600;
+}
+
+.unauthorized-details ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  text-align: left;
+}
+
+.unauthorized-details li {
+  padding: 8px 0;
+  color: #555;
+  font-size: 1rem;
+  position: relative;
+  padding-left: 25px;
+}
+
+.unauthorized-details li::before {
+  content: "✓";
+  position: absolute;
+  left: 0;
+  color: #eb0bba;
+  font-weight: bold;
+}
+
+.unauthorized-actions {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin: 30px 0;
+}
+
+.btn-admin-login,
+.btn-go-home {
+  padding: 15px 25px;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  min-width: 150px;
+  justify-content: center;
+}
+
+.btn-admin-login {
+  background: linear-gradient(135deg, #eb0bba 0%, #d309a5 100%);
+  color: white;
+}
+
+.btn-admin-login:hover {
+  background: linear-gradient(135deg, #d309a5 0%, #b8088a 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(235, 11, 186, 0.3);
+}
+
+.btn-go-home {
+  background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+  color: white;
+}
+
+.btn-go-home:hover {
+  background: linear-gradient(135deg, #5a6268 0%, #495057 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(108, 117, 125, 0.3);
+}
+
+.unauthorized-footer {
+  border-top: 1px solid #eee;
+  padding-top: 20px;
+  margin-top: 30px;
+}
+
+.unauthorized-footer p {
+  color: #888;
+  font-size: 0.9rem;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.unauthorized-footer i {
+  color: #eb0bba;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .unauthorized-content {
+    padding: 30px 20px;
+    margin: 10px;
+  }
+  
+  .unauthorized-content h1 {
+    font-size: 2rem;
+  }
+  
+  .unauthorized-icon {
+    font-size: 3rem;
+  }
+  
+  .unauthorized-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .btn-admin-login,
+  .btn-go-home {
+    width: 100%;
+    margin-bottom: 10px;
+  }
+  
+  .unauthorized-details {
+    padding: 20px;
+    margin: 20px 0;
+  }
+  
+  .unauthorized-footer p {
+    flex-direction: column;
+    text-align: center;
+    line-height: 1.5;
+  }
+}
+
+/* Animation for content */
+.unauthorized-content {
+  animation: slideIn 0.5s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

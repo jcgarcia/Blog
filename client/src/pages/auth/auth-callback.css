@@ -1,0 +1,98 @@
+.auth-callback {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 20px;
+}
+
+.auth-callback-container {
+  background: white;
+  border-radius: 15px;
+  padding: 40px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  text-align: center;
+  max-width: 400px;
+  width: 100%;
+}
+
+.auth-status.processing {
+  color: #3498db;
+}
+
+.auth-status.success {
+  color: #2ecc71;
+}
+
+.auth-status.error {
+  color: #e74c3c;
+}
+
+.auth-processing .spinner,
+.auth-success .success-icon,
+.auth-error .error-icon {
+  margin-bottom: 20px;
+}
+
+.auth-processing .spinner i {
+  color: #3498db;
+}
+
+.auth-success .success-icon i {
+  color: #2ecc71;
+}
+
+.auth-error .error-icon i {
+  color: #e74c3c;
+}
+
+.auth-callback h2 {
+  margin-bottom: 15px;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.auth-callback p {
+  margin-bottom: 20px;
+  color: #666;
+  line-height: 1.5;
+}
+
+.retry-button {
+  background: #3498db;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.retry-button:hover {
+  background: #2980b9;
+}
+
+.auth-info {
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 1px solid #eee;
+  color: #888;
+  font-size: 14px;
+}
+
+.auth-info i {
+  margin-right: 8px;
+  color: #3498db;
+}
+
+@media (max-width: 480px) {
+  .auth-callback-container {
+    padding: 30px 20px;
+  }
+  
+  .auth-callback h2 {
+    font-size: 20px;
+  }
+}

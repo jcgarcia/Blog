@@ -1,0 +1,213 @@
+body {
+    font-family: 'Roboto', sans-serif; /* Updated font for better readability */
+}
+
+.sidebar{
+    flex: 3;
+    height: fit-content;
+    margin: 20px;
+    padding-bottom: 30px;
+    background-color: #fefefe;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Add subtle shadow */
+}
+
+.sidebarItem{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.sidebarVideo {
+    width: 80%; /* Increase video size */
+    margin: 10px auto; /* Center the video and add spacing */
+    display: block;
+}
+
+.sidebarItem > video{
+    margin-top :15px;
+    width: 250px;
+    height: 250px;
+}
+.sidebarItem > p {
+    margin-top: 10px; /* Reduce spacing */
+    padding: 10px; /* Reduce padding */
+    font-size: 18px; /* Adjust font size */
+    line-height: 1.3; /* Compact text spacing */
+    text-align: center;
+}
+
+
+.sidebarTitle{
+   margin: 10px 0; /* Adjust spacing */
+   padding: 5px;
+   width: 80%;
+   border-top: 1px solid #a7a4a4;
+   border-bottom: 1px solid #a7a4a4;
+   font-family: 'Merriweather', serif; /* Elegant font for titles */
+   font-size: 24px; /* Adjust font size */
+   color: #eb0bba;
+   font-weight: bold;
+   line-height:  1.1; /* Compact line height */
+   text-align: center;
+}
+
+.sidebarList{
+    list-style: none;
+    margin-bottom: 30px;
+    width: 100%;
+}
+
+.sidebarListItem{
+    display: block;
+    width: 100%;
+    margin-top: 5px; /* Reduce spacing between list items */
+    font-size: 16px; /* Adjust font size */
+    cursor: pointer;
+    padding: 8px 0;
+    border-radius: 5px;
+    transition: all 0.3s ease;
+}
+
+.sidebarListItem:hover {
+    background-color: #f5f5f5;
+    transform: translateX(5px);
+}
+
+.sidebarListItem.active {
+    background-color: #eb0bba;
+    color: white;
+    font-weight: bold;
+}
+
+.sidebarListItem.active:hover {
+    background-color: #d309a5;
+    transform: translateX(0);
+}
+
+.sidebar-link {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+    padding: 5px 15px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.sidebar-link:hover {
+    color: #eb0bba;
+    text-decoration: none;
+}
+
+.sidebarListItem.active .sidebar-link {
+    color: white;
+}
+
+.sidebarListItem.active .sidebar-link:hover {
+    color: white;
+}
+
+.sidebarSocial{
+    margin-top: 25px;
+    width: 25px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.sidebarIcon{
+    font-size: 36px;
+    margin-left: 10px;
+    cursor: pointer;
+}
+
+.sidebarIcon:hover {
+    color: #eb0bba; /* Highlight color on hover */
+    transform: scale(1.2); /* Slightly enlarge icon on hover */
+    transition: transform 0.2s ease-in-out;
+}
+
+/* Subcategory styles */
+.subcategory-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+}
+
+.sidebarListItem.subcategory {
+    margin-left: 20px;
+    margin-top: 2px;
+    font-size: 14px;
+    border-left: 2px solid #eb0bba;
+    padding: 5px 0;
+}
+
+.sidebarListItem.subcategory .sidebar-link {
+    padding: 3px 10px;
+    position: relative;
+}
+
+.sidebarListItem.subcategory .sidebar-link:before {
+    content: "└ ";
+    color: #eb0bba;
+    font-weight: bold;
+}
+
+.sidebarListItem.subcategory:hover {
+    background-color: #f9f9f9;
+    transform: translateX(3px);
+}
+
+.sidebarListItem.subcategory.active {
+    background-color: #eb0bba;
+    color: white;
+}
+
+.sidebarListItem.subcategory.active .sidebar-link:before {
+    color: white;
+}
+
+/* Post count styles */
+.category-post-count {
+    color: #666;
+    font-size: 12px;
+    margin-left: 5px;
+    font-weight: normal;
+}
+
+.sidebarListItem.active .category-post-count {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.sidebarListItem.subcategory .category-post-count {
+    font-size: 11px;
+}
+
+@media (max-width: 768px) {
+    .sidebar {
+        flex: 1;
+        margin: 10px;
+        padding: 15px;
+    }
+
+    .sidebarTitle {
+        font-size: 28px;
+    }
+
+    .sidebarListItem {
+        font-size: 18px;
+    }
+
+    .sidebarListItem.subcategory {
+        font-size: 16px;
+        margin-left: 15px;
+    }
+
+    .sidebarIcon {
+        font-size: 28px;
+    }
+}

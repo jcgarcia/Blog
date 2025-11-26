@@ -1,0 +1,300 @@
+.rich-text-editor {
+  width: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.editor-toolbar {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  background: #f8f9fa;
+  border: 1px solid #ddd;
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.toolbar-btn {
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  min-height: 32px;
+}
+
+.toolbar-btn:hover {
+  background: #e9ecef;
+  border-color: #adb5bd;
+}
+
+.toolbar-btn:active,
+.toolbar-btn.active {
+  background: #dee2e6;
+  border-color: #6c757d;
+}
+
+.image-btn {
+  background: #007bff;
+  color: white;
+  border-color: #007bff;
+}
+
+.image-btn:hover {
+  background: #0056b3;
+  border-color: #0056b3;
+}
+
+.toolbar-separator {
+  width: 1px;
+  height: 20px;
+  background: #ddd;
+  margin: 0 8px;
+}
+
+.editor-container {
+  position: relative;
+  min-height: 400px;
+}
+
+.editor-content {
+  padding: 16px;
+  outline: none;
+  font-size: 16px;
+  line-height: 1.6;
+  min-height: 400px;
+  background: white;
+  color: #333;
+  border: 1px solid #ddd;
+  border-radius: 0 0 8px 8px;
+  border-top: none;
+}
+
+.editor-content:empty:before {
+  content: attr(data-placeholder);
+  color: #999;
+  pointer-events: none;
+}
+
+.editor-placeholder {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  color: #999;
+  pointer-events: none;
+  font-size: 16px;
+}
+
+/* Text formatting styles */
+.editor-text-bold {
+  font-weight: bold;
+}
+
+.editor-text-italic {
+  font-style: italic;
+}
+
+/* Heading styles */
+.editor-heading-h1 {
+  font-size: 2em;
+  font-weight: bold;
+  margin: 0.67em 0;
+  color: #333;
+}
+
+.editor-heading-h2 {
+  font-size: 1.5em;
+  font-weight: bold;
+  margin: 0.83em 0;
+  color: #333;
+}
+
+.editor-heading-h3 {
+  font-size: 1.17em;
+  font-weight: bold;
+  margin: 1em 0;
+  color: #333;
+}
+
+/* List styles */
+.editor-list-ul,
+.editor-list-ol {
+  margin: 1em 0;
+  padding-left: 0;
+}
+
+.editor-listitem {
+  list-style-position: inside;
+  margin: 0.25em 0;
+}
+
+.editor-list-ul .editor-listitem {
+  list-style-type: disc;
+}
+
+.editor-list-ol .editor-listitem {
+  list-style-type: decimal;
+}
+
+.editor-nested-listitem {
+  list-style-type: circle;
+  margin-left: 20px;
+}
+
+/* Paragraph styles */
+.editor-paragraph {
+  margin: 0.5em 0;
+}
+
+.editor-paragraph:first-child {
+  margin-top: 0;
+}
+
+.editor-paragraph:last-child {
+  margin-bottom: 0;
+}
+
+/* Error handling styles */
+.editor-error {
+  padding: 16px;
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c2c7;
+  border-radius: 4px;
+  margin-bottom: 16px;
+}
+
+.retry-btn {
+  background: #dc3545;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-top: 8px;
+}
+
+.retry-btn:hover {
+  background: #c82333;
+}
+
+.editor-textarea {
+  width: 100%;
+  border: 1px solid #ddd;
+  border-radius: 0 0 8px 8px;
+  padding: 16px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  resize: vertical;
+  min-height: 400px;
+  outline: none;
+  background: white;
+}
+
+.editor-textarea:focus {
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+/* Image handling in editor */
+.editor-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 4px;
+  margin: 8px 0;
+  display: block;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.editor-content img:hover {
+  box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
+  border: 2px solid #007bff;
+}
+
+.editor-content img.selected {
+  border: 2px solid #007bff !important;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+/* Image Controls Popup */
+.image-controls-popup {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+}
+
+.image-control-btn {
+  transition: all 0.2s ease;
+}
+
+.image-control-btn:hover {
+  background: #f8f9fa !important;
+  transform: translateY(-1px);
+}
+
+.image-control-btn.delete-btn:hover {
+  background: #c82333 !important;
+  transform: translateY(-1px);
+}
+
+/* Link styles */
+.editor-content a {
+  color: #007bff;
+  text-decoration: underline;
+}
+
+.editor-content a:hover {
+  color: #0056b3;
+}
+
+/* Focus styles */
+.editor-content:focus {
+  outline: none;
+}
+
+.rich-text-editor:focus-within {
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .toolbar {
+    padding: 4px 8px;
+    gap: 2px;
+  }
+  
+  .toolbar-btn {
+    padding: 4px 8px;
+    font-size: 13px;
+    min-height: 28px;
+  }
+  
+  .editor-content {
+    padding: 12px;
+    font-size: 16px;
+  }
+  
+  .editor-placeholder {
+    top: 12px;
+    left: 12px;
+    font-size: 16px;
+  }
+}
+
+/* Print styles */
+@media print {
+  .toolbar {
+    display: none;
+  }
+  
+  .rich-text-editor {
+    border: none;
+    box-shadow: none;
+  }
+}

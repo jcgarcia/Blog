@@ -1,0 +1,1539 @@
+/* ⚠️  WARNING: SOME STYLES MAY BE OVERRIDDEN BY /pages/ops/ops.css ⚠️ 
+ * 
+ * UPDATE: Cleaning up duplicate styles. Moving all media-management styles here.
+ * This file should be the ONLY place for MediaManagement component styles.
+ * 
+ * TODO: Remove media-management styles from /pages/ops/ops.css (DONE).
+ */
+
+/* Media Management Styles */
+
+/* Media Management Container - MOVED FROM ops.css */
+.media-management {
+  background: white;
+  border-radius: 10px;
+  padding: 25px;
+  margin-bottom: 30px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.media-management {
+  max-width: 100%;
+  width: 100%;
+  padding: 0;
+  box-sizing: border-box;
+  overflow-x: hidden; /* Prevent horizontal scroll */
+}
+
+/* Section Navigation Tabs */
+.section-navigation {
+  display: flex;
+  gap: 0;
+  margin-bottom: 2rem;
+  border-bottom: 2px solid #e9ecef;
+  background: #f8f9fa;
+  border-radius: 8px 8px 0 0;
+  overflow: hidden;
+}
+
+.section-tab {
+  flex: 1;
+  padding: 1rem 2rem;
+  background: #f8f9fa;
+  border: none;
+  color: #6c757d;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border-bottom: 3px solid transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.section-tab:hover {
+  background: #e9ecef;
+  color: #495057;
+}
+
+.section-tab.active {
+  background: white;
+  color: #007bff;
+  border-bottom-color: #007bff;
+  font-weight: 600;
+}
+
+.section-tab i {
+  font-size: 1.1rem;
+}
+
+/* Current Storage Info */
+.current-storage-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #e3f2fd;
+  border: 1px solid #bbdefb;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  color: #1565c0;
+}
+
+.current-storage-info span {
+  font-size: 0.95rem;
+}
+
+.current-storage-info .btn-link {
+  background: none;
+  border: none;
+  color: #1976d2;
+  cursor: pointer;
+  font-size: 0.9rem;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.current-storage-info .btn-link:hover {
+  background: rgba(25, 118, 210, 0.1);
+}
+
+/* Section Content Areas */
+.library-section,
+.config-section {
+  background: white;
+  border-radius: 0 0 12px 12px;
+  border: 1px solid #e9ecef;
+  border-top: none;
+  padding: 2rem;
+  min-height: 400px;
+}
+
+/* Section Headers - Better mobile layout */
+.media-management .section-header {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  position: sticky;
+  top: 0;
+  background: white;
+  z-index: 100; /* Ensure section header always stays on top */
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.media-management .section-header h2 {
+  margin: 0;
+  font-size: 1.75rem;
+  color: #333;
+}
+
+/* Folder Navigation Improvements */
+.folder-navigation {
+  margin-bottom: 2rem;
+  background: #f8f9fa;
+  border-radius: 12px;
+  padding: 1.5rem;
+  border: 1px solid #e9ecef;
+}
+
+.folder-navigation h3 {
+  margin: 0 0 1rem 0;
+  color: #495057;
+  font-size: 1.2rem;
+}
+
+.folders-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.75rem;
+}
+
+.folder-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: white;
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.9rem;
+}
+
+.folder-item:hover {
+  border-color: #007bff;
+  background: #f8f9ff;
+  transform: translateY(-1px);
+}
+
+.folder-item.back-button {
+  background: #e3f2fd;
+  border-color: #2196f3;
+  font-weight: 600;
+}
+
+.folder-item.back-button:hover {
+  background: #bbdefb;
+}
+
+.folder-item i {
+  font-size: 1.1rem;
+  color: #6c757d;
+  min-width: 16px;
+}
+
+.folder-item.back-button i {
+  color: #2196f3;
+}
+
+.folder-current-info {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: #fff3cd;
+  border: 1px solid #ffeaa7;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  color: #856404;
+  margin-top: 0.5rem;
+}
+
+.folder-current-info i {
+  color: #856404;
+}
+
+/* Media Thumbnail Improvements */
+.media-thumbnail {
+  position: relative;
+  width: 100%;
+  height: 150px;
+  overflow: hidden;
+  background: #f8f9fa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px 8px 0 0;
+}
+
+.media-thumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+  border-radius: 8px 8px 0 0;
+}
+
+.media-item:hover .media-thumbnail img {
+  transform: scale(1.05);
+}
+
+.media-thumbnail .file-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  background: #f8f9fa;
+  color: #6c757d;
+  font-size: 2.5rem;
+}
+
+/* Media Item Enhancements */
+.media-item {
+  background: white;
+  border: 2px solid #e9ecef;
+  border-radius: 12px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.media-item:hover {
+  border-color: #007bff;
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(0,123,255,0.15);
+}
+
+/* Media Server Configuration */
+.media-management .media-server-config {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.media-management .media-server-config label {
+  font-weight: 600;
+  color: #444;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.media-management .media-server-config select {
+  width: 100%;
+  max-width: 100%;
+  padding: 0.75rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 1rem;
+  background: white;
+  transition: border-color 0.2s ease;
+  box-sizing: border-box;
+}
+
+/* Configuration Section - Collapsible */
+.configuration-section {
+  margin-top: 3rem;
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.configuration-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  background: #e9ecef;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.configuration-header:hover {
+  background: #dee2e6;
+}
+
+.configuration-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #495057;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.collapse-toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #6c757d;
+  font-size: 1.2rem;
+  transition: transform 0.2s ease;
+}
+
+.configuration-header:hover .collapse-toggle {
+  color: #495057;
+}
+
+.config-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e9ecef;
+}
+
+/* Media Server Configuration Updates */
+.configuration-section .media-server-config {
+  background: #fff;
+  border: none;
+  border-radius: 0;
+  padding: 1.5rem;
+  margin-bottom: 0;
+}
+
+.media-management .media-server-config select:focus {
+  outline: none;
+  border-color: #eb0bba;
+  box-shadow: 0 0 0 3px rgba(235, 11, 186, 0.1);
+}
+
+/* Cloud Configuration Panel */
+.media-management .cloud-media-config {
+  margin-top: 1.5rem;
+  padding: 2rem;
+  background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+  border-radius: 12px;
+  border: 2px solid #e9ecef;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.media-management .cloud-media-config h4 {
+  margin: 0 0 1.5rem 0;
+  font-size: 1.4rem;
+  color: #333;
+  font-weight: 700;
+}
+
+/* Security Notice - Full width, no overflow */
+.media-management .security-notice {
+  background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+  border: 2px solid #bbdefb;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.media-management .security-notice i {
+  color: #1976d2;
+  font-size: 1.5rem;
+  display: block;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.media-management .security-notice strong {
+  color: #1565c0;
+  display: block;
+  margin-bottom: 0.75rem;
+  font-size: 1.1rem;
+  text-align: center;
+}
+
+.media-management .security-notice p {
+  margin: 0;
+  color: #424242;
+  line-height: 1.6;
+  text-align: center;
+}
+
+/* Configuration Grid - Single column, no overflow */
+.media-management .config-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.media-management .config-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.media-management .config-field label {
+  font-weight: 700;
+  color: #333;
+  font-size: 1rem;
+  margin-bottom: 0.25rem;
+}
+
+.media-management .config-field input,
+.media-management .config-field select {
+  padding: 0.75rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: border-color 0.2s ease;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.media-management .config-field input:focus,
+.media-management .config-field select:focus {
+  outline: none;
+  border-color: #eb0bba;
+  box-shadow: 0 0 0 3px rgba(235, 11, 186, 0.1);
+}
+
+.media-management .config-field small {
+  color: #666;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  margin-top: 0.25rem;
+}
+
+/* Media Actions - Always visible and well-spaced - HEADER SECTION */
+.media-management .section-header .media-actions {
+  display: flex !important;
+  gap: 1rem;
+  margin: 0 0 1.5rem 0;
+  padding: 1rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  border-radius: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+  width: 100%;
+  max-width: none;
+  box-sizing: border-box;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  overflow: visible;
+  position: sticky;
+  top: 10px;
+  z-index: 1000; /* Very high z-index to ensure it stays above everything */
+  justify-content: center;
+  min-height: 60px;
+}
+
+.media-management .section-header .media-actions button {
+  flex: 0 0 auto;
+  min-height: 48px;
+  font-weight: 600;
+  font-size: 1rem;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.media-management .section-header .media-actions .btn-primary {
+  background: linear-gradient(135deg, #eb0bba 0%, #d309a5 100%);
+  color: white;
+  box-shadow: 0 4px 12px rgba(235, 11, 186, 0.3);
+}
+
+.media-management .section-header .media-actions .btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(235, 11, 186, 0.4);
+}
+
+.media-management .section-header .media-actions .btn-secondary {
+  background: #6c757d;
+  color: white;
+}
+
+.media-management .section-header .media-actions .btn-secondary:hover {
+  background: #5a6268;
+  transform: translateY(-1px);
+}
+
+.media-management .section-header .media-actions .btn-warning {
+  background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+  color: white;
+  border: 2px solid #f57c00;
+  font-size: 1rem;
+  padding: 0.75rem 1.5rem;
+  box-shadow: 0 4px 12px rgba(255, 152, 0, 0.3);
+}
+
+.media-management .section-header .media-actions .btn-warning:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(255, 152, 0, 0.4);
+}
+
+.media-management .section-header .media-actions .btn-warning:disabled {
+  background: #6c757d;
+  border-color: #6c757d;
+  box-shadow: none;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Media Controls - Better mobile layout */
+.media-management .media-controls {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  margin: 2rem 0;
+  padding: 1.5rem;
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+}
+
+.media-management .media-search input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 1rem;
+  box-sizing: border-box;
+}
+
+.media-management .media-search input:focus {
+  outline: none;
+  border-color: #eb0bba;
+  box-shadow: 0 0 0 3px rgba(235, 11, 186, 0.1);
+}
+
+.media-management .media-filters select {
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 1rem;
+  background: white;
+}
+
+.media-management .folder-breadcrumb {
+  font-size: 0.9rem;
+  color: #666;
+  padding: 0.5rem 0;
+  border-top: 1px solid #e0e0e0;
+  margin-top: 1rem;
+}
+
+/* Media Grid - Responsive card layout */
+.media-management .media-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.5rem;
+  margin: 2rem 0 2rem 0; /* Ensure positive top margin */
+  position: relative;
+  z-index: 1; /* Lower z-index than header */
+}
+
+.media-management .media-item {
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  overflow: hidden;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.media-management .media-item:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.media-management .media-thumbnail {
+  width: 100%;
+  height: 200px;
+  position: relative;
+  background: #f8f9fa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.media-management .media-thumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.media-management .file-icon {
+  font-size: 3rem;
+  color: #6c757d;
+}
+
+.media-management .media-info {
+  padding: 1rem;
+}
+
+.media-management .media-info h4 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1rem;
+  color: #333;
+  word-break: break-word;
+}
+
+.media-management .media-info p {
+  margin: 0.25rem 0;
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.media-management .media-item-actions {
+  padding: 1rem;
+  border-top: 1px solid #e0e0e0;
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.media-management .media-item-actions .btn-icon {
+  background: none;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  padding: 0.5rem;
+  cursor: pointer;
+  color: #666;
+  transition: all 0.2s ease;
+}
+
+.media-management .media-item-actions .btn-icon:hover {
+  background: #f8f9fa;
+  border-color: #ccc;
+}
+
+.media-management .media-item-actions .btn-icon.delete {
+  color: #dc3545;
+}
+
+.media-management .media-item-actions .btn-icon.delete:hover {
+  background: #f8d7da;
+  border-color: #dc3545;
+}
+
+/* Media Server Status */
+.media-management .media-server-status {
+  margin-top: 1.5rem;
+  padding: 1.5rem;
+  background: linear-gradient(135deg, #e8f5e8 0%, #f0f8f0 100%);
+  border: 1px solid #d4edda;
+  border-radius: 12px;
+}
+
+.media-management .status-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding: 1rem;
+  background: #fff;
+  border-radius: 8px;
+  border-left: 4px solid #28a745;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.media-management .status-item:last-child {
+  margin-bottom: 0;
+}
+
+.media-management .status-item i {
+  color: #28a745;
+  font-size: 1.25rem;
+  width: 20px;
+  text-align: center;
+  margin-top: 0.25rem;
+  flex-shrink: 0;
+}
+
+.media-management .status-item span {
+  color: #333;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.media-management .status-item strong {
+  color: #155724;
+  font-weight: 700;
+}
+
+/* External ID Configuration */
+.media-management .external-id-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.media-management .external-id-input {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 0.9rem;
+  background: #f8f9fa;
+  border: 2px solid #e0e0e0;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  padding: 0.75rem !important; /* Same as other input fields */
+  box-sizing: border-box;
+  line-height: 1.4;
+  border-radius: 8px; /* Match other fields */
+  font-size: 1rem; /* Match other fields */
+  transition: border-color 0.2s ease; /* Match other fields */
+}
+
+.media-management .external-id-input:focus {
+  outline: none;
+  border-color: #eb0bba;
+  box-shadow: 0 0 0 3px rgba(235, 11, 186, 0.1);
+  background: white;
+}
+
+.media-management .external-id-buttons {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.media-management .btn-generate-external-id,
+.media-management .btn-copy-external-id,
+.media-management .btn-regenerate-external-id {
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+  color: white;
+  border: none;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
+  flex: 0 0 auto;
+}
+
+.media-management .btn-copy-external-id {
+  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+  box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
+}
+
+.media-management .btn-regenerate-external-id {
+  background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+  color: #212529;
+  box-shadow: 0 2px 8px rgba(255, 193, 7, 0.3);
+}
+
+.media-management .btn-generate-external-id:hover,
+.media-management .btn-copy-external-id:hover,
+.media-management .btn-regenerate-external-id:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.media-management .btn-generate-external-id:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.media-management .external-id-info {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem;
+  background: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: 8px;
+}
+
+.media-management .external-id-info small {
+  color: #495057;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.media-management .external-id-info small:first-child {
+  color: #dc3545;
+  font-weight: 700;
+}
+
+.media-management .external-id-info small:nth-child(2) {
+  color: #6c757d;
+}
+
+.media-management .external-id-info small:last-child {
+  color: #28a745;
+  font-weight: 600;
+}
+
+/* Modals */
+.media-management .modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.media-management .modal {
+  background: white;
+  border-radius: 12px;
+  max-width: 500px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+}
+
+.media-management .modal-header {
+  padding: 1.5rem;
+  border-bottom: 1px solid #e0e0e0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.media-management .modal-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: #333;
+}
+
+.media-management .modal-header button {
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  color: #666;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 4px;
+}
+
+.media-management .modal-header button:hover {
+  background: #f8f9fa;
+}
+
+.media-management .modal-body {
+  padding: 1.5rem;
+}
+
+.media-management .upload-area {
+  border: 2px dashed #ccc;
+  border-radius: 12px;
+  padding: 3rem 2rem;
+  text-align: center;
+  background: #fafafa;
+  transition: all 0.2s ease;
+}
+
+.media-management .upload-area:hover {
+  border-color: #eb0bba;
+  background: #fef7f7;
+}
+
+.media-management .upload-label {
+  cursor: pointer;
+  display: block;
+}
+
+.media-management .upload-label i {
+  font-size: 3rem;
+  color: #ccc;
+  margin-bottom: 1rem;
+  display: block;
+}
+
+.media-management .upload-label p {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.1rem;
+  color: #333;
+}
+
+.media-management .upload-label small {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.media-management .upload-progress {
+  margin-top: 1rem;
+  text-align: center;
+  color: #eb0bba;
+}
+
+.media-management .upload-progress i {
+  margin-right: 0.5rem;
+}
+
+/* AWS Configuration Layout - Prevent overflow */
+.media-management .aws-config-main {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.media-management .aws-config-fields {
+  margin-bottom: 2rem;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.media-management .aws-config-sidebar {
+  background: #f8f9fa;
+  padding: 1.5rem;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin-top: 1rem;
+}
+
+/* Access Key Configuration */
+.media-management .auth-section-header {
+  margin-bottom: 1rem;
+}
+
+.media-management .auth-section-header h5 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.1rem;
+  color: #333;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.media-management .auth-section-header small {
+  display: block;
+  color: #dc3545;
+  font-weight: 600;
+  margin-top: 0.25rem;
+}
+
+.media-management .access-key-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.media-management .auth-method-note {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
+.media-management .debug-info {
+  background: #f8f9fa;
+  padding: 1rem;
+  border: 1px solid #dee2e6;
+  font-size: 0.8rem;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  line-height: 1.4;
+}
+
+.media-management .aws-security-info {
+  background: #e8f5e8;
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid #d4edda;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.media-management .aws-security-info h5 {
+  margin: 0 0 0.5rem 0;
+  color: #155724;
+  font-size: 1rem;
+}
+
+.media-management .aws-security-info p {
+  margin: 0;
+  color: #155724;
+  line-height: 1.4;
+}
+
+/* Status Cards Container - Single column by default, 2-column on desktop */
+.media-management .aws-status-cards-container {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+/* Identity Center Credentials - Full Width Section */
+.media-management .identity-center-credentials-section {
+  background: #f8f9fa;
+  padding: 2rem;
+  border-radius: 12px;
+  border: 1px solid #e0e0e0;
+  margin: 2rem 0;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.media-management .identity-center-credentials-section .auth-section-header {
+  margin-bottom: 1.5rem;
+}
+
+.media-management .identity-center-credentials-section .access-key-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+/* Action Buttons */
+.media-management .action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.media-management .btn-test-connection,
+.media-management .btn-save-config {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  min-height: 44px;
+}
+
+.media-management .btn-test-connection:hover:not(:disabled) {
+  background-color: #0056b3 !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+}
+
+.media-management .btn-save-config:hover:not(:disabled) {
+  background-color: #1e7e34 !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+}
+
+.media-management .btn-test-connection:disabled,
+.media-management .btn-save-config:disabled {
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Pagination */
+.media-management .pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  margin: 2rem 0;
+  padding: 1rem;
+}
+
+.media-management .pagination button {
+  background: #eb0bba;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.media-management .pagination button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.media-management .pagination button:hover:not(:disabled) {
+  background: #d309a5;
+  transform: translateY(-1px);
+}
+
+.media-management .pagination span {
+  color: #333;
+  font-weight: 600;
+}
+
+/* Empty State */
+.media-management .media-empty {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: #666;
+}
+
+.media-management .media-empty i {
+  font-size: 4rem;
+  color: #ccc;
+  margin-bottom: 1rem;
+  display: block;
+}
+
+.media-management .media-empty p {
+  font-size: 1.1rem;
+  margin-bottom: 2rem;
+}
+
+/* Loading State */
+.media-management .loading {
+  text-align: center;
+  padding: 3rem;
+  color: #666;
+  font-size: 1.1rem;
+}
+
+/* Folder Navigation */
+.media-management .folder-navigation {
+  margin: 2rem 0;
+}
+
+.media-management .folder-navigation h3 {
+  margin: 0 0 1rem 0;
+  color: #333;
+  font-size: 1.25rem;
+}
+
+.media-management .folders-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.media-management .folder-item {
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.media-management .folder-item:hover {
+  background: #f8f9fa;
+  border-color: #eb0bba;
+  transform: translateY(-1px);
+}
+
+.media-management .folder-item i {
+  color: #ffc107;
+  font-size: 1.5rem;
+}
+
+.media-management .folder-item span {
+  font-weight: 600;
+  color: #333;
+}
+
+.media-management .folder-item small {
+  color: #666;
+  font-size: 0.8rem;
+}
+
+/* Responsive Design */
+@media (min-width: 768px) {
+  /* Section Header - Horizontal layout on desktop */
+  .media-management .section-header {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  
+  /* Better two-column layout for forms */
+  .media-management .config-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 2rem;
+  }
+  
+  .media-management .media-controls {
+    grid-template-columns: 2fr 1fr auto;
+    align-items: center;
+    gap: 1.5rem;
+  }
+  
+  .media-management .folder-breadcrumb {
+    border-top: none;
+    margin-top: 0;
+  }
+  
+  .media-management .security-notice {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  
+  .media-management .security-notice i {
+    text-align: left;
+    margin-bottom: 0;
+    margin-top: 0.25rem;
+    font-size: 1.25rem;
+  }
+  
+  .media-management .security-notice strong,
+  .media-management .security-notice p {
+    text-align: left;
+  }
+  
+  .media-management .external-id-input-group {
+    flex-direction: column; /* Always keep buttons below field */
+    align-items: stretch;
+  }
+  
+  .media-management .external-id-buttons {
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+  }
+  
+  /* Better spacing for desktop */
+  .media-management .cloud-media-config {
+    padding: 2.5rem;
+  }
+  
+  .media-management .media-item-actions {
+    gap: 1.5rem;
+    padding: 2rem;
+    justify-content: flex-start;
+  }
+}
+
+/* Medium screens - KEEP SINGLE COLUMN for AWS config */
+@media (min-width: 1024px) {
+  .media-management .config-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 2.5rem;
+  }
+  
+  /* Identity Center Credentials: Full-width 2-column layout */
+  .media-management .identity-center-credentials-section .access-key-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 2rem;
+  }
+  
+  /* Session Token spans both columns in full-width section */
+  .media-management .identity-center-credentials-section .session-token-field {
+    grid-column: 1 / -1;
+  }
+  
+  /* Old access-key-grid (if any remain) */
+  .media-management .access-key-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+  }
+  
+  /* Session Token spans both columns */
+  .media-management .session-token-field {
+    grid-column: 1 / -1;
+  }
+  
+  /* Status Cards: 2-column layout on desktop */
+  .media-management .aws-status-cards-container {
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+  
+  /* DO NOT split AWS config into columns yet - causes overflow */
+  .media-management .aws-config-main {
+    display: block; /* Keep single column */
+  }
+}
+
+/* Large screens - NOW we can safely use columns */
+@media (min-width: 1200px) {
+  .media-management .config-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 2rem;
+    max-width: 100%;
+  }
+  
+  .media-management .media-grid {
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 2rem;
+  }
+  
+  /* AWS Configuration: Safe 2-column layout for large screens only */
+  .media-management .aws-config-main {
+    display: grid;
+    grid-template-columns: 1.8fr 1fr; /* More space for form fields */
+    gap: 2rem;
+    align-items: start;
+    max-width: 100%;
+  }
+  
+  /* Identity Center Credentials: Maintain full-width 2-column layout */
+  .media-management .identity-center-credentials-section .access-key-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 2rem;
+  }
+  
+  .media-management .identity-center-credentials-section .session-token-field {
+    grid-column: 1 / -1;
+  }
+  
+  .media-management .access-key-grid {
+    grid-template-columns: repeat(2, 1fr); /* 2 columns in sidebar */
+    gap: 1rem;
+  }
+  
+  /* Session Token spans both columns */
+  .media-management .session-token-field {
+    grid-column: 1 / -1;
+  }
+}
+
+/* Extra large screens */
+@media (min-width: 1440px) {
+  .media-management .config-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 2rem;
+  }
+  
+  /* AWS Configuration: Optimal layout for very wide screens */
+  .media-management .aws-config-main {
+    grid-template-columns: 2fr 1fr; /* More space for main config */
+  }
+  
+  /* Identity Center Credentials: Maintain full-width 2-column layout */
+  .media-management .identity-center-credentials-section .access-key-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 2rem;
+  }
+  
+  .media-management .identity-center-credentials-section .session-token-field {
+    grid-column: 1 / -1;
+  }
+  
+  .media-management .access-key-grid {
+    grid-template-columns: repeat(2, 1fr); /* 2 columns for wide screens */
+  }
+  
+  /* Session Token spans both columns */
+  .media-management .session-token-field {
+    grid-column: 1 / -1;
+  }
+}
+
+/* Move File Modal Styles */
+.media-management .folder-select {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: white;
+  font-size: 1rem;
+  margin: 1rem 0;
+}
+
+.media-management .folder-select:focus {
+  outline: none;
+  border-color: #eb0bba;
+  box-shadow: 0 0 0 2px rgba(235, 11, 186, 0.1);
+}
+
+.media-management .folder-select option:disabled {
+  color: #999;
+  font-style: italic;
+}
+
+/* PDF Thumbnail Styles */
+.media-thumbnail.pdf-thumbnail {
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: #f9f9f9;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.media-thumbnail.pdf-thumbnail:hover {
+  border-color: #007bff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+/* Trash Folder Styles */
+.folder-item.trash-folder {
+  background: linear-gradient(135deg, #ffeaa7, #fdcb6e);
+  border: 2px solid #e17055;
+  color: #d63031;
+}
+
+.folder-item.trash-folder:hover {
+  background: linear-gradient(135deg, #fdcb6e, #e17055);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(225, 112, 85, 0.3);
+}
+
+.folder-item.trash-folder i {
+  color: #d63031;
+}
+
+/* Trash Controls */
+.trash-controls {
+  margin-bottom: 2rem;
+  padding: 1rem;
+  background: linear-gradient(135deg, #fff5f5, #fed7d7);
+  border: 1px solid #feb2b2;
+  border-radius: 8px;
+}
+
+.trash-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.trash-header h3 {
+  margin: 0;
+  color: #d63031;
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Action Button Styles for Trash */
+.btn-icon.restore {
+  color: #27ae60;
+  background: rgba(39, 174, 96, 0.1);
+}
+
+.btn-icon.restore:hover {
+  color: white;
+  background: #27ae60;
+}
+
+.btn-icon.permanent {
+  color: #e74c3c;
+  background: rgba(231, 76, 60, 0.1);
+}
+
+.btn-icon.permanent:hover {
+  color: white;
+  background: #e74c3c;
+}
+
+/* Trash Button in Media Actions */
+.btn-trash {
+  background: linear-gradient(135deg, #ffeaa7, #fdcb6e);
+  color: #d63031;
+  border: 2px solid #e17055;
+  padding: 10px 16px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.btn-trash:hover {
+  background: linear-gradient(135deg, #fdcb6e, #e17055);
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(225, 112, 85, 0.3);
+}
+
+.btn-trash:active {
+  transform: translateY(0);
+}

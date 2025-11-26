@@ -1,0 +1,457 @@
+pipeline {
+    agent {
+        label 'local-agent'
+    }
+    environment {
+        // Security credentials - JWT secret is available globally
+        JWT_SECRET = credentials('jwt-secret')
+        // Image configuration
+        BUILD_NUMBER = "${env.BUILD_NUMBER}"
+        // Environment configuration
+        CORS_ORIGIN = 'https://blog.ingasti.com'
+        VITE_API_URL = 'https://bapi.ingasti.com'
+        // Docker registry
+        REGISTRY_URL = 'localhost:5000'
+    }
+    stages {
+        stage('Agent Dependency Setup') {
+            steps {
+                script {
+                    echo "🔧 Ensuring required system packages are installed..."
+                    sh '''
+                        if ! dpkg -s libcommons-lang3-java >/dev/null 2>&1; then
+                            echo "Installing libcommons-lang3-java..."
+                            sudo apt-get update && sudo apt-get install -y libcommons-lang3-java
+                        else
+                            echo "libcommons-lang3-java already installed."
+                        fi
+                    '''
+                }
+            }
+        }
+        stage('Checkout') {
+            steps {
+                checkout scm
+                script {
+                    // Get short commit hash
+                    env.GIT_COMMIT_SHORT = sh(
+                        script: "git rev-parse --short HEAD",
+                        returnStdout: true
+                    ).trim()
+                    
+                    // Set image names with commit hash
+                    env.FRONTEND_IMAGE = "${REGISTRY_URL}/blog-frontend:${BUILD_NUMBER}-${env.GIT_COMMIT_SHORT}"
+                    env.BACKEND_IMAGE = "${REGISTRY_URL}/blog-backend:${BUILD_NUMBER}-${env.GIT_COMMIT_SHORT}"
+                    
+                    echo "🚀 Building Blog Application"
+                    echo "=============================="
+                    echo "📦 Images to build:"
+                    echo "  Frontend: ${env.FRONTEND_IMAGE}"
+                    echo "  Backend: ${env.BACKEND_IMAGE}"
+                    echo "  OIDC Provider: ${env.OIDC_IMAGE}"
+                    echo "  PostgreSQL: ${env.POSTGRES_IMAGE}"
+                    echo "🌐 Target URLs:"
+                    echo "  Frontend: https://blog.ingasti.com"
+                    echo "  Backend: https://bapi.ingasti.com"
+                }
+            }
+        }
+        
+        stage('Build Backend Image') {
+            steps {
+                script {
+                    echo "🔨 Building backend Docker image..."
+                    sh """
+                        docker build -f api/Dockerfile.k8s -t ${env.BACKEND_IMAGE} .
+                        docker tag ${env.BACKEND_IMAGE} ${REGISTRY_URL}/blog-backend:latest
+                    """
+                }
+            }
+        }
+        
+        stage('Build Frontend Image') {
+            steps {
+                script {
+                    echo "🔨 Building frontend Docker image..."
+                    sh """
+                        docker build -f client/Dockerfile.k8s -t ${env.FRONTEND_IMAGE} .
+                        docker tag ${env.FRONTEND_IMAGE} ${REGISTRY_URL}/blog-frontend:latest
+                    """
+                }
+            }
+        }
+        
+        stage('Build OIDC Provider Image') {
+            steps {
+                script {
+                    echo "🔨 Building OIDC provider Docker image..."
+                    env.OIDC_IMAGE = "${REGISTRY_URL}/oidc-provider:${BUILD_NUMBER}-${env.GIT_COMMIT_SHORT}"
+                    sh """
+                        docker build -f oidc-provider/Dockerfile -t ${env.OIDC_IMAGE} oidc-provider/
+                        docker tag ${env.OIDC_IMAGE} ${REGISTRY_URL}/oidc-provider:latest
+                    """
+                }
+            }
+        }
+        
+        stage('Build PostgreSQL Container Image') {
+            steps {
+                script {
+                    echo "🐘 Building PostgreSQL container Docker image..."
+                    env.POSTGRES_IMAGE = "${REGISTRY_URL}/blog-postgres:${BUILD_NUMBER}-${env.GIT_COMMIT_SHORT}"
+                    sh """
+                        docker build -f postgres/Dockerfile -t ${env.POSTGRES_IMAGE} postgres/
+                        docker tag ${env.POSTGRES_IMAGE} ${REGISTRY_URL}/blog-postgres:latest
+                    """
+                }
+            }
+        }
+        
+        stage('Push Images to Registry') {
+            steps {
+                script {
+                    echo "📤 Pushing images to registry..."
+                    sh """
+                        echo "Pushing backend image..."
+                        docker push ${env.BACKEND_IMAGE}
+                        docker push ${REGISTRY_URL}/blog-backend:latest
+                        
+                        echo "Pushing frontend image..."
+                        docker push ${env.FRONTEND_IMAGE}
+                        docker push ${REGISTRY_URL}/blog-frontend:latest
+                        
+                        echo "Pushing OIDC provider image..."
+                        docker push ${env.OIDC_IMAGE}
+                        docker push ${REGISTRY_URL}/oidc-provider:latest
+                        
+                        echo "Pushing PostgreSQL container image..."
+                        docker push ${env.POSTGRES_IMAGE}
+                        docker push ${REGISTRY_URL}/blog-postgres:latest
+                    """
+                }
+            }
+        }
+        
+        stage('Test Backend Container') {
+            steps {
+                script {
+                    echo "🧪 Testing backend container..."
+                    withCredentials([
+                        string(credentialsId: 'postgres-password', variable: 'POSTGRES_PASSWORD'),
+                        string(credentialsId: 'coredb-admin-user', variable: 'COREDB_ADMIN_USER'),
+                        string(credentialsId: 'coredb-admin-password', variable: 'COREDB_ADMIN_PASSWORD'),
+                        string(credentialsId: 'coredb-encryption-key', variable: 'COREDB_ENCRYPTION_KEY'),
+                        string(credentialsId: 'session-secret', variable: 'SESSION_SECRET')
+                    ]) {
+                        sh """
+                            # Start backend container for testing with all required credentials
+                            docker run -d -p 5002:5000 --name test-backend-${BUILD_NUMBER} \
+                                -e POSTGRES_PASSWORD="${POSTGRES_PASSWORD}" \
+                                -e COREDB_ADMIN_USER="${COREDB_ADMIN_USER}" \
+                                -e COREDB_ADMIN_PASSWORD="${COREDB_ADMIN_PASSWORD}" \
+                                -e COREDB_ENCRYPTION_KEY="${COREDB_ENCRYPTION_KEY}" \
+                                -e JWT_SECRET="${JWT_SECRET}" \
+                                -e SESSION_SECRET="${SESSION_SECRET}" \
+                                -e CORS_ORIGIN="${CORS_ORIGIN}" \
+                                -e NODE_ENV=production \
+                                ${env.BACKEND_IMAGE}
+                        
+                        # Wait for container to start
+                        sleep 15
+                        
+                        # Check container logs
+                        echo "Container logs:"
+                        docker logs test-backend-${BUILD_NUMBER}
+                        
+                        # Check if container is still running
+                        if docker ps | grep test-backend-${BUILD_NUMBER}; then
+                            echo "Container is running, testing health endpoint..."
+                            # Test health endpoint
+                            curl -f http://localhost:5002/health || (echo "Backend health check failed" && exit 1)
+                            echo "✅ Backend container test passed"
+                        else
+                            echo "❌ Container failed to start or exited"
+                            exit 1
+                        fi
+                        """
+                    }
+                }
+            }
+            post {
+                always {
+                    script {
+                        // Cleanup test container
+                        sh """
+                            docker stop test-backend-${BUILD_NUMBER} || true
+                            docker rm test-backend-${BUILD_NUMBER} || true
+                        """
+                    }
+                }
+            }
+        }
+        
+        stage('Test Frontend Container') {
+            steps {
+                script {
+                    echo "🧪 Testing frontend container..."
+                    sh """
+                        # Start frontend container for testing
+                        docker run -d -p 3001:80 --name test-frontend-${BUILD_NUMBER} \
+                            -e VITE_API_URL="${VITE_API_URL}" \
+                            ${env.FRONTEND_IMAGE}
+                        
+                        # Wait for container to start
+                        sleep 15
+                        
+                        # Test health endpoint
+                        curl -f http://localhost:3001/health || (echo "Frontend health check failed" && exit 1)
+                        
+                        echo "✅ Frontend container test passed"
+                    """
+                }
+            }
+            post {
+                always {
+                    script {
+                        // Cleanup test container
+                        sh """
+                            docker stop test-frontend-${BUILD_NUMBER} || true
+                            docker rm test-frontend-${BUILD_NUMBER} || true
+                        """
+                    }
+                }
+            }
+        }
+        
+        stage('Verify Kubernetes Access') {
+            steps {
+                script {
+                    echo "🔍 Verifying Kubernetes cluster access..."
+                    sh """
+                        kubectl version --client
+                        kubectl cluster-info --request-timeout=10s
+                        kubectl get nodes
+                    """
+                    echo "✅ Kubernetes cluster is accessible"
+                }
+            }
+        }
+        
+        stage('Update Kubernetes Secrets') {
+            steps {
+                script {
+                    echo "🔐 Updating Kubernetes secrets with Jenkins credentials..."
+                    withCredentials([
+                        string(credentialsId: 'postgres-host', variable: 'PGHOST'),
+                        string(credentialsId: 'postgres-port', variable: 'PGPORT'),
+                        string(credentialsId: 'postgres-database', variable: 'PGDATABASE'),
+                        string(credentialsId: 'postgres-user', variable: 'PGUSER'),
+                        string(credentialsId: 'postgres-password', variable: 'PGPASSWORD'),
+                        string(credentialsId: 'postgres-root-password', variable: 'POSTGRES_ROOT_PASSWORD'),
+                        string(credentialsId: 'blog-db-password', variable: 'BLOG_DB_PASSWORD'),
+                        string(credentialsId: 'coredb-admin-user', variable: 'COREDB_ADMIN_USER'),
+                        string(credentialsId: 'coredb-admin-password', variable: 'COREDB_ADMIN_PASSWORD'),
+                        string(credentialsId: 'coredb-encryption-key', variable: 'COREDB_ENCRYPTION_KEY'),
+                        string(credentialsId: 'jwt-secret', variable: 'JWT_SECRET'),
+                        string(credentialsId: 'session-secret', variable: 'SESSION_SECRET'),
+                        string(credentialsId: 'blog-api-key', variable: 'BLOG_API_KEY'),
+                        string(credentialsId: 'google-client-id', variable: 'GOOGLE_CLIENT_ID'),
+                        string(credentialsId: 'google-client-secret', variable: 'GOOGLE_CLIENT_SECRET')
+                    ]) {
+                        sh """
+                            # Delete existing secret if it exists (ignore errors)
+                            kubectl delete secret blog-secrets -n blog || true
+                            
+                            # Create new secret with PostgreSQL container credentials from Jenkins
+                            kubectl create secret generic blog-secrets -n blog \
+                                --from-literal=PGHOST="${PGHOST}" \
+                                --from-literal=PGPORT="${PGPORT}" \
+                                --from-literal=PGDATABASE="${PGDATABASE}" \
+                                --from-literal=PGUSER="${PGUSER}" \
+                                --from-literal=PGPASSWORD="${PGPASSWORD}" \
+                                --from-literal=POSTGRES_PASSWORD="${PGPASSWORD}" \
+                                --from-literal=COREDB_ADMIN_USER="${COREDB_ADMIN_USER}" \
+                                --from-literal=COREDB_ADMIN_PASSWORD="${COREDB_ADMIN_PASSWORD}" \
+                                --from-literal=COREDB_ENCRYPTION_KEY="${COREDB_ENCRYPTION_KEY}" \
+                                --from-literal=JWT_SECRET="${JWT_SECRET}" \
+                                --from-literal=SESSION_SECRET="${SESSION_SECRET}" \
+                                --from-literal=BLOG_API_KEY="${BLOG_API_KEY}" \
+                                --from-literal=GOOGLE_CLIENT_ID="${GOOGLE_CLIENT_ID}" \
+                                --from-literal=GOOGLE_CLIENT_SECRET="${GOOGLE_CLIENT_SECRET}"
+                            
+                            # Delete existing PostgreSQL secret if it exists (ignore errors)
+                            kubectl delete secret postgres-secrets -n blog || true
+                            
+                            # Create PostgreSQL secrets with proper password separation
+                            kubectl create secret generic postgres-secrets -n blog \
+                                --from-literal=POSTGRES_USER="${PGUSER}" \
+                                --from-literal=POSTGRES_PASSWORD="${POSTGRES_ROOT_PASSWORD}" \
+                                --from-literal=POSTGRES_DB="${PGDATABASE}" \
+                                --from-literal=BLOG_DB_PASSWORD="${BLOG_DB_PASSWORD}"
+                            
+                            # Verify secrets were created
+                            kubectl get secret blog-secrets -n blog
+                            kubectl get secret postgres-secrets -n blog
+                            echo "✅ Kubernetes secrets updated successfully"
+                        """
+                    }
+                }
+            }
+        }
+        
+        stage('Deploy to Kubernetes') {
+            steps {
+                script {
+                    echo "🚀 Deploying blog to Kubernetes..."
+                    
+                    // Update deployment files with current image tags
+                    sh """
+                        cd k8s
+                        
+                        # Update image tags in deployment files
+                        sed -i.bak "s|localhost:5000/blog-frontend:latest|${env.FRONTEND_IMAGE}|g" frontend-deployment.yaml
+                        sed -i.bak "s|localhost:5000/blog-backend:latest|${env.BACKEND_IMAGE}|g" backend-deployment.yaml
+                        sed -i.bak "s|localhost:5000/blog-postgres:latest|${env.POSTGRES_IMAGE}|g" postgres/postgres-deployment.yaml
+                        
+                        # Apply namespace first
+                        kubectl apply -f namespace.yaml
+                        
+                        # Apply persistent volumes
+                        kubectl apply -f storage.yaml
+                        
+                        # Apply PostgreSQL deployment
+                        echo "🐘 Deploying PostgreSQL container..."
+                        kubectl apply -f postgres/postgres-pvc.yaml
+                        kubectl apply -f postgres/postgres-service.yaml
+                        kubectl apply -f postgres/postgres-deployment.yaml
+                        
+                        # Apply OIDC service account and configuration
+                        kubectl apply -f service-account.yaml
+                        kubectl apply -f oidc-provider.yaml
+                        kubectl apply -f oidc-discovery-service.yaml
+                        
+                        # Deploy backend and frontend
+                        kubectl apply -f backend-deployment.yaml
+                        kubectl apply -f frontend-deployment.yaml
+                        
+                        # Apply services and ingress
+                        kubectl apply -f backend-service.yaml
+                        kubectl apply -f frontend-service.yaml
+                        kubectl apply -f ingress.yaml
+                        
+                        # Wait for deployments to be ready
+                        echo "⏳ Waiting for deployments to be ready..."
+                        kubectl wait --for=condition=available --timeout=300s deployment/blog-postgres -n blog
+                        kubectl wait --for=condition=available --timeout=300s deployment/blog-backend -n blog
+                        kubectl wait --for=condition=available --timeout=300s deployment/blog-frontend -n blog
+                        
+                        # Restore original deployment files
+                        mv frontend-deployment.yaml.bak frontend-deployment.yaml
+                        mv backend-deployment.yaml.bak backend-deployment.yaml
+                        mv postgres/postgres-deployment.yaml.bak postgres/postgres-deployment.yaml
+                    """
+                    
+                    echo "✅ Kubernetes deployment completed"
+                }
+            }
+        }
+        
+        stage('Verify Deployment') {
+            steps {
+                script {
+                    echo "🔍 Verifying blog deployment..."
+                    sh """
+                        # Check deployment status
+                        kubectl get all -n blog
+                        
+                        # Check pod status
+                        kubectl get pods -n blog -o wide
+                        
+                        # Check for any issues
+                        kubectl describe pods -n blog -l app=blog-postgres | grep -A 10 Events || true
+                        kubectl describe pods -n blog -l app=blog-backend | grep -A 10 Events || true
+                        kubectl describe pods -n blog -l app=blog-frontend | grep -A 10 Events || true
+                        
+                        # Internal health checks
+                        echo "🏥 Performing internal health checks..."
+                        kubectl run health-check-postgres --image=postgres:15 --rm -i --restart=Never --timeout=60s -- psql -h blog-postgres-service.blog.svc.cluster.local -U blogadmin -d blog -c "SELECT version();" && echo "PostgreSQL health check passed" || echo "PostgreSQL health check failed"
+                        
+                        kubectl run health-check-backend --image=busybox --rm -i --restart=Never --timeout=60s -- /bin/sh -c "wget -qO- http://blog-backend-service.blog.svc.cluster.local/health && echo 'Backend health check passed'" || echo "Backend health check failed"
+                        
+                        kubectl run health-check-frontend --image=busybox --rm -i --restart=Never --timeout=60s -- /bin/sh -c "wget -qO- http://blog-frontend-service.blog.svc.cluster.local/health && echo 'Frontend health check passed'" || echo "Frontend health check failed"
+                    """
+                }
+            }
+        }
+        
+        stage('Show Recent Logs') {
+            steps {
+                script {
+                    echo "📋 Recent application logs:"
+                    sh """
+                        echo "PostgreSQL logs:"
+                        kubectl logs -n blog -l app=blog-postgres --tail=20 || echo "Could not fetch PostgreSQL logs"
+                        
+                        echo "Backend logs:"
+                        kubectl logs -n blog -l app=blog-backend --tail=20 || echo "Could not fetch backend logs"
+                        
+                        echo "Frontend logs:"
+                        kubectl logs -n blog -l app=blog-frontend --tail=20 || echo "Could not fetch frontend logs"
+                    """
+                }
+            }
+        }
+    }
+    
+    post {
+        always {
+            script {
+                // Cleanup old Docker images to save space
+                sh """
+                    echo "🧹 Cleaning up old Docker images..."
+                    # Keep only the latest 5 images for each service
+                    docker images localhost:5000/blog-backend --format "table {{.Tag}}\t{{.ID}}" | tail -n +2 | grep -v latest | awk '{print \$2}' | tail -n +6 | xargs -r docker rmi || true
+                    docker images localhost:5000/blog-frontend --format "table {{.Tag}}\t{{.ID}}" | tail -n +2 | grep -v latest | awk '{print \$2}' | tail -n +6 | xargs -r docker rmi || true
+                """
+            }
+        }
+        success {
+            echo "🎉 Blog deployment pipeline completed successfully!"
+            echo ""
+            echo "📱 Blog services should be available at:"
+            echo "  Frontend: https://blog.ingasti.com"
+            echo "  Backend: https://bapi.ingasti.com"
+            echo ""
+            echo "🔍 Monitor with:"
+            echo "  kubectl get pods -n blog -w"
+            echo "  kubectl logs -f deployment/blog-backend -n blog"
+            echo "  kubectl logs -f deployment/blog-frontend -n blog"
+            
+            script {
+                // Show final status
+                sh """
+                    echo "🌐 Service and Ingress Status:"
+                    kubectl get services -n blog
+                    kubectl get ingress -n blog
+                """
+            }
+        }
+        failure {
+            echo "❌ Blog deployment pipeline failed!"
+            echo ""
+            echo "🔍 Debug information:"
+            script {
+                try {
+                    sh """
+                        echo "Kubernetes cluster status:"
+                        kubectl get nodes || true
+                        kubectl get pods -n blog || true
+                        kubectl get events -n blog --sort-by=.metadata.creationTimestamp | tail -10 || true
+                    """
+                } catch (Exception e) {
+                    echo "Could not retrieve debug information: ${e.getMessage()}"
+                }
+            }
+        }
+    }
+}
