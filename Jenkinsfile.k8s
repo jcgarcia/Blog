@@ -416,18 +416,18 @@ pipeline {
             }
         }
         success {
-            echo "🎉 Blog deployment pipeline completed successfully!"
-            echo ""
-            echo "📱 Blog services should be available at:"
-            echo "  Frontend: https://blog.ingasti.com"
-            echo "  Backend: https://bapi.ingasti.com"
-            echo ""
-            echo "🔍 Monitor with:"
-            echo "  kubectl get pods -n blog -w"
-            echo "  kubectl logs -f deployment/blog-backend -n blog"
-            echo "  kubectl logs -f deployment/blog-frontend -n blog"
-            
             script {
+                echo "🎉 Blog deployment pipeline completed successfully!"
+                echo ""
+                echo "📱 Blog services should be available at:"
+                echo "  Frontend: https://blog.ingasti.com"
+                echo "  Backend: https://bapi.ingasti.com"
+                echo ""
+                echo "🔍 Monitor with:"
+                echo "  kubectl get pods -n blog -w"
+                echo "  kubectl logs -f deployment/blog-backend -n blog"
+                echo "  kubectl logs -f deployment/blog-frontend -n blog"
+                
                 // Show final status
                 sh """
                     echo "🌐 Service and Ingress Status:"
@@ -437,10 +437,11 @@ pipeline {
             }
         }
         failure {
-            echo "❌ Blog deployment pipeline failed!"
-            echo ""
-            echo "🔍 Debug information:"
             script {
+                echo "❌ Blog deployment pipeline failed!"
+                echo ""
+                echo "🔍 Debug information:"
+                
                 try {
                     sh """
                         echo "Kubernetes cluster status:"
