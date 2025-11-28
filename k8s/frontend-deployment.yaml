@@ -25,7 +25,7 @@ spec:
       containers:
       - name: blog-frontend
         image: localhost:5000/blog-frontend:latest
-        imagePullPolicy: Always
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 80
           name: http
