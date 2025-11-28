@@ -1,0 +1,14 @@
+{
+  "name": "oidc-provider",
+  "version": "1.0.0",
+  "description": "OIDC Provider for Kubernetes Service Account tokens",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.2",
+    "jwks-rsa": "^3.0.1"
+  }
+}

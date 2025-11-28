@@ -2,10 +2,6 @@
 
 A comprehensive, production-ready blog platform with advanced content management, media handling, user authentication, and administrative tools. Built with modern technologies and deployed on Kubernetes infrastructure.
 
-=============================================
-wrong README, it must be modified
-============================================
-
 ## 🏛️ Architecture Overview
 
 **Infrastructure**: Kubernetes ARM64 cluster on Oracle Cloud Infrastructure  
@@ -509,14 +505,3 @@ Built with love using:
 
 *Last updated: October 29, 2025*  
 *Status: Production Ready* ✅
-# Test webhook - Wed Nov 26 05:09:37 PM GMT 2025
-# Webhook test - Wed Nov 26 05:16:40 PM GMT 2025
-to be updated
-to be updated
-webhook test Wed Nov 26 05:30:27 PM GMT 2025
-webhook-test-1764181939
-webhook-test-1764182145
-webhook-fix-test-1764182232
-Testing webhook with fixed job config
-Testing webhook after fixing default branch
-Testing webhook with correct secret
