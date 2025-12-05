@@ -460,11 +460,13 @@ pipeline {
             
             script {
                 // Show final status
-                sh """
-                    echo "🌐 Service and Ingress Status:"
-                    kubectl get services -n blog
-                    kubectl get ingress -n blog
-                """
+                withCredentials([file(credentialsId: 'oci-kubeconfig', variable: 'KUBECONFIG')]) {
+                    sh """
+                        echo "🌐 Service and Ingress Status:"
+                        kubectl get services -n blog
+                        kubectl get ingress -n blog
+                    """
+                }
             }
         }
         failure {
@@ -473,12 +475,14 @@ pipeline {
             echo "🔍 Debug information:"
             script {
                 try {
-                    sh """
-                        echo "Kubernetes cluster status:"
-                        kubectl get nodes || true
-                        kubectl get pods -n blog || true
-                        kubectl get events -n blog --sort-by=.metadata.creationTimestamp | tail -10 || true
-                    """
+                    withCredentials([file(credentialsId: 'oci-kubeconfig', variable: 'KUBECONFIG')]) {
+                        sh """
+                            echo "Kubernetes cluster status:"
+                            kubectl get nodes || true
+                            kubectl get pods -n blog || true
+                            kubectl get events -n blog --sort-by=.metadata.creationTimestamp | tail -10 || true
+                        """
+                    }
                 } catch (Exception e) {
                     echo "Could not retrieve debug information: ${e.getMessage()}"
                 }
