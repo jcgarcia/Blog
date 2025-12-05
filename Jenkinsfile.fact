@@ -14,21 +14,6 @@ pipeline {
         REGISTRY_URL = 'ghcr.io/jcgarcia'
     }
     stages {
-        stage('Agent Dependency Setup') {
-            steps {
-                script {
-                    echo "🔧 Ensuring required system packages are installed..."
-                    sh '''
-                        if ! dpkg -s libcommons-lang3-java >/dev/null 2>&1; then
-                            echo "Installing libcommons-lang3-java..."
-                            sudo apt-get update && sudo apt-get install -y libcommons-lang3-java
-                        else
-                            echo "libcommons-lang3-java already installed."
-                        fi
-                    '''
-                }
-            }
-        }
         stage('Checkout') {
             steps {
                 checkout scm
