@@ -17,6 +17,8 @@ spec:
         app: oidc-provider
     spec:
       serviceAccount: oidc-provider-sa
+      imagePullSecrets:
+      - name: ghcr-credentials
       containers:
       - name: oidc-provider
         image: ghcr.io/jcgarcia/oidc-provider:latest

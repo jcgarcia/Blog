@@ -20,6 +20,8 @@ spec:
         version: "16"
     spec:
       serviceAccountName: blog-postgres-sa
+      imagePullSecrets:
+      - name: ghcr-credentials
       securityContext:
         fsGroup: 999 # postgres group
       containers:

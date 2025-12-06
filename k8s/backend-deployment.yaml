@@ -23,6 +23,8 @@ spec:
         version: v1
     spec:
       serviceAccountName: media-access-sa
+      imagePullSecrets:
+      - name: ghcr-credentials
       containers:
       - name: blog-backend
         image: ghcr.io/jcgarcia/blog-backend:latest
