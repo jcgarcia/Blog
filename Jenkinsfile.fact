@@ -102,17 +102,21 @@ pipeline {
         
         stage('Push Images to Registry') {
             steps {
-                script {
-                    echo "📤 Pushing images to registry..."
-                    sh """
-                        echo "Pushing backend image..."
-                        docker push ${env.BACKEND_IMAGE}
-                        docker push ${REGISTRY_URL}/blog-backend:latest
+                withCredentials([usernamePassword(credentialsId: 'ghcr-credentials', usernameVariable: 'GHCR_USER', passwordVariable: 'GHCR_TOKEN')]) {
+                    script {
+                        echo "🔐 Logging into GitHub Container Registry..."
+                        sh 'echo $GHCR_TOKEN | docker login ghcr.io -u $GHCR_USER --password-stdin'
                         
-                        echo "Pushing frontend image..."
-                        docker push ${env.FRONTEND_IMAGE}
-                        docker push ${REGISTRY_URL}/blog-frontend:latest
-                    """
+                        echo "📤 Pushing images to registry..."
+                        sh """
+                            echo "Pushing backend image..."
+                            docker push ${env.BACKEND_IMAGE}
+                            docker push ${REGISTRY_URL}/blog-backend:latest
+                            
+                            echo "Pushing frontend image..."
+                            docker push ${env.FRONTEND_IMAGE}
+                            docker push ${REGISTRY_URL}/blog-frontend:latest
+                        """
                     
                     // Push OIDC provider if it was built
                     if (env.OIDC_BUILD_ENABLED == 'true') {
@@ -134,6 +138,7 @@ pipeline {
                         """
                     } else {
                         echo "⚠️  PostgreSQL not built (postgres/Dockerfile not found)"
+                    }
                     }
                 }
             }
