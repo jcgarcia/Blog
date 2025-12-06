@@ -19,7 +19,7 @@ spec:
       serviceAccount: oidc-provider-sa
       containers:
       - name: oidc-provider
-        image: localhost:5000/oidc-provider:latest
+        image: ghcr.io/jcgarcia/oidc-provider:latest
         imagePullPolicy: Always
         ports:
         - containerPort: 8080

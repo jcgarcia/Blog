@@ -24,7 +24,7 @@ spec:
         fsGroup: 999 # postgres group
       containers:
       - name: postgres
-        image: localhost:5000/blog-postgres:latest
+        image: ghcr.io/jcgarcia/blog-postgres:latest
         imagePullPolicy: Always
         env:
         - name: POSTGRES_DB
