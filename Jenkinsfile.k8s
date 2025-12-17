@@ -11,7 +11,7 @@ pipeline {
         CORS_ORIGIN = 'https://blog.ingasti.com'
         VITE_API_URL = 'https://bapi.ingasti.com'
         // Docker registry
-        REGISTRY_URL = 'localhost:5000'
+        REGISTRY_URL = 'ghcr.io/jcgarcia'
     }
     stages {
         stage('Agent Dependency Setup') {
@@ -118,37 +118,41 @@ pipeline {
         stage('Push Images to Registry') {
             steps {
                 script {
-                    echo "📤 Pushing images to registry..."
-                    sh """
-                        echo "Pushing backend image..."
-                        docker push ${env.BACKEND_IMAGE}
-                        docker push ${REGISTRY_URL}/blog-backend:latest
+                    echo "📤 Pushing images to GitHub Container Registry..."
+                    withCredentials([string(credentialsId: 'github-token', variable: 'GITHUB_TOKEN')]) {
+                        sh """
+                            echo "${GITHUB_TOKEN}" | docker login ghcr.io -u jcgarcia --password-stdin
+                            
+                            echo "Pushing backend image..."
+                            docker push ${env.BACKEND_IMAGE}
+                            docker push ${REGISTRY_URL}/blog-backend:latest
+                            
+                            echo "Pushing frontend image..."
+                            docker push ${env.FRONTEND_IMAGE}
+                            docker push ${REGISTRY_URL}/blog-frontend:latest
+                        """
                         
-                        echo "Pushing frontend image..."
-                        docker push ${env.FRONTEND_IMAGE}
-                        docker push ${REGISTRY_URL}/blog-frontend:latest
-                    """
-                    
-                    // Push OIDC provider if it was built
-                    if (env.OIDC_BUILD_ENABLED == 'true') {
-                        sh """
-                            echo "Pushing OIDC provider image..."
-                            docker push ${env.OIDC_IMAGE}
-                            docker push ${REGISTRY_URL}/oidc-provider:latest
-                        """
-                    } else {
-                        echo "⚠️  OIDC provider not built (oidc-provider/Dockerfile not found)"
-                    }
-                    
-                    // Push PostgreSQL if it was built
-                    if (env.POSTGRES_BUILD_ENABLED == 'true') {
-                        sh """
-                            echo "Pushing PostgreSQL container image..."
-                            docker push ${env.POSTGRES_IMAGE}
-                            docker push ${REGISTRY_URL}/blog-postgres:latest
-                        """
-                    } else {
-                        echo "⚠️  PostgreSQL not built (postgres/Dockerfile not found)"
+                        // Push OIDC provider if it was built
+                        if (env.OIDC_BUILD_ENABLED == 'true') {
+                            sh """
+                                echo "Pushing OIDC provider image..."
+                                docker push ${env.OIDC_IMAGE}
+                                docker push ${REGISTRY_URL}/oidc-provider:latest
+                            """
+                        } else {
+                            echo "⚠️  OIDC provider not built (oidc-provider/Dockerfile not found)"
+                        }
+                        
+                        // Push PostgreSQL if it was built
+                        if (env.POSTGRES_BUILD_ENABLED == 'true') {
+                            sh """
+                                echo "Pushing PostgreSQL container image..."
+                                docker push ${env.POSTGRES_IMAGE}
+                                docker push ${REGISTRY_URL}/blog-postgres:latest
+                            """
+                        } else {
+                            echo "⚠️  PostgreSQL not built (postgres/Dockerfile not found)"
+                        }
                     }
                 }
             }
