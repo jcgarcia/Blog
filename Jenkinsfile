@@ -18,15 +18,15 @@ pipeline {
         // Image configuration
         BUILD_NUMBER = "${env.BUILD_NUMBER}"
         GIT_COMMIT_SHORT = ""
-        FRONTEND_IMAGE = "localhost:5000/blog-frontend:${BUILD_NUMBER}"
-        BACKEND_IMAGE = "localhost:5000/blog-backend:${BUILD_NUMBER}"
+        FRONTEND_IMAGE = "ghcr.io/jcgarcia/blog-frontend:${BUILD_NUMBER}"
+        BACKEND_IMAGE = "ghcr.io/jcgarcia/blog-backend:${BUILD_NUMBER}"
 
         // Environment configuration
         CORS_ORIGIN = 'https://blog.ingasti.com'
         VITE_API_URL = 'https://bapi.ingasti.com'
 
         // Docker registry
-        REGISTRY_URL = 'localhost:5000'
+        REGISTRY_URL = 'ghcr.io/jcgarcia'
     }
     
     stages {
@@ -202,8 +202,8 @@ pipeline {
                         cp backend-deployment.yaml backend-deployment.yaml.bak
                         
                         # Update image tags in deployment files
-                        sed -i 's|image: localhost:5000/blog-frontend:.*|image: ${env.FRONTEND_IMAGE}|g' frontend-deployment.yaml
-                        sed -i 's|image: localhost:5000/blog-backend:.*|image: ${env.BACKEND_IMAGE}|g' backend-deployment.yaml
+                        sed -i 's|image: ghcr.io/jcgarcia/blog-frontend:.*|image: ${env.FRONTEND_IMAGE}|g' frontend-deployment.yaml
+                        sed -i 's|image: ghcr.io/jcgarcia/blog-backend:.*|image: ${env.BACKEND_IMAGE}|g' backend-deployment.yaml
                         
                         # Apply all Kubernetes resources in the correct order
                         echo "📋 Applying namespace..."
