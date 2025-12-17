@@ -60,9 +60,8 @@ pipeline {
             steps {
                 script {
                     echo "🔨 Building backend Docker image..."
-                    dir('api') {
                         sh """
-                            docker build -f Dockerfile.k8s -t ${env.BACKEND_IMAGE} .
+                            docker build -f api/Dockerfile.k8s -t ${env.BACKEND_IMAGE} .
                             docker tag ${env.BACKEND_IMAGE} ${REGISTRY_URL}/blog-backend:latest
                         """
                     }
@@ -74,9 +73,8 @@ pipeline {
             steps {
                 script {
                     echo "🔨 Building frontend Docker image..."
-                    dir('client') {
                         sh """
-                            docker build -f Dockerfile.k8s -t ${env.FRONTEND_IMAGE} .
+                            docker build -f client/Dockerfile.k8s -t ${env.FRONTEND_IMAGE} .
                             docker tag ${env.FRONTEND_IMAGE} ${REGISTRY_URL}/blog-frontend:latest
                         """
                     }
