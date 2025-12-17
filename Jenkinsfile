@@ -84,15 +84,20 @@ pipeline {
             steps {
                 script {
                     echo "📤 Pushing images to registry..."
-                    sh """
-                        echo "Pushing backend image..."
-                        docker push ${env.BACKEND_IMAGE}
-                        docker push ${REGISTRY_URL}/blog-backend:latest
-                        
-                        echo "Pushing frontend image..."
-                        docker push ${env.FRONTEND_IMAGE}
-                        docker push ${REGISTRY_URL}/blog-frontend:latest
-                    """
+                    withCredentials([string(credentialsId: 'github-token', variable: 'GITHUB_TOKEN')]) {
+                        sh """
+                            echo "Logging in to GitHub Container Registry..."
+                            echo "${GITHUB_TOKEN}" | docker login ghcr.io -u jcgarcia --password-stdin
+                            
+                            echo "Pushing backend image..."
+                            docker push ${env.BACKEND_IMAGE}
+                            docker push ${REGISTRY_URL}/blog-backend:latest
+                            
+                            echo "Pushing frontend image..."
+                            docker push ${env.FRONTEND_IMAGE}
+                            docker push ${REGISTRY_URL}/blog-frontend:latest
+                        """
+                    }
                 }
             }
         }
