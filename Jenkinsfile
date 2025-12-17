@@ -18,15 +18,15 @@ pipeline {
         // Image configuration
         BUILD_NUMBER = "${env.BUILD_NUMBER}"
         GIT_COMMIT_SHORT = ""
-        FRONTEND_IMAGE = "ghcr.io/jcgarcia/blog-frontend:${BUILD_NUMBER}"
-        BACKEND_IMAGE = "ghcr.io/jcgarcia/blog-backend:${BUILD_NUMBER}"
+        FRONTEND_IMAGE = "localhost:5000/blog-frontend:${BUILD_NUMBER}"
+        BACKEND_IMAGE = "localhost:5000/blog-backend:${BUILD_NUMBER}"
 
         // Environment configuration
         CORS_ORIGIN = 'https://blog.ingasti.com'
         VITE_API_URL = 'https://bapi.ingasti.com'
 
         // Docker registry
-        REGISTRY_URL = 'ghcr.io/jcgarcia'
+        REGISTRY_URL = 'localhost:5000'
     }
     
     stages {
@@ -41,8 +41,8 @@ pipeline {
                     ).trim()
                     
                     // Update image tags with commit hash
-                    env.FRONTEND_IMAGE = "${REGISTRY_URL}/blog-frontend:${BUILD_NUMBER}-${env.GIT_COMMIT_SHORT}"
-                    env.BACKEND_IMAGE = "${REGISTRY_URL}/blog-backend:${BUILD_NUMBER}-${env.GIT_COMMIT_SHORT}"
+                    env.FRONTEND_IMAGE = "${REGISTRY_URL}/blog-frontend:${BUILD_NUMBER}-${GIT_COMMIT_SHORT}"
+                    env.BACKEND_IMAGE = "${REGISTRY_URL}/blog-backend:${BUILD_NUMBER}-${GIT_COMMIT_SHORT}"
                     
                     echo "� Building Blog Application"
                     echo "=============================="
@@ -60,13 +60,13 @@ pipeline {
             steps {
                 script {
                     echo "🔨 Building backend Docker image..."
-                    
+                    dir('api') {
                         sh """
-                            docker build -f api/Dockerfile.k8s -t ${env.BACKEND_IMAGE} .
+                            docker build -f Dockerfile.k8s -t ${env.BACKEND_IMAGE} .
                             docker tag ${env.BACKEND_IMAGE} ${REGISTRY_URL}/blog-backend:latest
                         """
-                    
-                
+                    }
+                }
             }
         }
         
@@ -74,13 +74,13 @@ pipeline {
             steps {
                 script {
                     echo "🔨 Building frontend Docker image..."
-                    
+                    dir('client') {
                         sh """
-                            docker build -f client/Dockerfile.k8s -t ${env.FRONTEND_IMAGE} .
+                            docker build -f Dockerfile.k8s -t ${env.FRONTEND_IMAGE} .
                             docker tag ${env.FRONTEND_IMAGE} ${REGISTRY_URL}/blog-frontend:latest
                         """
-                    
-                
+                    }
+                }
             }
         }
         
@@ -202,8 +202,8 @@ pipeline {
                         cp backend-deployment.yaml backend-deployment.yaml.bak
                         
                         # Update image tags in deployment files
-                        sed -i 's|image: ghcr.io/jcgarcia/blog-frontend:.*|image: ${env.FRONTEND_IMAGE}|g' frontend-deployment.yaml
-                        sed -i 's|image: ghcr.io/jcgarcia/blog-backend:.*|image: ${env.BACKEND_IMAGE}|g' backend-deployment.yaml
+                        sed -i 's|image: localhost:5000/blog-frontend:.*|image: ${env.FRONTEND_IMAGE}|g' frontend-deployment.yaml
+                        sed -i 's|image: localhost:5000/blog-backend:.*|image: ${env.BACKEND_IMAGE}|g' backend-deployment.yaml
                         
                         # Apply all Kubernetes resources in the correct order
                         echo "📋 Applying namespace..."
@@ -286,12 +286,12 @@ pipeline {
         always {
             script {
                 // Cleanup old Docker images to save space
-                sh '''
+                sh """
                     echo "🧹 Cleaning up old Docker images..."
                     # Keep only the latest 5 images for each service
-                    docker images ''' + REGISTRY_URL + '''/blog-backend --format "table {{.Tag}}\t{{.ID}}" | tail -n +2 | grep -v latest | awk '{print $2}' | tail -n +6 | xargs -r docker rmi || true
-                    docker images ''' + REGISTRY_URL + '''/blog-frontend --format "table {{.Tag}}\t{{.ID}}" | tail -n +2 | grep -v latest | awk '{print $2}' | tail -n +6 | xargs -r docker rmi || true
-                '''
+                    docker images ${REGISTRY_URL}/blog-backend --format "table {{.Tag}}\t{{.ID}}" | tail -n +2 | grep -v latest | awk '{print \$2}' | tail -n +6 | xargs -r docker rmi || true
+                    docker images ${REGISTRY_URL}/blog-frontend --format "table {{.Tag}}\t{{.ID}}" | tail -n +2 | grep -v latest | awk '{print \$2}' | tail -n +6 | xargs -r docker rmi || true
+                """
             }
         }
         success {
@@ -330,4 +330,3 @@ pipeline {
         }
     }
 }
-
