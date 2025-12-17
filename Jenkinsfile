@@ -18,15 +18,15 @@ pipeline {
         // Image configuration
         BUILD_NUMBER = "${env.BUILD_NUMBER}"
         GIT_COMMIT_SHORT = ""
-        FRONTEND_IMAGE = "ghcr.io/jcgarcia/blog-frontend:${BUILD_NUMBER}"
-        BACKEND_IMAGE = "ghcr.io/jcgarcia/blog-backend:${BUILD_NUMBER}"
+        FRONTEND_IMAGE = "localhost:5000/blog-frontend:${BUILD_NUMBER}"
+        BACKEND_IMAGE = "localhost:5000/blog-backend:${BUILD_NUMBER}"
 
         // Environment configuration
         CORS_ORIGIN = 'https://blog.ingasti.com'
         VITE_API_URL = 'https://bapi.ingasti.com'
 
         // Docker registry
-        REGISTRY_URL = 'ghcr.io/jcgarcia'
+        REGISTRY_URL = 'localhost:5000'
     }
     
     stages {
@@ -87,20 +87,16 @@ pipeline {
         stage('Push Images to Registry') {
             steps {
                 script {
-                    echo "📤 Pushing images to GitHub Container Registry..."
-                    withCredentials([string(credentialsId: 'github-token', variable: 'GITHUB_TOKEN')]) {
-                        sh """
-                            echo "${GITHUB_TOKEN}" | docker login ghcr.io -u jcgarcia --password-stdin
-                            
-                            echo "Pushing backend image..."
-                            docker push ${env.BACKEND_IMAGE}
-                            docker push ${REGISTRY_URL}/blog-backend:latest
-                            
-                            echo "Pushing frontend image..."
-                            docker push ${env.FRONTEND_IMAGE}
-                            docker push ${REGISTRY_URL}/blog-frontend:latest
-                        """
-                    }
+                    echo "📤 Pushing images to registry..."
+                    sh """
+                        echo "Pushing backend image..."
+                        docker push ${env.BACKEND_IMAGE}
+                        docker push ${REGISTRY_URL}/blog-backend:latest
+                        
+                        echo "Pushing frontend image..."
+                        docker push ${env.FRONTEND_IMAGE}
+                        docker push ${REGISTRY_URL}/blog-frontend:latest
+                    """
                 }
             }
         }
