@@ -84,10 +84,10 @@ pipeline {
             steps {
                 script {
                     echo "📤 Pushing images to registry..."
-                    withCredentials([string(credentialsId: 'github-token', variable: 'GITHUB_TOKEN')]) {
+                    withCredentials([usernamePassword(credentialsId: 'ghcr-credentials', usernameVariable: 'GHCR_USER', passwordVariable: 'GHCR_TOKEN')]) {
                         sh """
                             echo "Logging in to GitHub Container Registry..."
-                            echo "${GITHUB_TOKEN}" | docker login ghcr.io -u jcgarcia --password-stdin
+                            echo "\${GHCR_TOKEN}" | docker login ghcr.io -u \${GHCR_USER} --password-stdin
                             
                             echo "Pushing backend image..."
                             docker push ${env.BACKEND_IMAGE}
