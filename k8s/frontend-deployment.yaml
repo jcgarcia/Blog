@@ -22,12 +22,10 @@ spec:
         app: blog-frontend
         version: v1
     spec:
-      imagePullSecrets:
-      - name: ghcr-credentials
       containers:
       - name: blog-frontend
-        image: ghcr.io/jcgarcia/blog-frontend:latest
-        imagePullPolicy: IfNotPresent
+        image: localhost:5000/blog-frontend:latest
+        imagePullPolicy: Always
         ports:
         - containerPort: 80
           name: http

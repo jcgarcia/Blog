@@ -12,6 +12,7 @@ import { generatePdfThumbnail, deletePdfThumbnail, getThumbnailRelativePath } fr
 import CoreDB from '../services/CoreDB.js';
 import fs from 'fs/promises';
 import { existsSync } from 'fs';
+import imageCacheService from '../services/imageCacheService.js';
 
 // Removed complex getS3Client function - using direct OIDC approach instead
 
@@ -1179,6 +1180,13 @@ export const updateMediaFile = async (req, res) => {
       });
     }
 
+    // Invalidate cache for updated file
+    const updatedFile = result.rows[0];
+    if (updatedFile.s3_key) {
+      await imageCacheService.invalidate(updatedFile.s3_key);
+      console.log(`🗑️  Cache invalidated for updated file: ${updatedFile.s3_key}`);
+    }
+
     res.json({
       success: true,
       message: 'Media file updated successfully',
@@ -1269,6 +1277,12 @@ export const deleteMediaFile = async (req, res) => {
       // Remove from database
       const deleteQuery = 'DELETE FROM media WHERE id = $1 RETURNING *';
       const deleteResult = await pool.query(deleteQuery, [id]);
+
+      // Invalidate cache
+      if (mediaFile.s3_key) {
+        await imageCacheService.invalidate(mediaFile.s3_key);
+        console.log(`🗑️  Cache invalidated for deleted file: ${mediaFile.s3_key}`);
+      }
 
       res.json({
         success: true,

@@ -1,5 +1,15 @@
 version: '3.8'
 services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
   backend:
     build: ./api
     ports:
@@ -10,7 +20,12 @@ services:
       JWT_SECRET: ${JWT_SECRET} # Injected by Jenkins credentials
       PORT: 5000
       NODE_ENV: production
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
       # Add other backend env vars as needed
+    depends_on:
+      redis:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/health", "||", "curl", "-f", "http://localhost:5000"]
       interval: 30s

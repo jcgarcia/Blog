@@ -23,12 +23,10 @@ spec:
         version: v1
     spec:
       serviceAccountName: media-access-sa
-      imagePullSecrets:
-      - name: ghcr-credentials
       containers:
       - name: blog-backend
-        image: ghcr.io/jcgarcia/blog-backend:latest
-        imagePullPolicy: IfNotPresent
+        image: localhost:5000/blog-backend:latest
+        imagePullPolicy: Always
         ports:
         - containerPort: 5000
           name: http
@@ -89,6 +87,10 @@ spec:
             secretKeyRef:
               name: blog-secrets
               key: COREDB_ENCRYPTION_KEY
+        - name: REDIS_HOST
+          value: "redis.blog.svc.cluster.local"
+        - name: REDIS_PORT
+          value: "6379"
         - name: POSTGRES_PASSWORD
           valueFrom:
             secretKeyRef:

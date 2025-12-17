@@ -17,11 +17,9 @@ spec:
         app: oidc-provider
     spec:
       serviceAccount: oidc-provider-sa
-      imagePullSecrets:
-      - name: ghcr-credentials
       containers:
       - name: oidc-provider
-        image: ghcr.io/jcgarcia/oidc-provider:latest
+        image: localhost:5000/oidc-provider:latest
         imagePullPolicy: Always
         ports:
         - containerPort: 8080

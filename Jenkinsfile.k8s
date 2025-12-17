@@ -10,8 +10,8 @@ pipeline {
         // Environment configuration
         CORS_ORIGIN = 'https://blog.ingasti.com'
         VITE_API_URL = 'https://bapi.ingasti.com'
-        // Docker registry (GitHub Container Registry)
-        REGISTRY_URL = 'ghcr.io/jcgarcia'
+        // Docker registry
+        REGISTRY_URL = 'localhost:5000'
     }
     stages {
         stage('Agent Dependency Setup') {
@@ -330,10 +330,10 @@ pipeline {
                     sh """
                         cd k8s
                         
-                        # Update image tags in deployment files (from ghcr.io default to specific build)
-                        sed -i.bak "s|ghcr.io/jcgarcia/blog-frontend:latest|${env.FRONTEND_IMAGE}|g" frontend-deployment.yaml
-                        sed -i.bak "s|ghcr.io/jcgarcia/blog-backend:latest|${env.BACKEND_IMAGE}|g" backend-deployment.yaml
-                        sed -i.bak "s|ghcr.io/jcgarcia/blog-postgres:latest|${env.POSTGRES_IMAGE}|g" postgres/postgres-deployment.yaml
+                        # Update image tags in deployment files
+                        sed -i.bak "s|localhost:5000/blog-frontend:latest|${env.FRONTEND_IMAGE}|g" frontend-deployment.yaml
+                        sed -i.bak "s|localhost:5000/blog-backend:latest|${env.BACKEND_IMAGE}|g" backend-deployment.yaml
+                        sed -i.bak "s|localhost:5000/blog-postgres:latest|${env.POSTGRES_IMAGE}|g" postgres/postgres-deployment.yaml
                         
                         # Apply namespace first
                         kubectl apply -f namespace.yaml
@@ -432,8 +432,8 @@ pipeline {
                 sh """
                     echo "🧹 Cleaning up old Docker images..."
                     # Keep only the latest 5 images for each service
-                    docker images ghcr.io/jcgarcia/blog-backend --format "table {{.Tag}}\t{{.ID}}" | tail -n +2 | grep -v latest | awk '{print \$2}' | tail -n +6 | xargs -r docker rmi || true
-                    docker images ghcr.io/jcgarcia/blog-frontend --format "table {{.Tag}}\t{{.ID}}" | tail -n +2 | grep -v latest | awk '{print \$2}' | tail -n +6 | xargs -r docker rmi || true
+                    docker images localhost:5000/blog-backend --format "table {{.Tag}}\t{{.ID}}" | tail -n +2 | grep -v latest | awk '{print \$2}' | tail -n +6 | xargs -r docker rmi || true
+                    docker images localhost:5000/blog-frontend --format "table {{.Tag}}\t{{.ID}}" | tail -n +2 | grep -v latest | awk '{print \$2}' | tail -n +6 | xargs -r docker rmi || true
                 """
             }
         }
