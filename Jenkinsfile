@@ -60,13 +60,13 @@ pipeline {
             steps {
                 script {
                     echo "🔨 Building backend Docker image..."
-                    # dir removed
+                    
                         sh """
                             docker build -f api/Dockerfile.k8s -t ${env.BACKEND_IMAGE} .
                             docker tag ${env.BACKEND_IMAGE} ${REGISTRY_URL}/blog-backend:latest
                         """
-# end dir removed
-                }
+                    
+                
             }
         }
         
@@ -74,13 +74,13 @@ pipeline {
             steps {
                 script {
                     echo "🔨 Building frontend Docker image..."
-                    # dir removed
+                    
                         sh """
                             docker build -f client/Dockerfile.k8s -t ${env.FRONTEND_IMAGE} .
                             docker tag ${env.FRONTEND_IMAGE} ${REGISTRY_URL}/blog-frontend:latest
                         """
-# end dir removed
-                }
+                    
+                
             }
         }
         
