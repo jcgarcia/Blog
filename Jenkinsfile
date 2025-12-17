@@ -41,8 +41,8 @@ pipeline {
                     ).trim()
                     
                     // Update image tags with commit hash
-                    env.FRONTEND_IMAGE = "${REGISTRY_URL}/blog-frontend:${BUILD_NUMBER}-${GIT_COMMIT_SHORT}"
-                    env.BACKEND_IMAGE = "${REGISTRY_URL}/blog-backend:${BUILD_NUMBER}-${GIT_COMMIT_SHORT}"
+                    env.FRONTEND_IMAGE = "${REGISTRY_URL}/blog-frontend:${BUILD_NUMBER}-${env.GIT_COMMIT_SHORT}"
+                    env.BACKEND_IMAGE = "${REGISTRY_URL}/blog-backend:${BUILD_NUMBER}-${env.GIT_COMMIT_SHORT}"
                     
                     echo "� Building Blog Application"
                     echo "=============================="
