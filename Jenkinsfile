@@ -286,12 +286,12 @@ pipeline {
         always {
             script {
                 // Cleanup old Docker images to save space
-                sh """
+                sh '''
                     echo "🧹 Cleaning up old Docker images..."
                     # Keep only the latest 5 images for each service
-                    docker images ${REGISTRY_URL}/blog-backend --format "table {{.Tag}}\t{{.ID}}" | tail -n +2 | grep -v latest | awk '{print \$2}' | tail -n +6 | xargs -r docker rmi || true
-                    docker images ${REGISTRY_URL}/blog-frontend --format "table {{.Tag}}\t{{.ID}}" | tail -n +2 | grep -v latest | awk '{print \$2}' | tail -n +6 | xargs -r docker rmi || true
-                """
+                    docker images ''' + REGISTRY_URL + '''/blog-backend --format "table {{.Tag}}\t{{.ID}}" | tail -n +2 | grep -v latest | awk '{print $2}' | tail -n +6 | xargs -r docker rmi || true
+                    docker images ''' + REGISTRY_URL + '''/blog-frontend --format "table {{.Tag}}\t{{.ID}}" | tail -n +2 | grep -v latest | awk '{print $2}' | tail -n +6 | xargs -r docker rmi || true
+                '''
             }
         }
         success {
@@ -330,3 +330,4 @@ pipeline {
         }
     }
 }
+
