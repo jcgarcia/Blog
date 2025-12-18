@@ -61,7 +61,7 @@ pipeline {
                 script {
                     echo "🔨 Building backend Docker image..."
                     sh """
-                        docker build -f api/Dockerfile.k8s -t ${env.BACKEND_IMAGE} .
+                        docker build --no-cache --build-arg BUILD_DATE=\$(date -u +'%Y-%m-%dT%H:%M:%SZ') -f api/Dockerfile.k8s -t ${env.BACKEND_IMAGE} .
                         docker tag ${env.BACKEND_IMAGE} ${REGISTRY_URL}/blog-backend:latest
                     """
                 }
@@ -73,7 +73,7 @@ pipeline {
                 script {
                     echo "🔨 Building frontend Docker image..."
                     sh """
-                        docker build -f client/Dockerfile.k8s -t ${env.FRONTEND_IMAGE} .
+                        docker build --no-cache --build-arg BUILD_DATE=\$(date -u +'%Y-%m-%dT%H:%M:%SZ') -f client/Dockerfile.k8s -t ${env.FRONTEND_IMAGE} .
                         docker tag ${env.FRONTEND_IMAGE} ${REGISTRY_URL}/blog-frontend:latest
                     """
                 }
