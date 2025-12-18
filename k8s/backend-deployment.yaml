@@ -25,7 +25,7 @@ spec:
       serviceAccountName: media-access-sa
       containers:
       - name: blog-backend
-        image: localhost:5000/blog-backend:latest
+        image: ghcr.io/jcgarcia/blog-backend:latest
         imagePullPolicy: Always
         ports:
         - containerPort: 5000

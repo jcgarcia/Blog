@@ -1,3 +1,5 @@
+# This ConfigMap is generated from jwks.json
+# To regenerate: kubectl create configmap oidc-jwks --from-file=jwks.json -n kube-system --dry-run=client -o yaml > oidc-configmap.yaml
 apiVersion: v1
 kind: ConfigMap
 metadata:

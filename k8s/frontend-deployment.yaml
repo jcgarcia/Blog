@@ -24,7 +24,7 @@ spec:
     spec:
       containers:
       - name: blog-frontend
-        image: localhost:5000/blog-frontend:latest
+        image: ghcr.io/jcgarcia/blog-frontend:latest
         imagePullPolicy: Always
         ports:
         - containerPort: 80

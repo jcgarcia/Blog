@@ -226,6 +226,9 @@ pipeline {
                             kubectl apply -f oidc-configmap.yaml
                             kubectl apply -f oidc-discovery-service.yaml
                             
+                            echo "💾 Deploying Redis cache..."
+                            kubectl apply -f redis-deployment.yaml
+                            
                             echo "🚀 Applying main application deployments..."
                             kubectl apply -f backend-deployment.yaml
                             kubectl apply -f frontend-deployment.yaml
@@ -237,6 +240,7 @@ pipeline {
                             
                             # Wait for deployments to be ready
                             echo "⏳ Waiting for deployments to be ready..."
+                            kubectl wait --for=condition=available --timeout=300s deployment/redis -n blog
                             kubectl wait --for=condition=available --timeout=300s deployment/blog-backend -n blog
                             kubectl wait --for=condition=available --timeout=300s deployment/blog-frontend -n blog
                             kubectl wait --for=condition=available --timeout=300s deployment/secure-oidc-discovery -n kube-system
