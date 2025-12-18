@@ -22,6 +22,8 @@ spec:
         app: blog-frontend
         version: v1
     spec:
+      imagePullSecrets:
+      - name: ghcr-credentials
       containers:
       - name: blog-frontend
         image: ghcr.io/jcgarcia/blog-frontend:latest
